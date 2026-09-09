@@ -5,7 +5,7 @@ export ANTHBOT_DB_PATH="/data/anthbot_reporting.sqlite3"
 export ANTHBOT_ADMIN_TOKEN="$(bashio::config 'admin_token')"
 
 bashio::log.info "Starting ANTHBOT Reporting Server on port 8080"
-exec uvicorn asgi:app \
+exec uvicorn entrypoint:app \
   --host 0.0.0.0 \
   --port 8080 \
   --proxy-headers \
