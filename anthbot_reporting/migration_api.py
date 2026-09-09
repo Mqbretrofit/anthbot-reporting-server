@@ -7,7 +7,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app import _canonical_json, _contains_sensitive_key, _db, _iso, require_admin
+from app import _canonical_json, _contains_sensitive_key, _db, require_admin
 
 router = APIRouter()
 
@@ -55,6 +55,17 @@ class MigrationDiagnostic(BaseModel):
     report: dict[str, Any]
 
 
+class InstallationExport(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    count: int | None = None
+    items: list[MigrationInstallation] = Field(default_factory=list, max_length=500)
+
+
+class DiagnosticsExport(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    items: list[MigrationDiagnostic] = Field(default_factory=list, max_length=500)
+
+
 class MigrationPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -63,41 +74,10 @@ class MigrationPayload(BaseModel):
     diagnostics: list[MigrationDiagnostic] = Field(default_factory=list, max_length=500)
 
 
-@router.post(
-    "/api/anthbot/admin/migration/import",
-    dependencies=[Depends(require_admin)],
-)
-def import_reporting_data(payload: MigrationPayload) -> dict[str, Any]:
-    """Import data exported from the previous reporting-server installation.
-
-    This endpoint is intentionally admin-only and idempotent. It preserves the
-    original installation timestamps and diagnostic report IDs so links and
-    report history remain stable after moving the Home Assistant app to a new
-    repository slug.
-    """
-
-    prepared_diagnostics: list[tuple[MigrationDiagnostic, str, str]] = []
-    for item in payload.diagnostics:
-        if _contains_sensitive_key(item.report):
-            raise HTTPException(
-                status_code=422,
-                detail=f"diagnostic {item.report_id} contains a credential-like field name",
-            )
-        report_json = _canonical_json(item.report)
-        calculated_sha = hashlib.sha256(report_json.encode("utf-8")).hexdigest()
-        if item.report_sha256 and item.report_sha256.lower() != calculated_sha:
-            raise HTTPException(
-                status_code=422,
-                detail=f"diagnostic {item.report_id} SHA-256 mismatch",
-            )
-        prepared_diagnostics.append((item, report_json, calculated_sha))
-
-    installations_written = 0
-    diagnostics_inserted = 0
-    diagnostics_existing = 0
-
+def _write_installations(items: list[MigrationInstallation]) -> int:
+    written = 0
     with _db() as conn:
-        for item in payload.installations:
+        for item in items:
             model_counts = dict(sorted(item.model_counts.items()))
             models = sorted(model_counts)
             conn.execute(
@@ -131,9 +111,35 @@ def import_reporting_data(payload: MigrationPayload) -> dict[str, Any]:
                     _canonical_json(model_counts),
                 ),
             )
-            installations_written += 1
+            written += 1
+    return written
 
-        for item, report_json, calculated_sha in prepared_diagnostics:
+
+def _prepare_diagnostics(items: list[MigrationDiagnostic]) -> list[tuple[MigrationDiagnostic, str, str]]:
+    prepared: list[tuple[MigrationDiagnostic, str, str]] = []
+    for item in items:
+        if _contains_sensitive_key(item.report):
+            raise HTTPException(
+                status_code=422,
+                detail=f"diagnostic {item.report_id} contains a credential-like field name",
+            )
+        report_json = _canonical_json(item.report)
+        calculated_sha = hashlib.sha256(report_json.encode("utf-8")).hexdigest()
+        if item.report_sha256 and item.report_sha256.lower() != calculated_sha:
+            raise HTTPException(
+                status_code=422,
+                detail=f"diagnostic {item.report_id} SHA-256 mismatch",
+            )
+        prepared.append((item, report_json, calculated_sha))
+    return prepared
+
+
+def _write_diagnostics(items: list[MigrationDiagnostic]) -> tuple[int, int]:
+    prepared = _prepare_diagnostics(items)
+    inserted = 0
+    existing = 0
+    with _db() as conn:
+        for item, report_json, calculated_sha in prepared:
             cursor = conn.execute(
                 """
                 INSERT OR IGNORE INTO diagnostics (
@@ -152,14 +158,45 @@ def import_reporting_data(payload: MigrationPayload) -> dict[str, Any]:
                 ),
             )
             if cursor.rowcount:
-                diagnostics_inserted += 1
+                inserted += 1
             else:
-                diagnostics_existing += 1
+                existing += 1
+    return inserted, existing
 
+
+@router.post(
+    "/api/anthbot/admin/migration/installations",
+    dependencies=[Depends(require_admin)],
+)
+def import_installations(payload: InstallationExport) -> dict[str, Any]:
+    written = _write_installations(payload.items)
+    return {"imported": True, "installations_written": written}
+
+
+@router.post(
+    "/api/anthbot/admin/migration/diagnostics",
+    dependencies=[Depends(require_admin)],
+)
+def import_diagnostics(payload: DiagnosticsExport) -> dict[str, Any]:
+    inserted, existing = _write_diagnostics(payload.items)
+    return {
+        "imported": True,
+        "diagnostics_inserted": inserted,
+        "diagnostics_existing": existing,
+    }
+
+
+@router.post(
+    "/api/anthbot/admin/migration/import",
+    dependencies=[Depends(require_admin)],
+)
+def import_reporting_data(payload: MigrationPayload) -> dict[str, Any]:
+    written = _write_installations(payload.installations)
+    inserted, existing = _write_diagnostics(payload.diagnostics)
     return {
         "imported": True,
         "schema": MIGRATION_SCHEMA,
-        "installations_written": installations_written,
-        "diagnostics_inserted": diagnostics_inserted,
-        "diagnostics_existing": diagnostics_existing,
+        "installations_written": written,
+        "diagnostics_inserted": inserted,
+        "diagnostics_existing": existing,
     }
