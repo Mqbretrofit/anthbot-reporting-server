@@ -1,0 +1,31 @@
+name: Bump Reporting Server test.19
+
+on:
+  push:
+    paths:
+      - ".github/workflows/bump-test19.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bump app version
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('anthbot_reporting/config.yaml')
+          text = path.read_text(encoding='utf-8')
+          text = text.replace('version: "1.0.0-test.18"', 'version: "1.0.0-test.19"')
+          path.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add anthbot_reporting/config.yaml
+          git commit -m "Bump ANTHBOT Reporting Server to test.19"
+          git push
