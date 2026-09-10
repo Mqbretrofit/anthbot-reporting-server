@@ -130,7 +130,7 @@
         <div class="shell">
           <div class="topbar">
             <div class="brand"><div class="logo">A</div><div><h1>ANTHBOT Statisztika</h1><div class="subtitle">Használati statisztikák és diagnosztika</div></div></div>
-            <div class="top-actions"><button class="btn" id="refresh">Frissítés</button><button class="btn danger" id="logout">Kijelentkezés</button></div>
+            <div class="top-actions"><button class="btn primary" id="developer-agent">Fejlesztői lekérések</button><button class="btn" id="refresh">Frissítés</button><button class="btn danger" id="logout">Kijelentkezés</button></div>
           </div>
           <div class="grid kpis">
             ${kpi('Telepítések', s.installations.total ?? 0, 'Egyedi, önként engedélyezett telepítések')}
@@ -216,6 +216,7 @@
     }
 
     function bind() {
+      el('developer-agent').onclick = () => { location.href='/dashboard/developer-agent'; };
       el('refresh').onclick = loadAll;
       el('logout').onclick = async () => { await fetch('/dashboard/logout', {method:'POST', credentials:'same-origin'}); location.href='/dashboard'; };
       el('apply').onclick = loadInstallations;
