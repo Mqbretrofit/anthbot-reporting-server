@@ -36,6 +36,17 @@ class DashboardEmbeddingTests(unittest.TestCase):
         self.assertIn("diagnostic_event", response.text)
         self.assertIn("Robot hibariport", response.text)
 
+    def test_dashboard_groups_reports_by_robot_identity(self) -> None:
+        response = self.client.get("/dashboard")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Riportok robotonként", response.text)
+        self.assertIn("groupByRobot", response.text)
+        self.assertIn("robot_serial_hash", response.text)
+        self.assertIn("robot_serial_number", response.text)
+        self.assertIn("report-robot-group", response.text)
+        self.assertIn("diagnostics/summary?limit=500", response.text)
+        self.assertIn("Integrációs diagnosztikák", response.text)
+
     def test_dashboard_login_cookie_allows_iframe_session(self) -> None:
         response = self.client.post(
             "/dashboard/login",
