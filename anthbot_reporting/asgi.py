@@ -51,9 +51,23 @@ _DASHBOARD_DIAGNOSTICS_SCRIPT = """
     const style = document.createElement('style');
     style.id = 'anthbot-report-groups-style';
     style.textContent = `
-      .report-groups{display:grid;gap:14px}
+      .report-groups{display:grid;gap:18px}
+      .report-robot-group{border:1px solid #263349;border-radius:15px;background:rgba(8,16,28,.26);overflow:hidden}
+      .report-robot-summary{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 15px;cursor:pointer;list-style:none}
+      .report-robot-summary::-webkit-details-marker{display:none}
+      .report-robot-summary::before{content:'▾';color:#9fb0ca;font-size:.84rem;transition:transform .15s ease}
+      .report-robot-group:not([open])>.report-robot-summary::before{transform:rotate(-90deg)}
+      .report-robot-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;flex:1}
+      .report-robot-name{color:#eef4ff;font-weight:750;font-size:.96rem}
+      .report-robot-id{color:#9fb0ca;font-size:.76rem;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow-wrap:anywhere}
+      .report-robot-stats{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
+      .report-stat{display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;border:1px solid #263349;background:#0e1828;color:#c8d7ed;font-size:.72rem;white-space:nowrap}
+      .report-stat.error{color:#ffd7dc;border-color:rgba(255,122,138,.42)}
+      .report-stat.diag{color:#baf7e7;border-color:rgba(128,224,199,.28)}
+      .report-stat.integration{color:#cfe3ff;border-color:rgba(106,169,255,.32)}
+      .report-robot-body{display:grid;gap:14px;padding:0 14px 14px}
       .report-group{display:grid;gap:8px}
-      .report-group-head{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#dce7f8;font-weight:700}
+      .report-group-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:2px;color:#dce7f8;font-weight:700}
       .report-group-count{color:#9fb0ca;font-size:.78rem;font-weight:500}
       .report-empty{padding:12px;border:1px dashed #263349;border-radius:11px;color:#9fb0ca;font-size:.82rem}
       .diag-item.report-robot{border-color:rgba(128,224,199,.25)}
@@ -69,6 +83,10 @@ _DASHBOARD_DIAGNOSTICS_SCRIPT = """
       .report-event-line{margin-top:4px;color:#ffe3a7;font-size:.76rem;line-height:1.35}
       .report-raw-line{margin-top:3px;color:#9fb0ca;font-size:.72rem;line-height:1.3}
       .report-time-line{margin-top:5px;color:#9fb0ca;font-size:.72rem;line-height:1.3}
+      @media(max-width:700px){
+        .report-robot-summary{align-items:flex-start;flex-wrap:wrap}
+        .report-robot-stats{width:100%;justify-content:flex-start;padding-left:20px}
+      }
     `;
     document.head.appendChild(style);
   };
@@ -77,17 +95,22 @@ _DASHBOARD_DIAGNOSTICS_SCRIPT = """
     location.href = '/dashboard/diagnostics/' + encodeURIComponent(reportId);
   };
 
+  const isAutomaticError = (item) =>
+    item.trigger === 'mower_error_code' ||
+    item.trigger === 'task_event_error' ||
+    !!item.diagnostic_event;
+
   const itemHtml = (item) => {
     const error = item.diagnostic_event || null;
-    const isAutomaticError = item.trigger === 'mower_error_code' || item.trigger === 'task_event_error' || !!error;
-    const typeClass = isAutomaticError
+    const automaticError = isAutomaticError(item);
+    const typeClass = automaticError
       ? 'report-error'
       : item.report_type === 'robot'
         ? 'report-robot'
         : item.report_type === 'integration'
           ? 'report-integration'
           : '';
-    const badgeClass = isAutomaticError
+    const badgeClass = automaticError
       ? 'report-type-error'
       : item.report_type === 'robot'
         ? 'report-type-robot'
@@ -116,7 +139,7 @@ _DASHBOARD_DIAGNOSTICS_SCRIPT = """
     if (error?.task_event_time) timeParts.push(`Robot esemény: ${esc(fmt(error.task_event_time))}`);
     if (item.received_at) timeParts.push(`Riport érkezett: ${esc(fmt(item.received_at))}`);
 
-    const badgeLabel = isAutomaticError
+    const badgeLabel = automaticError
       ? 'Robot hibariport'
       : (item.report_type_label || 'Egyéb');
 
@@ -136,39 +159,118 @@ _DASHBOARD_DIAGNOSTICS_SCRIPT = """
       </div>`;
   };
 
-  const groupHtml = (title, items) => `
-    <div class="report-group">
-      <div class="report-group-head">
-        <span>${esc(title)}</span>
-        <span class="report-group-count">${items.length} riport</span>
-      </div>
-      ${items.length ? items.map(itemHtml).join('') : '<div class="report-empty">Nincs ilyen riport.</div>'}
-    </div>`;
+  const sectionHtml = (title, items) => {
+    if (!items.length) return '';
+    return `
+      <div class="report-group">
+        <div class="report-group-head">
+          <span>${esc(title)}</span>
+          <span class="report-group-count">${items.length} riport</span>
+        </div>
+        ${items.map(itemHtml).join('')}
+      </div>`;
+  };
+
+  const robotKey = (item) => {
+    if (item.robot_serial_hash) return 'hash:' + String(item.robot_serial_hash);
+    if (item.robot_serial_number) return 'serial:' + String(item.robot_serial_number);
+    if (item.robot_id) return 'id:' + String(item.robot_id);
+    return 'installation:' + String(item.installation_id || 'unknown');
+  };
+
+  const groupByRobot = (items) => {
+    const groups = new Map();
+
+    items.forEach((item) => {
+      const key = robotKey(item);
+      let group = groups.get(key);
+      if (!group) {
+        group = {
+          key,
+          robot_model: item.robot_model || null,
+          robot_id: item.robot_id || null,
+          robot_serial_number: item.robot_serial_number || null,
+          robot_serial_hash: item.robot_serial_hash || null,
+          installation_id: item.installation_id || null,
+          latest_received_at: item.received_at || '',
+          items: [],
+        };
+        groups.set(key, group);
+      }
+
+      group.items.push(item);
+      if (!group.robot_model && item.robot_model) group.robot_model = item.robot_model;
+      if (!group.robot_id && item.robot_id) group.robot_id = item.robot_id;
+      if (!group.robot_serial_number && item.robot_serial_number) group.robot_serial_number = item.robot_serial_number;
+      if (!group.robot_serial_hash && item.robot_serial_hash) group.robot_serial_hash = item.robot_serial_hash;
+      if (!group.installation_id && item.installation_id) group.installation_id = item.installation_id;
+      if ((item.received_at || '') > (group.latest_received_at || '')) group.latest_received_at = item.received_at || '';
+    });
+
+    return [...groups.values()].sort((a, b) =>
+      String(b.latest_received_at || '').localeCompare(String(a.latest_received_at || ''))
+    );
+  };
+
+  const robotGroupHtml = (group, index) => {
+    const errors = group.items.filter(isAutomaticError);
+    const robot = group.items.filter(item => item.report_type === 'robot' && !isAutomaticError(item));
+    const integration = group.items.filter(item => item.report_type === 'integration' && !isAutomaticError(item));
+    const other = group.items.filter(item => !['robot','integration'].includes(item.report_type) && !isAutomaticError(item));
+
+    const model = group.robot_model || (group.robot_id ? 'Ismeretlen modell' : 'Telepítés');
+    const identifier = group.robot_id || (group.installation_id ? shortId(group.installation_id) : 'Ismeretlen azonosító');
+    const diagnosticCount = robot.length + integration.length + other.length;
+
+    return `
+      <details class="report-robot-group" ${index === 0 ? 'open' : ''}>
+        <summary class="report-robot-summary">
+          <div class="report-robot-title">
+            <span class="report-robot-name">${esc(model)}</span>
+            <span class="report-robot-id">${esc(identifier)}</span>
+          </div>
+          <div class="report-robot-stats">
+            ${errors.length ? `<span class="report-stat error">${errors.length} hiba</span>` : ''}
+            ${diagnosticCount ? `<span class="report-stat diag">${diagnosticCount} diagnosztika</span>` : ''}
+            ${integration.length ? `<span class="report-stat integration">${integration.length} integráció</span>` : ''}
+            <span class="report-stat">${group.items.length} összesen</span>
+          </div>
+        </summary>
+        <div class="report-robot-body">
+          ${sectionHtml('Automatikus hibariportok', errors)}
+          ${sectionHtml('Robot diagnosztikák', robot)}
+          ${sectionHtml('Integrációs diagnosztikák', integration)}
+          ${sectionHtml('Egyéb riportok', other)}
+        </div>
+      </details>`;
+  };
 
   async function renderGroupedDiagnostics(box) {
     if (!box || processed.has(box)) return;
     processed.add(box);
     ensureStyle();
 
+    const section = box.closest('.section');
+    const sectionTitle = section?.querySelector('.section-title');
+    const sectionMeta = section?.querySelector('.section-head .small');
+    if (sectionTitle) sectionTitle.textContent = 'Riportok robotonként';
+    if (sectionMeta) sectionMeta.textContent = 'betöltés…';
+
     try {
-      const res = await fetch('/api/anthbot/admin/diagnostics/summary?limit=50', {credentials: 'same-origin'});
+      const res = await fetch('/api/anthbot/admin/diagnostics/summary?limit=500', {credentials: 'same-origin'});
       if (res.status === 401) { location.href = '/dashboard'; return; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const data = await res.json();
       const items = Array.isArray(data.items) ? data.items : [];
-      const errors = items.filter(x => x.trigger === 'mower_error_code' || x.trigger === 'task_event_error' || x.diagnostic_event);
-      const robot = items.filter(x => x.report_type === 'robot' && !errors.includes(x));
-      const integration = items.filter(x => x.report_type === 'integration' && !errors.includes(x));
-      const other = items.filter(x => !['robot','integration'].includes(x.report_type) && !errors.includes(x));
+      const robotGroups = groupByRobot(items);
+      if (sectionMeta) {
+        sectionMeta.textContent = `${robotGroups.length} robot/csoport · ${items.length} riport`;
+      }
 
-      box.innerHTML = `
-        <div class="report-groups">
-          ${groupHtml('Automatikus hibariportok', errors)}
-          ${groupHtml('Robot diagnosztikák', robot)}
-          ${groupHtml('Integrációs diagnosztikák', integration)}
-          ${other.length ? groupHtml('Egyéb riportok', other) : ''}
-        </div>`;
+      box.innerHTML = robotGroups.length
+        ? `<div class="report-groups">${robotGroups.map(robotGroupHtml).join('')}</div>`
+        : '<div class="report-empty">Még nem érkezett diagnosztikai jelentés.</div>';
 
       box.querySelectorAll('.diag-item[data-report-id]').forEach((item) => {
         const reportId = item.dataset.reportId;
@@ -184,6 +286,7 @@ _DASHBOARD_DIAGNOSTICS_SCRIPT = """
         });
       });
     } catch (err) {
+      if (sectionMeta) sectionMeta.textContent = 'hiba';
       box.innerHTML = `<div class="empty">A riportok csoportosítása nem sikerült: ${esc(err.message)}</div>`;
     }
   }
