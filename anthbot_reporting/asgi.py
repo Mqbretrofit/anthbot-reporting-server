@@ -83,9 +83,17 @@ _DASHBOARD_DIAGNOSTICS_SCRIPT = """
       .report-event-line{margin-top:4px;color:#ffe3a7;font-size:.76rem;line-height:1.35}
       .report-raw-line{margin-top:3px;color:#9fb0ca;font-size:.72rem;line-height:1.3}
       .report-time-line{margin-top:5px;color:#9fb0ca;font-size:.72rem;line-height:1.3}
+      .report-item-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;align-self:start}
+      .report-delete,.report-delete-all{border:1px solid rgba(255,122,138,.45);background:rgba(255,122,138,.09);color:#ffdfe4;border-radius:10px;padding:6px 10px;cursor:pointer;font:inherit;font-size:.76rem;font-weight:700;white-space:nowrap;transition:.15s ease}
+      .report-delete:hover,.report-delete-all:hover{background:rgba(255,122,138,.18);border-color:rgba(255,122,138,.72)}
+      .report-delete:disabled,.report-delete-all:disabled{opacity:.5;cursor:wait}
+      .report-diagnostics-head{flex-wrap:wrap}
+      .report-delete-all{margin-left:auto;padding:7px 11px}
       @media(max-width:700px){
         .report-robot-summary{align-items:flex-start;flex-wrap:wrap}
         .report-robot-stats{width:100%;justify-content:flex-start;padding-left:20px}
+        .report-item-actions{justify-content:flex-start}
+        .report-delete-all{margin-left:0}
       }
     `;
     document.head.appendChild(style);
@@ -93,6 +101,91 @@ _DASHBOARD_DIAGNOSTICS_SCRIPT = """
 
   const openReport = (reportId) => {
     location.href = '/dashboard/diagnostics/' + encodeURIComponent(reportId);
+  };
+
+  const responseError = async (res) => {
+    try {
+      const payload = await res.json();
+      if (payload?.detail) return String(payload.detail);
+    } catch (_) {}
+    return `HTTP ${res.status}`;
+  };
+
+  const deleteReport = async (reportId, button) => {
+    if (!reportId) return;
+    if (!window.confirm(`Biztosan törlöd ezt a diagnosztikai riportot?\n\n${reportId}\n\nEz nem vonható vissza.`)) return;
+
+    const originalLabel = button?.textContent || 'Törlés';
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Törlés…';
+    }
+
+    try {
+      const res = await fetch('/api/anthbot/admin/diagnostics/' + encodeURIComponent(reportId), {
+        method: 'DELETE',
+        credentials: 'same-origin'
+      });
+      if (res.status === 401) { location.href = '/dashboard'; return; }
+      if (!res.ok) throw new Error(await responseError(res));
+      location.reload();
+    } catch (err) {
+      window.alert(`A riport törlése nem sikerült: ${err.message}`);
+      if (button) {
+        button.disabled = false;
+        button.textContent = originalLabel;
+      }
+    }
+  };
+
+  const deleteBatch = async (items) => {
+    const batchSize = 20;
+    for (let start = 0; start < items.length; start += batchSize) {
+      const batch = items.slice(start, start + batchSize);
+      const responses = await Promise.all(batch.map((item) =>
+        fetch('/api/anthbot/admin/diagnostics/' + encodeURIComponent(item.report_id), {
+          method: 'DELETE',
+          credentials: 'same-origin'
+        })
+      ));
+      for (const res of responses) {
+        if (res.status === 401) { location.href = '/dashboard'; throw new Error('Nincs jogosultság'); }
+        if (!res.ok) throw new Error(await responseError(res));
+      }
+    }
+  };
+
+  const deleteAllDiagnostics = async (button, currentCount) => {
+    const countLabel = Number.isFinite(currentCount) ? ` (${currentCount} db)` : '';
+    if (!window.confirm(`Biztosan törlöd az ÖSSZES diagnosztikai riportot${countLabel}?\n\nEz minden robot összes tárolt diagnosztikai riportját törli, és nem vonható vissza.`)) return;
+
+    const originalLabel = button?.textContent || 'Összes diagnosztika törlése';
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Összes törlése…';
+    }
+
+    let deleted = 0;
+    try {
+      while (true) {
+        const summary = await fetch('/api/anthbot/admin/diagnostics/summary?limit=500', {credentials: 'same-origin'});
+        if (summary.status === 401) { location.href = '/dashboard'; return; }
+        if (!summary.ok) throw new Error(await responseError(summary));
+        const data = await summary.json();
+        const items = Array.isArray(data.items) ? data.items : [];
+        if (!items.length) break;
+        await deleteBatch(items);
+        deleted += items.length;
+      }
+      window.alert(`${deleted} diagnosztikai riport törölve.`);
+      location.reload();
+    } catch (err) {
+      window.alert(`Az összes diagnosztika törlése nem sikerült: ${err.message}`);
+      if (button) {
+        button.disabled = false;
+        button.textContent = originalLabel;
+      }
+    }
   };
 
   const isAutomaticError = (item) =>
@@ -155,7 +248,10 @@ _DASHBOARD_DIAGNOSTICS_SCRIPT = """
           ${showRawDescription ? `<div class="report-raw-line">Gyári leírás: ${esc(rawDescription)}</div>` : ''}
           ${timeParts.length ? `<div class="report-time-line">${timeParts.join(' · ')}</div>` : ''}
         </div>
-        <span class="pill ${badgeClass}">${esc(badgeLabel)}</span>
+        <div class="report-item-actions">
+          <span class="pill ${badgeClass}">${esc(badgeLabel)}</span>
+          <button type="button" class="report-delete" data-delete-report-id="${esc(item.report_id)}" aria-label="Riport törlése: ${esc(item.report_id)}">Törlés</button>
+        </div>
       </div>`;
   };
 
@@ -251,8 +347,10 @@ _DASHBOARD_DIAGNOSTICS_SCRIPT = """
     ensureStyle();
 
     const section = box.closest('.section');
+    const sectionHead = section?.querySelector('.section-head');
     const sectionTitle = section?.querySelector('.section-title');
     const sectionMeta = section?.querySelector('.section-head .small');
+    if (sectionHead) sectionHead.classList.add('report-diagnostics-head');
     if (sectionTitle) sectionTitle.textContent = 'Riportok robotonként';
     if (sectionMeta) sectionMeta.textContent = 'betöltés…';
 
@@ -268,9 +366,37 @@ _DASHBOARD_DIAGNOSTICS_SCRIPT = """
         sectionMeta.textContent = `${robotGroups.length} robot/csoport · ${items.length} riport`;
       }
 
+      if (sectionHead) {
+        let deleteAllButton = sectionHead.querySelector('.report-delete-all');
+        if (!deleteAllButton) {
+          deleteAllButton = document.createElement('button');
+          deleteAllButton.type = 'button';
+          deleteAllButton.className = 'report-delete-all';
+          sectionHead.appendChild(deleteAllButton);
+        }
+        deleteAllButton.textContent = `Összes diagnosztika törlése${items.length ? ` (${items.length})` : ''}`;
+        deleteAllButton.disabled = items.length === 0;
+        deleteAllButton.onclick = (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          deleteAllDiagnostics(deleteAllButton, items.length);
+        };
+      }
+
       box.innerHTML = robotGroups.length
         ? `<div class="report-groups">${robotGroups.map(robotGroupHtml).join('')}</div>`
         : '<div class="report-empty">Még nem érkezett diagnosztikai jelentés.</div>';
+
+      box.querySelectorAll('.report-delete[data-delete-report-id]').forEach((button) => {
+        const reportId = button.dataset.deleteReportId;
+        if (!reportId) return;
+        button.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          deleteReport(reportId, button);
+        });
+        button.addEventListener('keydown', (event) => event.stopPropagation());
+      });
 
       box.querySelectorAll('.diag-item[data-report-id]').forEach((item) => {
         const reportId = item.dataset.reportId;
