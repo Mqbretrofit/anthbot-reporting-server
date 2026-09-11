@@ -35,16 +35,28 @@ class DeveloperAgentApiTests(unittest.TestCase):
     def _headers(self) -> dict[str, str]:
         return {"Authorization": "Bearer test-admin-token"}
 
-    def _poll(self) -> dict:
+    def _modern_capabilities(self) -> dict:
+        return {
+            "probe_actions": sorted(agent.ALLOWED_PROBES),
+            "job_params": True,
+            "state_inspector_paths": True,
+            "full_state": True,
+            "state_diff": True,
+        }
+
+    def _poll(self, *, modern: bool = False) -> dict:
+        payload = {
+            "schema": "anthbot-developer-agent-poll-v1",
+            "installation_id": self.installation_id,
+            "agent_key": self.agent_key,
+            "integration_version": "2.4.6.3" if modern else "2.4.6.2",
+            "models": ["N8"],
+        }
+        if modern:
+            payload["capabilities"] = self._modern_capabilities()
         response = self.client.post(
             "/api/anthbot/developer-agent/poll",
-            json={
-                "schema": "anthbot-developer-agent-poll-v1",
-                "installation_id": self.installation_id,
-                "agent_key": self.agent_key,
-                "integration_version": "2.4.6-beta.2",
-                "models": ["N8"],
-            },
+            json=payload,
         )
         self.assertEqual(response.status_code, 200, response.text)
         return response.json()
@@ -59,7 +71,10 @@ class DeveloperAgentApiTests(unittest.TestCase):
             headers=self._headers(),
         )
         self.assertEqual(agents.status_code, 200)
-        self.assertEqual(agents.json()["items"][0]["models"], ["N8"])
+        item = agents.json()["items"][0]
+        self.assertEqual(item["models"], ["N8"])
+        self.assertTrue(item["legacy_client"])
+        self.assertEqual(item["capabilities"], {})
 
         stopped = self.client.post(
             f"/api/anthbot/admin/developer-agent/installations/{self.installation_id}/enabled",
@@ -79,6 +94,20 @@ class DeveloperAgentApiTests(unittest.TestCase):
         self.assertEqual(resumed.status_code, 200)
         self.assertTrue(self._poll()["server_enabled"])
 
+    def test_modern_poll_stores_capabilities(self) -> None:
+        self._poll(modern=True)
+        agents = self.client.get(
+            "/api/anthbot/admin/developer-agent/installations",
+            headers=self._headers(),
+        )
+        self.assertEqual(agents.status_code, 200)
+        item = agents.json()["items"][0]
+        self.assertFalse(item["legacy_client"])
+        self.assertTrue(item["capabilities"]["job_params"])
+        self.assertIn("state_inspector", item["capabilities"]["probe_actions"])
+        self.assertIn("full_diagnostics", agents.json()["allowed_probes"])
+        self.assertNotIn("full_diagnostics", agents.json()["legacy_probes"])
+
     def test_admin_can_queue_whitelisted_job_and_receive_chunked_result(self) -> None:
         self._poll()
         created = self.client.post(
@@ -97,6 +126,7 @@ class DeveloperAgentApiTests(unittest.TestCase):
         self.assertEqual(poll["job"]["job_id"], job_id)
         self.assertEqual(poll["job"]["action"], "map_definition")
         self.assertEqual(poll["job"]["target_model"], "N8")
+        self.assertEqual(poll["job"]["params"], {})
 
         result = {
             "status": "ok",
@@ -138,13 +168,86 @@ class DeveloperAgentApiTests(unittest.TestCase):
         self.assertEqual(item["status"], "completed")
         self.assertEqual(item["result"]["targets"][0]["model"], "N8")
 
-    def test_unknown_probe_is_rejected_by_admin_schema(self) -> None:
+    def test_parameterized_state_inspector_round_trips_to_modern_client(self) -> None:
+        self._poll(modern=True)
+        params = {
+            "paths": [
+                "reported_state._history_path_info",
+                "reported_state._m_series_last_mowing_record",
+            ]
+        }
+        created = self.client.post(
+            "/api/anthbot/admin/developer-agent/jobs",
+            json={
+                "installation_id": self.installation_id,
+                "action": "state_inspector",
+                "target_model": "N8",
+                "params": params,
+            },
+            headers=self._headers(),
+        )
+        self.assertEqual(created.status_code, 201, created.text)
+        self.assertEqual(created.json()["params"], params)
+
+        polled = self._poll(modern=True)
+        self.assertEqual(polled["job"]["action"], "state_inspector")
+        self.assertEqual(polled["job"]["params"], params)
+
+        jobs = self.client.get(
+            "/api/anthbot/admin/developer-agent/jobs",
+            headers=self._headers(),
+        )
+        self.assertEqual(jobs.status_code, 200)
+        self.assertEqual(jobs.json()["items"][0]["params"], params)
+
+    def test_legacy_client_cannot_queue_new_generic_probe(self) -> None:
         self._poll()
         response = self.client.post(
             "/api/anthbot/admin/developer-agent/jobs",
             json={
                 "installation_id": self.installation_id,
+                "action": "full_diagnostics",
+                "target_model": "N8",
+            },
+            headers=self._headers(),
+        )
+        self.assertEqual(response.status_code, 409, response.text)
+
+    def test_modern_client_can_queue_new_generic_probe(self) -> None:
+        self._poll(modern=True)
+        response = self.client.post(
+            "/api/anthbot/admin/developer-agent/jobs",
+            json={
+                "installation_id": self.installation_id,
+                "action": "full_diagnostics",
+                "target_model": "N8",
+                "params": {},
+            },
+            headers=self._headers(),
+        )
+        self.assertEqual(response.status_code, 201, response.text)
+
+    def test_unknown_probe_is_rejected_by_admin_schema(self) -> None:
+        self._poll(modern=True)
+        response = self.client.post(
+            "/api/anthbot/admin/developer-agent/jobs",
+            json={
+                "installation_id": self.installation_id,
                 "action": "publish_mqtt_command",
+            },
+            headers=self._headers(),
+        )
+        self.assertEqual(response.status_code, 422)
+
+    def test_sensitive_job_params_are_rejected(self) -> None:
+        self._poll(modern=True)
+        response = self.client.post(
+            "/api/anthbot/admin/developer-agent/jobs",
+            json={
+                "installation_id": self.installation_id,
+                "action": "state_inspector",
+                "target_model": "N8",
+                "params": {"access_token": "bad"},
             },
             headers=self._headers(),
         )
@@ -158,8 +261,9 @@ class DeveloperAgentApiTests(unittest.TestCase):
                 "schema": "anthbot-developer-agent-poll-v1",
                 "installation_id": self.installation_id,
                 "agent_key": "b" * 48,
-                "integration_version": "2.4.6-beta.2",
+                "integration_version": "2.4.6.3",
                 "models": ["N8"],
+                "capabilities": self._modern_capabilities(),
             },
         )
         self.assertEqual(response.status_code, 401)
