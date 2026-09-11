@@ -35,6 +35,9 @@ class DashboardEmbeddingTests(unittest.TestCase):
         self.assertIn("Robot diagnosztikák", response.text)
         self.assertIn("diagnostic_event", response.text)
         self.assertIn("Robot hibariport", response.text)
+        self.assertIn("Összes diagnosztika törlése", response.text)
+        self.assertIn("report-delete", response.text)
+        self.assertIn("method: 'DELETE'", response.text)
 
     def test_dashboard_groups_reports_by_robot_identity(self) -> None:
         response = self.client.get("/dashboard")
@@ -46,6 +49,8 @@ class DashboardEmbeddingTests(unittest.TestCase):
         self.assertIn("report-robot-group", response.text)
         self.assertIn("diagnostics/summary?limit=500", response.text)
         self.assertIn("Integrációs diagnosztikák", response.text)
+        self.assertIn("data-delete-report-id", response.text)
+        self.assertIn("deleteAllDiagnostics", response.text)
 
     def test_dashboard_login_cookie_allows_iframe_session(self) -> None:
         response = self.client.post(
