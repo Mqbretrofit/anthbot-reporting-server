@@ -101,6 +101,7 @@ def _report_identity(report: Any) -> dict[str, Any]:
             "robot_model": None,
             "robot_id": None,
             "robot_serial_number": None,
+            "robot_serial_suffix": None,
             "robot_serial_hash": None,
         }
 
@@ -113,6 +114,12 @@ def _report_identity(report: Any) -> dict[str, Any]:
     model = str(model).strip() if isinstance(model, str) and model.strip() else None
     serial = device.get("serial_number")
     serial = str(serial).strip() if isinstance(serial, str) and serial.strip() else None
+    serial_suffix = device.get("serial_suffix")
+    serial_suffix = (
+        str(serial_suffix).strip()[-4:]
+        if isinstance(serial_suffix, str) and serial_suffix.strip()
+        else (serial[-4:] if serial else None)
+    )
     serial_hash = device.get("serial_sha256")
     serial_hash = (
         str(serial_hash).strip()
@@ -120,15 +127,19 @@ def _report_identity(report: Any) -> dict[str, Any]:
         else None
     )
 
-    # The mower serial number is the clearest stable device identifier for the
-    # reporting administrator and for reports forwarded to ANTHBOT support.
-    # It is not an account credential. Keep the hash as a fallback for older
-    # reports that were generated without the serial number.
-    robot_id = (
-        f"S/N: {serial}"
-        if serial
-        else (f"Robot ID: {serial_hash[:12]}" if serial_hash else None)
-    )
+    # Automatic reports intentionally omit the full mower serial number.  A
+    # four-character suffix is enough for the administrator to distinguish two
+    # same-model robots while the stable hash remains the grouping identity.
+    if serial:
+        robot_id = f"S/N: {serial}"
+    elif serial_suffix and serial_hash:
+        robot_id = f"S/N: …{serial_suffix} · Robot ID: {serial_hash[:12]}"
+    elif serial_suffix:
+        robot_id = f"S/N: …{serial_suffix}"
+    elif serial_hash:
+        robot_id = f"Robot ID: {serial_hash[:12]}"
+    else:
+        robot_id = None
 
     is_robot_report = (
         schema == "anthbot-firmware-diagnostics-v1"
@@ -144,6 +155,7 @@ def _report_identity(report: Any) -> dict[str, Any]:
             "robot_model": model,
             "robot_id": robot_id,
             "robot_serial_number": serial,
+            "robot_serial_suffix": serial_suffix,
             "robot_serial_hash": serial_hash,
         }
 
@@ -164,6 +176,7 @@ def _report_identity(report: Any) -> dict[str, Any]:
             "robot_model": model,
             "robot_id": robot_id,
             "robot_serial_number": serial,
+            "robot_serial_suffix": serial_suffix,
             "robot_serial_hash": serial_hash,
         }
 
@@ -174,6 +187,7 @@ def _report_identity(report: Any) -> dict[str, Any]:
         "robot_model": model,
         "robot_id": robot_id,
         "robot_serial_number": serial,
+        "robot_serial_suffix": serial_suffix,
         "robot_serial_hash": serial_hash,
     }
 
