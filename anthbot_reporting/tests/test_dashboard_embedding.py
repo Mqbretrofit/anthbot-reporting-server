@@ -104,7 +104,26 @@ class DashboardEmbeddingTests(unittest.TestCase):
         self.assertEqual(identity["report_type"], "robot")
         self.assertEqual(identity["robot_model"], "M9 Pro")
         self.assertEqual(identity["robot_serial_number"], "26230LGW00000110")
+        self.assertEqual(identity["robot_serial_suffix"], "0110")
         self.assertEqual(identity["robot_id"], "S/N: 26230LGW00000110")
+
+    def test_robot_identity_uses_masked_suffix_with_hash(self) -> None:
+        identity = diagnostics_dashboard._report_identity(
+            {
+                "schema": "anthbot-firmware-diagnostics-v1",
+                "device": {
+                    "model": "M9 Pro",
+                    "serial_suffix": "0046",
+                    "serial_sha256": "5770fbd15a25abcdef",
+                },
+            }
+        )
+        self.assertIsNone(identity["robot_serial_number"])
+        self.assertEqual(identity["robot_serial_suffix"], "0046")
+        self.assertEqual(
+            identity["robot_id"],
+            "S/N: …0046 · Robot ID: 5770fbd15a25",
+        )
 
     def test_robot_identity_falls_back_to_hash_for_older_reports(self) -> None:
         identity = diagnostics_dashboard._report_identity(
@@ -117,6 +136,7 @@ class DashboardEmbeddingTests(unittest.TestCase):
             }
         )
         self.assertIsNone(identity["robot_serial_number"])
+        self.assertIsNone(identity["robot_serial_suffix"])
         self.assertEqual(identity["robot_id"], "Robot ID: abcdef012345")
 
 
