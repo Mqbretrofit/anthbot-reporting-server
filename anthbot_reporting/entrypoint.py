@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app import app as fastapi_app
+from diagnostics_dedupe import DiagnosticsDedupeMiddleware
 from migration_api import router as migration_router
 
 fastapi_app.include_router(migration_router)
@@ -67,4 +68,6 @@ class MigrationUploadMiddleware:
         await self.app(migrated_scope, receive, send)
 
 
-app = MigrationUploadMiddleware(dashboard_app)
+# Defense in depth: clients deduplicate automatic diagnostics themselves, but
+# production must also protect its persistent store from older/buggy clients.
+app = DiagnosticsDedupeMiddleware(MigrationUploadMiddleware(dashboard_app))
