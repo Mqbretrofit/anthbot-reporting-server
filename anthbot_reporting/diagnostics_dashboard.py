@@ -91,6 +91,28 @@ def _diagnostic_event_summary(report: Any) -> dict[str, Any] | None:
     return summary
 
 
+def _cloud_api_error_summary(report: Any) -> dict[str, Any] | None:
+    """Extract the privacy-safe ANTHBOT cloud/API failure context."""
+    if not isinstance(report, dict):
+        return None
+    error = report.get("cloud_api_error")
+    if not isinstance(error, dict):
+        return None
+
+    summary = {
+        "category": error.get("category"),
+        "operation": error.get("operation"),
+        "api_code": error.get("api_code"),
+        "http_status": error.get("http_status"),
+        "temporary": error.get("temporary"),
+        "attempts": error.get("attempts"),
+        "message": error.get("message"),
+    }
+    if not any(value is not None and value != "" for value in summary.values()):
+        return None
+    return summary
+
+
 def _report_identity(report: Any) -> dict[str, Any]:
     """Classify one stored report and extract mower identity for the admin UI."""
     if not isinstance(report, dict):
@@ -140,6 +162,18 @@ def _report_identity(report: Any) -> dict[str, Any]:
         robot_id = f"Robot ID: {serial_hash[:12]}"
     else:
         robot_id = None
+
+    if isinstance(report.get("cloud_api_error"), dict):
+        return {
+            "report_type": "robot",
+            "report_type_label": "ANTHBOT cloud/API hiba",
+            "report_schema": schema,
+            "robot_model": model,
+            "robot_id": robot_id,
+            "robot_serial_number": serial,
+            "robot_serial_suffix": serial_suffix,
+            "robot_serial_hash": serial_hash,
+        }
 
     is_robot_report = (
         schema == "anthbot-firmware-diagnostics-v1"
@@ -207,6 +241,7 @@ def _row_payload(row: Any, *, include_report: bool) -> dict[str, Any]:
         "report_sha256": row["report_sha256"],
         **_report_identity(report),
         "diagnostic_event": _diagnostic_event_summary(report),
+        "cloud_api_error": _cloud_api_error_summary(report),
     }
     if include_report:
         item["report"] = report
