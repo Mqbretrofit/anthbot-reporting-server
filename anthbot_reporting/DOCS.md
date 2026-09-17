@@ -18,12 +18,6 @@ The SQLite database is stored in the app `/data` volume as
 
 ## Tunnel
 
-## Endpoints
-
-- `POST /api/anthbot/telemetry`
-- `POST /api/anthbot/diagnostics`
-- `GET /api/anthbot/admin/stats`
-- `GET /api/anthbot/admin/diagnostics`
 Publish local port 8080 through your own tunnel. Do not commit the public
 hostname or LAN address.
 
@@ -31,3 +25,11 @@ After start, `GET /health` should return:
 
 ```json
 {"ok":true,"schema":"anthbot-reporting-server-v1"}
+
+## Endpoints
+
+- `POST /api/anthbot/telemetry`
+- `POST /api/anthbot/diagnostics`
+- `GET /api/anthbot/admin/stats`
+- `GET /api/anthbot/admin/diagnostics`
+
