@@ -32,4 +32,4 @@ After start, `GET /health` should return:
 - `POST /api/anthbot/diagnostics`
 - `GET /api/anthbot/admin/stats`
 - `GET /api/anthbot/admin/diagnostics`
-
+```
