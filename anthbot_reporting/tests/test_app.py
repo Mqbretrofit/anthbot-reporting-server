@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import os
 from pathlib import Path
 import tempfile
@@ -18,6 +19,9 @@ class ReportingServerTests(unittest.TestCase):
             Path(self.tempdir.name) / "reporting.sqlite3"
         )
         os.environ["ANTHBOT_ADMIN_TOKEN"] = "test-admin-token"
+        os.environ["ANTHBOT_VOICE_PACK_DIR"] = str(
+            Path(self.tempdir.name) / "voice_packs"
+        )
         self.client_ctx = TestClient(server.app, base_url="https://testserver")
         self.client = self.client_ctx.__enter__()
         self.installation_id = str(uuid4())
@@ -199,6 +203,106 @@ class ReportingServerTests(unittest.TestCase):
         self.assertEqual(
             pack["music_md5"], "74e1955f019aa422d446a0d367232826"
         )
+
+    def test_admin_can_upload_serve_replace_and_delete_voice_pack(self) -> None:
+        content_v1 = b"verified-czech-voice-pack-v1"
+        response = self.client.post(
+            "/api/anthbot/admin/voice-packs",
+            headers=self._admin_headers(),
+            files={"file": ("cs.pack", content_v1, "application/octet-stream")},
+            data={
+                "language": "Čeština",
+                "language_code": "cs",
+                "version": "1.0.0",
+                "english_name": "German",
+                "sex": "girl",
+                "music_package": "3",
+                "models": "Anthbot Genie 1000",
+            },
+        )
+        self.assertEqual(response.status_code, 201)
+        pack_v1 = response.json()["pack"]
+        self.assertEqual(pack_v1["language"], "Čeština")
+        self.assertEqual(
+            pack_v1["music_md5"],
+            hashlib.md5(content_v1, usedforsecurity=False).hexdigest(),
+        )
+        self.assertEqual(pack_v1["size"], len(content_v1))
+        self.assertTrue(
+            pack_v1["music_url"].startswith("https://testserver/voice-packs/")
+        )
+
+        download_path = pack_v1["music_url"].removeprefix("https://testserver")
+        downloaded = self.client.get(download_path)
+        self.assertEqual(downloaded.status_code, 200)
+        self.assertEqual(downloaded.content, content_v1)
+        self.assertIn("immutable", downloaded.headers["cache-control"])
+
+        public = self.client.get("/api/anthbot/voice-packs").json()
+        self.assertEqual(len(public["packs"]), 2)
+        self.assertEqual(
+            {item["language_code"] for item in public["packs"]},
+            {"hu", "cs"},
+        )
+
+        content_v2 = b"verified-czech-voice-pack-v2"
+        replaced = self.client.post(
+            "/api/anthbot/admin/voice-packs",
+            headers=self._admin_headers(),
+            files={"file": ("cs.pack", content_v2, "application/octet-stream")},
+            data={
+                "language": "Čeština",
+                "language_code": "cs",
+                "version": "1.0.1",
+            },
+        )
+        self.assertEqual(replaced.status_code, 201)
+        pack_v2 = replaced.json()["pack"]
+        self.assertNotEqual(pack_v1["music_url"], pack_v2["music_url"])
+
+        old_download = self.client.get(download_path)
+        self.assertEqual(old_download.status_code, 404)
+
+        public = self.client.get("/api/anthbot/voice-packs").json()
+        czech = [
+            item for item in public["packs"] if item["language_code"] == "cs"
+        ]
+        self.assertEqual(len(czech), 1)
+        self.assertEqual(czech[0]["version"], "1.0.1")
+
+        deleted = self.client.delete(
+            f"/api/anthbot/admin/voice-packs/{pack_v2['id']}",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(deleted.status_code, 200)
+        self.assertTrue(deleted.json()["deleted"])
+
+        public = self.client.get("/api/anthbot/voice-packs").json()
+        self.assertEqual([item["language_code"] for item in public["packs"]], ["hu"])
+
+    def test_voice_pack_upload_requires_admin_and_rejects_empty_file(self) -> None:
+        unauthorized = self.client.post(
+            "/api/anthbot/admin/voice-packs",
+            files={"file": ("sk.pack", b"x", "application/octet-stream")},
+            data={
+                "language": "Slovenčina",
+                "language_code": "sk",
+                "version": "1.0.0",
+            },
+        )
+        self.assertEqual(unauthorized.status_code, 401)
+
+        empty = self.client.post(
+            "/api/anthbot/admin/voice-packs",
+            headers=self._admin_headers(),
+            files={"file": ("sk.pack", b"", "application/octet-stream")},
+            data={
+                "language": "Slovenčina",
+                "language_code": "sk",
+                "version": "1.0.0",
+            },
+        )
+        self.assertEqual(empty.status_code, 422)
 
     def test_health(self) -> None:
         response = self.client.get("/health")
