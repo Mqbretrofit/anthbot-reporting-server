@@ -333,6 +333,116 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertFalse(entitlements.json()["licensed"])
         self.assertEqual(entitlements.json()["packs"], [])
 
+    def test_paid_voice_ownership_survives_reupload_version_change(self) -> None:
+        pack = self._upload_pack()
+        old_pack_id = pack["id"]
+        priced = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{old_pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 299, "currency": "eur"},
+        )
+        self.assertEqual(priced.status_code, 200)
+
+        client_token = "C" * 48
+        pairing = self.client.post(
+            "/api/anthbot/store/client/pair",
+            json={"client_token": client_token},
+        )
+        self.assertEqual(pairing.status_code, 200)
+        pair_code = pairing.json()["store_url"].split("pair=", 1)[1]
+        client_id = store_api._client_id_from_token(client_token)
+
+        order = store_api._upsert_order_from_session(
+            {
+                "id": "cs_test_upgrade_123",
+                "object": "checkout.session",
+                "created": int(time.time()),
+                "client_reference_id": old_pack_id,
+                "metadata": {
+                    "pack_id": old_pack_id,
+                    "community_id": "cs_vlasta_standard",
+                    "store_client_id": client_id,
+                },
+                "payment_status": "paid",
+                "status": "complete",
+                "amount_total": 299,
+                "currency": "eur",
+                "payment_intent": "pi_upgrade",
+            }
+        )
+        self.assertEqual(order["community_id"], "cs_vlasta_standard")
+        license_key = store_api._license_for_order(order)
+
+        reupload = self.client.post(
+            "/api/anthbot/admin/voice-packs",
+            headers=self._admin_headers(),
+            files={
+                "file": (
+                    "cs-v2.pack",
+                    b"paid-community-pack-v2",
+                    "application/octet-stream",
+                )
+            },
+            data={
+                "language": "Čeština",
+                "language_code": "cs",
+                "version": "2.0.0",
+                "community_id": "cs_vlasta_standard",
+                "variant_id": "vlasta_standard",
+                "variant_name": "Vlasta (női) · Standard",
+                "voice_gender": "female",
+                "technical_slot": "German_girl",
+            },
+        )
+        self.assertEqual(reupload.status_code, 201)
+        current_pack = reupload.json()["pack"]
+        current_pack_id = current_pack["id"]
+        self.assertNotEqual(current_pack_id, old_pack_id)
+        self.assertEqual(current_pack["access"], "paid")
+        self.assertEqual(current_pack["price_amount"], 299)
+
+        entitlements = self.client.post(
+            "/api/anthbot/store/client/entitlements",
+            json={"client_token": client_token},
+        )
+        self.assertEqual(entitlements.status_code, 200)
+        entitled_pack = entitlements.json()["packs"][0]
+        self.assertEqual(entitled_pack["id"], current_pack_id)
+        upgraded_download = self.client.get(
+            entitled_pack["music_url"].removeprefix("https://testserver")
+        )
+        self.assertEqual(upgraded_download.status_code, 200)
+        self.assertEqual(upgraded_download.content, b"paid-community-pack-v2")
+
+        manual = self.client.post(
+            "/api/anthbot/store/entitlements",
+            json={"license_key": license_key},
+        )
+        self.assertEqual(manual.status_code, 200)
+        self.assertEqual(manual.json()["packs"][0]["id"], current_pack_id)
+
+        with patch.object(store_api, "_create_checkout_session") as create:
+            duplicate = self.client.post(
+                "/api/anthbot/store/checkout",
+                json={"pack_id": current_pack_id, "pair_code": pair_code},
+            )
+        self.assertEqual(duplicate.status_code, 200)
+        self.assertTrue(duplicate.json()["already_owned"])
+        create.assert_not_called()
+
+        admin = self.client.get(
+            "/api/anthbot/admin/store/voice-packs",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(admin.status_code, 200)
+        current_admin = next(
+            item
+            for item in admin.json()["items"]
+            if item["id"] == current_pack_id
+        )
+        self.assertEqual(current_admin["sales"], 1)
+        self.assertEqual(current_admin["revenue"], 299)
+
     def test_paid_pricing_survives_reupload(self) -> None:
         pack = self._upload_pack()
         pack_id = pack["id"]
