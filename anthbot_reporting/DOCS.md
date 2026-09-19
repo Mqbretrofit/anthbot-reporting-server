@@ -118,6 +118,28 @@ flow, so Managed Payments merchant-of-record eligibility requirements are not
 applied. The inline product still carries `txcd_10401100` (Digital Audio Works
 - downloaded - non subscription - with permanent rights) for future tax use.
 
+### Automatic ANTHBOT Map entitlement linking
+
+ANTHBOT Map can create a random local store client token that never contains an
+ANTHBOT account name, mower serial number, email address, or other account
+identifier. The Reporting Server hashes that token to an opaque client ID and
+never stores the token itself.
+
+The integration requests a temporary browser pairing URL, opens the store with
+that pairing code, and the Checkout Session records only the opaque client ID.
+After payment, ANTHBOT Map polls its entitlement endpoint with the local token.
+Purchased packs are then returned with licensed download URLs and appear in the
+normal voice-pack selector automatically. Manual license copying remains only a
+recovery fallback.
+
+Client endpoints:
+
+- `POST /api/anthbot/store/client/pair`
+- `POST /api/anthbot/store/client/entitlements`
+
+Pairing codes expire after seven days. They can associate purchases with a Map
+installation but cannot read entitlements or download paid packs by themselves.
+
 Public endpoints:
 
 - `GET /store`
