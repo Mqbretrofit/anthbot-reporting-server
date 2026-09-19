@@ -493,8 +493,9 @@ class VoiceStoreTests(unittest.TestCase):
         kwargs = create_session.call_args.kwargs
         self.assertIsNotNone(kwargs["client_id"])
         self.assertIsNone(kwargs["pair_code"])
+        self.assertEqual(kwargs["entitlement_scope"], "web")
 
-    def test_paid_pack_is_hidden_from_legacy_registry_and_requires_license(self) -> None:
+    def test_direct_store_purchase_is_web_installer_only(self) -> None:
         pack = self._upload_pack()
         pack_id = pack["id"]
         direct_url = pack["music_url"].removeprefix("https://testserver")
@@ -516,6 +517,12 @@ class VoiceStoreTests(unittest.TestCase):
         blocked = self.client.get(direct_url)
         self.assertEqual(blocked.status_code, 404)
 
+        store_page = self.client.get("/store")
+        self.assertEqual(store_page.status_code, 200)
+        browser_token = self.client.cookies.get("anthbot_voice_store_client")
+        self.assertTrue(browser_token)
+        browser_client_id = store_api._client_id_from_token(browser_token)
+
         catalog = self.client.get("/api/anthbot/store/voice-packs")
         self.assertEqual(catalog.status_code, 200)
         paid = next(
@@ -523,6 +530,7 @@ class VoiceStoreTests(unittest.TestCase):
         )
         self.assertEqual(paid["access"], "paid")
         self.assertEqual(paid["price_amount"], 799)
+        self.assertFalse(paid.get("owned", False))
         self.assertNotIn("music_url", paid)
 
         checkout_session = {
@@ -531,7 +539,12 @@ class VoiceStoreTests(unittest.TestCase):
             "url": "https://checkout.stripe.com/c/pay/test",
             "created": int(time.time()),
             "client_reference_id": pack_id,
-            "metadata": {"pack_id": pack_id, "community_id": "cs_vlasta_standard"},
+            "metadata": {
+                "pack_id": pack_id,
+                "community_id": "cs_vlasta_standard",
+                "store_client_id": browser_client_id,
+                "entitlement_scope": "web",
+            },
             "payment_status": "unpaid",
             "status": "open",
             "amount_total": 499,
@@ -542,14 +555,17 @@ class VoiceStoreTests(unittest.TestCase):
         }
         with patch.object(
             store_api, "_create_checkout_session", return_value=checkout_session
-        ):
+        ) as create:
             checkout = self.client.post(
                 "/api/anthbot/store/checkout", json={"pack_id": pack_id}
             )
         self.assertEqual(checkout.status_code, 200)
+        self.assertEqual(checkout.json()["entitlement_scope"], "web")
         self.assertTrue(
             checkout.json()["checkout_url"].startswith("https://checkout.stripe.com/")
         )
+        self.assertEqual(create.call_args.kwargs["client_id"], browser_client_id)
+        self.assertEqual(create.call_args.kwargs["entitlement_scope"], "web")
 
         paid_session = {
             **checkout_session,
@@ -566,23 +582,39 @@ class VoiceStoreTests(unittest.TestCase):
                 "/api/anthbot/store/orders/cs_test_paid_123"
             )
         self.assertEqual(order.status_code, 200)
-        self.assertEqual(order.json()["payment_status"], "paid")
-        license_key = order.json()["license_key"]
-        self.assertTrue(license_key.startswith("abv1."))
+        body = order.json()
+        self.assertEqual(body["payment_status"], "paid")
+        self.assertEqual(body["entitlement_scope"], "web")
+        self.assertFalse(body["map_linked"])
+        self.assertTrue(body["web_installer_linked"])
+        self.assertNotIn("license_key", body)
+        self.assertIn("/voice-installer?pack=", body["installer_url"])
 
-        entitlement = self.client.post(
-            "/api/anthbot/store/entitlements",
-            json={"license_key": license_key},
+        browser_catalog = self.client.get("/api/anthbot/store/voice-packs")
+        owned = next(
+            item for item in browser_catalog.json()["packs"]
+            if item.get("id") == pack_id
         )
-        self.assertEqual(entitlement.status_code, 200)
-        licensed_pack = entitlement.json()["packs"][0]
-        self.assertEqual(licensed_pack["id"], pack_id)
-        self.assertIn("license=", licensed_pack["music_url"])
+        self.assertTrue(owned["owned"])
+        self.assertEqual(owned["ownership"], "web")
 
-        download_path = licensed_pack["music_url"].removeprefix("https://testserver")
-        downloaded = self.client.get(download_path)
-        self.assertEqual(downloaded.status_code, 200)
-        self.assertEqual(downloaded.content, b"paid-community-pack")
+        map_entitlements = self.client.post(
+            "/api/anthbot/store/client/entitlements",
+            json={"client_token": browser_token},
+        )
+        self.assertEqual(map_entitlements.status_code, 200)
+        self.assertFalse(map_entitlements.json()["licensed"])
+        self.assertEqual(map_entitlements.json()["packs"], [])
+
+        with patch.object(store_api, "_create_checkout_session") as duplicate_create:
+            duplicate = self.client.post(
+                "/api/anthbot/store/checkout",
+                json={"pack_id": pack_id},
+            )
+        self.assertEqual(duplicate.status_code, 200)
+        self.assertTrue(duplicate.json()["already_owned"])
+        self.assertEqual(duplicate.json()["entitlement_scope"], "web")
+        duplicate_create.assert_not_called()
 
     def test_checkout_uses_official_stripe_sdk_payload(self) -> None:
         pack = self._upload_pack()
@@ -673,6 +705,7 @@ class VoiceStoreTests(unittest.TestCase):
                 "pack_id": pack_id,
                 "community_id": "cs_vlasta_standard",
                 "store_client_id": client_id,
+                "entitlement_scope": "map",
             },
             "payment_status": "unpaid",
             "status": "open",
@@ -695,6 +728,7 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(checkout.status_code, 200)
         self.assertEqual(create.call_args.kwargs["client_id"], client_id)
         self.assertEqual(create.call_args.kwargs["pair_code"], pair_code)
+        self.assertEqual(create.call_args.kwargs["entitlement_scope"], "map")
 
         paid_session = {
             **checkout_session,
