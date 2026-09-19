@@ -35,6 +35,8 @@ _PAIR_RE = re.compile(r"^abp_[A-Za-z0-9_-]{24,128}$")
 _CLIENT_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{32,512}$")
 _STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300
 _STORE_PAIR_TTL_SECONDS = 7 * 24 * 60 * 60
+_STORE_BROWSER_COOKIE = "anthbot_voice_store_client"
+_STORE_BROWSER_COOKIE_MAX_AGE = 365 * 24 * 60 * 60
 _STRIPE_REFUND_RECONCILE_SECONDS = 5 * 60
 _STANDARD_VOICE_PACK_PRICE_AMOUNT = 799
 _STANDARD_VOICE_PACK_CURRENCY = "eur"
@@ -607,6 +609,7 @@ def _init_store_tables() -> None:
                 stripe_customer_id TEXT,
                 stripe_payment_intent_id TEXT,
                 client_id TEXT,
+                entitlement_scope TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 paid_at TEXT
@@ -704,6 +707,8 @@ def _init_store_tables() -> None:
             conn.execute("ALTER TABLE store_orders ADD COLUMN community_id TEXT")
         if "stripe_checked_at" not in columns:
             conn.execute("ALTER TABLE store_orders ADD COLUMN stripe_checked_at INTEGER")
+        if "entitlement_scope" not in columns:
+            conn.execute("ALTER TABLE store_orders ADD COLUMN entitlement_scope TEXT")
         conn.executescript(
             """
             CREATE INDEX IF NOT EXISTS idx_store_orders_client_id
@@ -898,6 +903,28 @@ def _client_id_from_token(client_token: str) -> str:
     return f"abvc_{digest[:40]}"
 
 
+def _browser_store_token(request: Request) -> str | None:
+    value = request.cookies.get(_STORE_BROWSER_COOKIE, "").strip()
+    return value if _CLIENT_TOKEN_RE.fullmatch(value) else None
+
+
+def _browser_store_client_id(request: Request) -> str | None:
+    token = _browser_store_token(request)
+    return _client_id_from_token(token) if token else None
+
+
+def _set_browser_store_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        _STORE_BROWSER_COOKIE,
+        token,
+        max_age=_STORE_BROWSER_COOKIE_MAX_AGE,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        path="/",
+    )
+
+
 def _create_store_pairing(client_token: str) -> tuple[str, int]:
     """Create a temporary browser pairing code for one ANTHBOT Map install."""
     _init_store_tables()
@@ -1049,8 +1076,10 @@ def _reconcile_paid_order_with_stripe(
 def _paid_order_for_client_pack(
     client_id: str,
     record: dict[str, Any],
+    *,
+    entitlement_scope: str | None = None,
 ) -> dict[str, Any] | None:
-    """Return an active purchase for the stable Community voice identity."""
+    """Return an active purchase for one client and entitlement surface."""
     _init_store_tables()
     pack_id = str(record.get("id", "")).strip()
     community_id = str(record.get("community_id", "")).strip()
@@ -1062,13 +1091,25 @@ def _paid_order_for_client_pack(
             WHERE client_id = ?
               AND payment_status = 'paid'
               AND (
+                    ? IS NULL
+                    OR entitlement_scope = ?
+                    OR entitlement_scope IS NULL
+                  )
+              AND (
                     (? != '' AND community_id = ?)
                     OR pack_id = ?
                   )
             ORDER BY COALESCE(paid_at, updated_at) DESC
             LIMIT 1
             """,
-            (client_id, community_id, community_id, pack_id),
+            (
+                client_id,
+                entitlement_scope,
+                entitlement_scope,
+                community_id,
+                community_id,
+                pack_id,
+            ),
         ).fetchone()
     if row is None:
         return None
@@ -1251,6 +1292,7 @@ def _create_checkout_session(
     *,
     client_id: str | None = None,
     pair_code: str | None = None,
+    entitlement_scope: str | None = None,
     success_url_override: str | None = None,
     cancel_url_override: str | None = None,
 ) -> dict[str, Any]:
@@ -1284,6 +1326,8 @@ def _create_checkout_session(
     }
     if client_id:
         metadata["store_client_id"] = client_id
+    if entitlement_scope in {"map", "web"}:
+        metadata["entitlement_scope"] = entitlement_scope
 
     payment_metadata = {
         "pack_id": pack_id,
@@ -1291,6 +1335,8 @@ def _create_checkout_session(
     }
     if client_id:
         payment_metadata["store_client_id"] = client_id
+    if entitlement_scope in {"map", "web"}:
+        payment_metadata["entitlement_scope"] = entitlement_scope
 
     params: dict[str, Any] = {
         "mode": "payment",
@@ -1399,6 +1445,14 @@ def _session_client_id(session: dict[str, Any]) -> str | None:
     return normalized
 
 
+def _session_entitlement_scope(session: dict[str, Any]) -> str | None:
+    metadata = session.get("metadata")
+    if not isinstance(metadata, dict):
+        return None
+    value = str(metadata.get("entitlement_scope") or "").strip().casefold()
+    return value if value in {"map", "web"} else None
+
+
 def _session_customer_email(session: dict[str, Any]) -> str | None:
     details = session.get("customer_details")
     if isinstance(details, dict):
@@ -1445,6 +1499,7 @@ def _upsert_order_from_session(session: dict[str, Any]) -> dict[str, Any]:
     payment_intent = session.get("payment_intent")
     payment_intent = str(payment_intent)[:255] if payment_intent else None
     client_id = _session_client_id(session)
+    entitlement_scope = _session_entitlement_scope(session)
     created_at = _iso_from_epoch(session.get("created"))
     now = core._iso()
 
@@ -1463,8 +1518,9 @@ def _upsert_order_from_session(session: dict[str, Any]) -> dict[str, Any]:
             INSERT INTO store_orders (
                 stripe_session_id, pack_id, community_id, status, payment_status,
                 amount_total, currency, customer_email, stripe_customer_id,
-                stripe_payment_intent_id, client_id, created_at, updated_at, paid_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                stripe_payment_intent_id, client_id, entitlement_scope,
+                created_at, updated_at, paid_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(stripe_session_id) DO UPDATE SET
                 pack_id=excluded.pack_id,
                 community_id=COALESCE(excluded.community_id, store_orders.community_id),
@@ -1476,6 +1532,10 @@ def _upsert_order_from_session(session: dict[str, Any]) -> dict[str, Any]:
                 stripe_customer_id=excluded.stripe_customer_id,
                 stripe_payment_intent_id=excluded.stripe_payment_intent_id,
                 client_id=COALESCE(excluded.client_id, store_orders.client_id),
+                entitlement_scope=COALESCE(
+                    excluded.entitlement_scope,
+                    store_orders.entitlement_scope
+                ),
                 updated_at=excluded.updated_at,
                 paid_at=COALESCE(store_orders.paid_at, excluded.paid_at)
             """,
@@ -1491,6 +1551,7 @@ def _upsert_order_from_session(session: dict[str, Any]) -> dict[str, Any]:
                 customer_id,
                 payment_intent,
                 client_id,
+                entitlement_scope,
                 created_at,
                 now,
                 paid_at,
@@ -1558,6 +1619,8 @@ def _order_from_license(license_key: str) -> dict[str, Any]:
 def _order_public(order: dict[str, Any], request: Request) -> dict[str, Any]:
     pack = _resolve_order_pack(order)
     paid = str(order.get("payment_status", "")).casefold() == "paid"
+    scope = str(order.get("entitlement_scope") or "").strip().casefold()
+    legacy_linked = not scope and bool(order.get("client_id"))
     body: dict[str, Any] = {
         "stripe_session_id": order.get("stripe_session_id"),
         "pack_id": order.get("pack_id"),
@@ -1567,10 +1630,17 @@ def _order_public(order: dict[str, Any], request: Request) -> dict[str, Any]:
         "currency": order.get("currency"),
         "customer_email": order.get("customer_email"),
         "paid_at": order.get("paid_at"),
-        "map_linked": bool(order.get("client_id")),
+        "entitlement_scope": scope or None,
+        "map_linked": scope == "map" or legacy_linked,
+        "web_installer_linked": scope == "web",
         "pack": _public_paid_pack(pack, request),
     }
-    if paid:
+    if scope == "web":
+        body["installer_url"] = (
+            f"{core._public_base_url(request)}/voice-installer"
+            f"?pack={quote(str(pack.get('id') or order.get('pack_id') or ''))}"
+        )
+    elif paid:
         body["license_key"] = _license_for_order(order)
     return body
 
@@ -2222,7 +2292,32 @@ def admin_site_analytics(days: int = 30) -> dict[str, Any]:
 
 @router.get("/api/anthbot/store/voice-packs")
 def store_voice_packs(request: Request) -> dict[str, Any]:
-    return _store_catalog(request)
+    catalog = _store_catalog(request)
+    client_id = _browser_store_client_id(request)
+    if client_id is None:
+        return catalog
+
+    packs: list[dict[str, Any]] = []
+    for item in catalog.get("packs", []):
+        if not isinstance(item, dict):
+            continue
+        public = dict(item)
+        if str(public.get("access") or "free").casefold() == "paid":
+            try:
+                record = _find_uploaded_pack(str(public.get("id") or ""))
+                order = _paid_order_for_client_pack(
+                    client_id,
+                    record,
+                    entitlement_scope="web",
+                )
+            except HTTPException:
+                order = None
+            public["owned"] = order is not None
+            if order is not None:
+                public["ownership"] = "web"
+        packs.append(public)
+    catalog["packs"] = packs
+    return catalog
 
 
 @router.post("/api/anthbot/store/client/checkout")
@@ -2239,7 +2334,11 @@ async def create_store_client_checkout(
         raise HTTPException(status_code=409, detail="voice pack is not a paid product")
 
     client_id = _client_id_from_token(payload.client_token)
-    existing_order = _paid_order_for_client_pack(client_id, record)
+    existing_order = _paid_order_for_client_pack(
+        client_id,
+        record,
+        entitlement_scope="web",
+    )
     if existing_order is not None:
         return {
             "already_owned": True,
@@ -2254,6 +2353,7 @@ async def create_store_client_checkout(
         request,
         client_id=client_id,
         pair_code=None,
+        entitlement_scope="web",
     )
     order = _upsert_order_from_session(session)
     checkout_url = session.get("url")
@@ -2295,7 +2395,12 @@ def store_client_entitlements(
             """
             SELECT *
             FROM store_orders
-            WHERE client_id = ? AND payment_status = 'paid'
+            WHERE client_id = ?
+              AND payment_status = 'paid'
+              AND (
+                    entitlement_scope = 'map'
+                    OR entitlement_scope IS NULL
+                  )
             ORDER BY COALESCE(paid_at, updated_at) DESC
             """,
             (client_id,),
@@ -2418,16 +2523,28 @@ async def create_store_checkout(
     if not _is_paid(record):
         raise HTTPException(status_code=409, detail="voice pack is not a paid product")
 
-    client_id = _client_id_from_pairing(payload.pair_code)
-    if client_id is not None:
-        existing_order = _paid_order_for_client_pack(client_id, record)
-        if existing_order is not None:
-            return {
-                "already_owned": True,
-                "pack_id": payload.pack_id,
-                "checkout_url": None,
-                "session_id": existing_order["stripe_session_id"],
-            }
+    pair_client_id = _client_id_from_pairing(payload.pair_code)
+    entitlement_scope = "map" if pair_client_id is not None else "web"
+    client_id = pair_client_id or _browser_store_client_id(request)
+    if client_id is None:
+        raise HTTPException(
+            status_code=409,
+            detail="Voice Store browser identity is missing. Reload the store page.",
+        )
+
+    existing_order = _paid_order_for_client_pack(
+        client_id,
+        record,
+        entitlement_scope=entitlement_scope,
+    )
+    if existing_order is not None:
+        return {
+            "already_owned": True,
+            "pack_id": payload.pack_id,
+            "checkout_url": None,
+            "session_id": existing_order["stripe_session_id"],
+            "entitlement_scope": entitlement_scope,
+        }
 
     session = await asyncio.to_thread(
         _create_checkout_session,
@@ -2435,6 +2552,7 @@ async def create_store_checkout(
         request,
         client_id=client_id,
         pair_code=payload.pair_code,
+        entitlement_scope=entitlement_scope,
     )
     order = _upsert_order_from_session(session)
     checkout_url = session.get("url")
@@ -2444,6 +2562,7 @@ async def create_store_checkout(
         "already_owned": False,
         "checkout_url": checkout_url,
         "session_id": order["stripe_session_id"],
+        "entitlement_scope": entitlement_scope,
     }
 
 
@@ -2855,7 +2974,10 @@ def store_page(request: Request) -> Response:
     redirect = _canonical_public_redirect(request, "/store")
     if redirect is not None:
         return redirect
-    return HTMLResponse(_html_file("store.html"))
+    response = HTMLResponse(_html_file("store.html"))
+    if _browser_store_token(request) is None:
+        _set_browser_store_cookie(response, secrets.token_urlsafe(36))
+    return response
 
 
 @router.get("/store/success", response_class=HTMLResponse)
