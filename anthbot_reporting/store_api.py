@@ -1050,6 +1050,7 @@ def _store_catalog(request: Request) -> dict[str, Any]:
     return {
         "schema": STORE_SCHEMA,
         "checkout_available": _checkout_ready(),
+        "web_installer_available": _env_flag("ANTHBOT_WEB_VOICE_INSTALLER_ENABLED", False),
         "packs": packs,
     }
 
