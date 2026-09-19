@@ -151,6 +151,53 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(downloaded.status_code, 200)
         self.assertEqual(downloaded.content, b"paid-community-pack")
 
+    def test_checkout_uses_official_stripe_sdk_payload(self) -> None:
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        priced = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 100, "currency": "eur"},
+        )
+        self.assertEqual(priced.status_code, 200)
+
+        checkout_session = {
+            "id": "cs_test_sdk_123",
+            "object": "checkout.session",
+            "url": "https://checkout.stripe.com/c/pay/sdk-test",
+            "created": int(time.time()),
+            "client_reference_id": pack_id,
+            "metadata": {"pack_id": pack_id, "community_id": "cs_vlasta_standard"},
+            "payment_status": "unpaid",
+            "status": "open",
+            "amount_total": 100,
+            "currency": "eur",
+            "customer_details": None,
+            "customer": None,
+            "payment_intent": None,
+        }
+        with patch.object(
+            store_api.stripe.checkout.Session,
+            "create",
+            return_value=checkout_session,
+        ) as create:
+            checkout = self.client.post(
+                "/api/anthbot/store/checkout",
+                json={"pack_id": pack_id},
+            )
+
+        self.assertEqual(checkout.status_code, 200)
+        kwargs = create.call_args.kwargs
+        self.assertEqual(kwargs["mode"], "payment")
+        self.assertEqual(kwargs["client_reference_id"], pack_id)
+        self.assertEqual(kwargs["line_items"][0]["price_data"]["currency"], "eur")
+        self.assertEqual(kwargs["line_items"][0]["price_data"]["unit_amount"], 100)
+        self.assertEqual(kwargs["metadata"]["pack_id"], pack_id)
+        self.assertEqual(
+            kwargs["payment_intent_data"]["metadata"]["pack_id"],
+            pack_id,
+        )
+
     def test_paid_pricing_survives_reupload(self) -> None:
         pack = self._upload_pack()
         pack_id = pack["id"]
