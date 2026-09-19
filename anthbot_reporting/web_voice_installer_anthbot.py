@@ -117,7 +117,18 @@ def _owner_value(value: Any) -> bool:
 
 
 def is_genie(category: str) -> bool:
-    return "genie" in re.sub(r"[^a-z0-9]+", "", category.casefold())
+    """Match the beta.15 fail-closed Genie family gate."""
+    value = category.strip()
+    if not value:
+        return False
+    return (
+        re.match(
+            r"^(?:anthbot[\\s_-]+)?genie(?=$|[\\s_-]|\\d)",
+            value,
+            flags=re.IGNORECASE,
+        )
+        is not None
+    )
 
 
 def mask_serial(serial: str) -> str:
