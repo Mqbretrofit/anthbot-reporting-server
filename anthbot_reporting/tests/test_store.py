@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 import entrypoint
 import store_api
 import web_voice_installer
+import web_voice_installer
 
 
 class VoiceStoreTests(unittest.TestCase):
@@ -37,6 +38,7 @@ class VoiceStoreTests(unittest.TestCase):
         os.environ["ANTHBOT_PRIVACY_CONTACT_EMAIL"] = "privacy@example.test"
         os.environ["ANTHBOT_PRIVACY_CONTACT_PHONE"] = "+36 1 000 0000"
         os.environ["ANTHBOT_SITE_ANALYTICS_ENABLED"] = "true"
+        os.environ["ANTHBOT_WEB_VOICE_INSTALLER_ENABLED"] = "true"
         os.environ["ANTHBOT_WEB_VOICE_INSTALLER_ENABLED"] = "true"
         web_voice_installer._SESSIONS.clear()
         web_voice_installer._JOBS.clear()
@@ -523,6 +525,122 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIn("The password is not written to disk", html)
         self.assertEqual(html.count("installerPrivacyTitle:"), 23)
         self.assertEqual(html.count("installerPrivacyText:"), 23)
+
+    def test_web_voice_installer_page_and_transient_login_session(self) -> None:
+        page = self.client.get("/voice-installer")
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("ANTHBOT hang telepítése Home Assistant nélkül", page.text)
+        self.assertIn("ANTHBOT password", page.text)
+        self.assertEqual(page.headers.get("x-robots-tag"), "noindex, nofollow")
+
+        fake_devices = [
+            {
+                "serial": "GENIE-TEST-12345678",
+                "serial_masked": "GENI…5678",
+                "alias": "Kerti Genie",
+                "category": "Anthbot Genie 1000",
+                "supported": True,
+            }
+        ]
+        with patch.object(
+            web_voice_installer.anthbot,
+            "login_and_devices",
+            return_value=("temporary-anthbot-token", fake_devices),
+        ):
+            login = self.client.post(
+                "/api/anthbot/web-installer/login",
+                json={
+                    "username": "owner@example.test",
+                    "password": "never-store-this-password",
+                    "area_code": "36",
+                },
+            )
+        self.assertEqual(login.status_code, 200)
+        body = login.json()
+        self.assertTrue(body["authenticated"])
+        self.assertEqual(len(body["devices"]), 1)
+        self.assertEqual(body["devices"][0]["serial_masked"], "GENI…5678")
+        self.assertNotIn("serial", body["devices"][0])
+        self.assertNotIn("access_token", body)
+        self.assertNotIn("password", body)
+
+        self.assertTrue(web_voice_installer._SESSIONS)
+        for value in web_voice_installer._SESSIONS.values():
+            self.assertEqual(value["access_token"], "temporary-anthbot-token")
+            self.assertNotIn("password", value)
+            self.assertNotIn("username", value)
+
+    def test_web_voice_installer_starts_beta15_style_genie_install(self) -> None:
+        pack = self._upload_pack()
+        fake_devices = [
+            {
+                "serial": "GENIE-TEST-12345678",
+                "serial_masked": "GENI…5678",
+                "alias": "Kerti Genie",
+                "category": "Anthbot Genie 1000",
+                "supported": True,
+            }
+        ]
+        with patch.object(
+            web_voice_installer.anthbot,
+            "login_and_devices",
+            return_value=("temporary-anthbot-token", fake_devices),
+        ):
+            login = self.client.post(
+                "/api/anthbot/web-installer/login",
+                json={
+                    "username": "owner@example.test",
+                    "password": "temporary-password",
+                    "area_code": "36",
+                },
+            )
+        self.assertEqual(login.status_code, 200)
+        device_id = login.json()["devices"][0]["device_id"]
+
+        calls = []
+        def fake_install_voice(*, access_token, serial, pack, update):
+            calls.append(
+                {
+                    "access_token": access_token,
+                    "serial": serial,
+                    "pack_id": pack["id"],
+                }
+            )
+            update(status="success", progress=100, message="done")
+
+        with patch.object(
+            web_voice_installer.anthbot,
+            "install_voice",
+            side_effect=fake_install_voice,
+        ):
+            started = self.client.post(
+                "/api/anthbot/web-installer/install",
+                json={"device_id": device_id, "pack_id": pack["id"]},
+            )
+            self.assertEqual(started.status_code, 202)
+            job_id = started.json()["job_id"]
+            for _ in range(30):
+                job = self.client.get(
+                    f"/api/anthbot/web-installer/jobs/{job_id}"
+                )
+                if job.status_code == 200 and job.json()["status"] == "success":
+                    break
+                time.sleep(0.01)
+
+        self.assertTrue(calls)
+        self.assertEqual(calls[0]["access_token"], "temporary-anthbot-token")
+        self.assertEqual(calls[0]["serial"], "GENIE-TEST-12345678")
+        self.assertEqual(calls[0]["pack_id"], pack["id"])
+        self.assertEqual(job.json()["status"], "success")
+        self.assertEqual(job.json()["progress"], 100)
+
+    def test_store_catalog_exposes_web_installer_test_flag(self) -> None:
+        catalog = self.client.get("/api/anthbot/store/voice-packs")
+        self.assertEqual(catalog.status_code, 200)
+        self.assertTrue(catalog.json()["web_installer_available"])
+        store = self.client.get("/store")
+        self.assertIn("Telepítés Home Assistant nélkül", store.text)
+        self.assertIn("/voice-installer?pack=", store.text)
 
     def test_standalone_client_checkout_links_purchase_without_pair_code(self) -> None:
         token = "A" * 48
