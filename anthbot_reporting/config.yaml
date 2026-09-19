@@ -1,5 +1,5 @@
 name: ANTHBOT Reporting Server
-version: "1.0.0-test.59"
+version: "1.0.0-test.60"
 slug: anthbot_reporting
 description: Opt-in telemetry, diagnostics, and admin dashboard backend for the ANTHBOT Map integration
 url: https://github.com/Mqbretrofit/anthbot-reporting-server/tree/main/anthbot_reporting
@@ -26,6 +26,7 @@ options:
   privacy_contact_email: ""
   privacy_contact_phone: "+36 30 620 9015"
   site_analytics_enabled: true
+  web_voice_installer_enabled: false
 schema:
   admin_token: password?
   store_enabled: bool
@@ -38,3 +39,4 @@ schema:
   privacy_contact_email: str?
   privacy_contact_phone: str
   site_analytics_enabled: bool
+  web_voice_installer_enabled: bool
