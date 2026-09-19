@@ -112,10 +112,11 @@ Configuration:
   calculation for Checkout Sessions. Enable this only after Stripe Tax is
   configured on the Stripe account.
 
-Stripe Managed Payments requires an eligible product tax code for every sold
-product. ANTHBOT Community voice packs use `txcd_10401100` (Digital Audio
-Works - downloaded - non subscription - with permanent rights), which matches
-the one-time downloadable voice-pack model.
+Checkout sessions explicitly disable Stripe Managed Payments. The ANTHBOT store
+uses standard Stripe Checkout with the project's own licensing and delivery
+flow, so Managed Payments merchant-of-record eligibility requirements are not
+applied. The inline product still carries `txcd_10401100` (Digital Audio Works
+- downloaded - non subscription - with permanent rights) for future tax use.
 
 Public endpoints:
 

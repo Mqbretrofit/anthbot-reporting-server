@@ -190,6 +190,7 @@ class VoiceStoreTests(unittest.TestCase):
         kwargs = create.call_args.kwargs
         self.assertEqual(kwargs["mode"], "payment")
         self.assertEqual(kwargs["client_reference_id"], pack_id)
+        self.assertEqual(kwargs["managed_payments"], {"enabled": False})
         self.assertEqual(kwargs["line_items"][0]["price_data"]["currency"], "eur")
         self.assertEqual(kwargs["line_items"][0]["price_data"]["unit_amount"], 100)
         self.assertEqual(
