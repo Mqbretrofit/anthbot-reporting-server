@@ -32,5 +32,40 @@ After start, `GET /health` should return:
 - `POST /api/anthbot/telemetry`
 - `POST /api/anthbot/diagnostics`
 - `GET /api/anthbot/voice-packs`
+- `GET /voice-packs/{filename}`
+- `GET /api/anthbot/admin/voice-packs`
+- `POST /api/anthbot/admin/voice-packs`
+- `DELETE /api/anthbot/admin/voice-packs/{pack_id}`
 - `GET /api/anthbot/admin/stats`
 - `GET /api/anthbot/admin/diagnostics`
+
+
+## Community voice-pack uploads
+
+Uploaded packs are stored persistently under `/data/voice_packs`. The server
+calculates MD5 and size while streaming the upload, publishes the file at
+`/voice-packs/{filename}`, and immediately merges its metadata into the public
+`/api/anthbot/voice-packs` registry. Uploads replace the previous uploaded pack
+with the same `language_code`, so ANTHBOT Map gets one current Community option
+per language.
+
+Maximum package size: 32 MiB.
+
+Example:
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -F "file=@cs-girl-de-1.0.0" \
+  -F "language=Čeština" \
+  -F "language_code=cs" \
+  -F "version=1.0.0" \
+  -F "english_name=German" \
+  -F "sex=girl" \
+  -F "music_package=3" \
+  -F "models=Anthbot Genie 1000" \
+  https://reports.example/api/anthbot/admin/voice-packs
+```
+
+Only the admin API accepts uploads/deletes. Public registry and package download
+endpoints do not expose the admin token.
