@@ -17,7 +17,11 @@
       ],
       "source": "community",
       "variant_id": "noemi_standard",
-      "variant_name": "Noémi (női) · Standard"
+      "variant_name": "Noémi (női) · Standard",
+      "community_id": "hu_noemi_standard",
+      "voice_gender": "female",
+      "technical_slot": "German_girl",
+      "version_source": "verified_legacy"
     }
   ]
 }
