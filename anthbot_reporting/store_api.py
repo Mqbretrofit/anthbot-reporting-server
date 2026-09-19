@@ -378,6 +378,9 @@ def _configure_stripe() -> None:
 def _create_checkout_session(
     record: dict[str, Any],
     request: Request,
+    *,
+    client_id: str | None = None,
+    pair_code: str | None = None,
 ) -> dict[str, Any]:
     amount = _price_amount(record)
     currency = _currency(record)
@@ -395,10 +398,25 @@ def _create_checkout_session(
         else f"{language} · Community voice"
     )
 
+    cancel_url = f"{base}/store?cancelled=1"
+    if pair_code:
+        cancel_url = f"{cancel_url}&pair={quote(pair_code)}"
+
+    metadata = {
+        "pack_id": pack_id,
+        "community_id": community_id,
+    }
+    if client_id:
+        metadata["store_client_id"] = client_id
+
+    payment_metadata = {"pack_id": pack_id}
+    if client_id:
+        payment_metadata["store_client_id"] = client_id
+
     params: dict[str, Any] = {
         "mode": "payment",
         "success_url": f"{base}/store/success?session_id={{CHECKOUT_SESSION_ID}}",
-        "cancel_url": f"{base}/store?cancelled=1",
+        "cancel_url": cancel_url,
         "client_reference_id": pack_id,
         "customer_creation": "always",
         "locale": "auto",
@@ -417,14 +435,9 @@ def _create_checkout_session(
                 "quantity": 1,
             }
         ],
-        "metadata": {
-            "pack_id": pack_id,
-            "community_id": community_id,
-        },
+        "metadata": metadata,
         "payment_intent_data": {
-            "metadata": {
-                "pack_id": pack_id,
-            }
+            "metadata": payment_metadata,
         },
     }
     if _stripe_automatic_tax():
@@ -483,6 +496,19 @@ def _session_pack_id(session: dict[str, Any]) -> str:
     return str(session.get("client_reference_id", "")).strip()
 
 
+def _session_client_id(session: dict[str, Any]) -> str | None:
+    metadata = session.get("metadata")
+    if not isinstance(metadata, dict):
+        return None
+    value = metadata.get("store_client_id")
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip()
+    if not normalized.startswith("abvc_") or len(normalized) > 64:
+        return None
+    return normalized
+
+
 def _session_customer_email(session: dict[str, Any]) -> str | None:
     details = session.get("customer_details")
     if isinstance(details, dict):
@@ -519,6 +545,7 @@ def _upsert_order_from_session(session: dict[str, Any]) -> dict[str, Any]:
     customer_id = str(customer_id)[:255] if customer_id else None
     payment_intent = session.get("payment_intent")
     payment_intent = str(payment_intent)[:255] if payment_intent else None
+    client_id = _session_client_id(session)
     created_at = _iso_from_epoch(session.get("created"))
     now = core._iso()
 
@@ -537,8 +564,8 @@ def _upsert_order_from_session(session: dict[str, Any]) -> dict[str, Any]:
             INSERT INTO store_orders (
                 stripe_session_id, pack_id, status, payment_status,
                 amount_total, currency, customer_email, stripe_customer_id,
-                stripe_payment_intent_id, created_at, updated_at, paid_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                stripe_payment_intent_id, client_id, created_at, updated_at, paid_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(stripe_session_id) DO UPDATE SET
                 pack_id=excluded.pack_id,
                 status=excluded.status,
@@ -548,6 +575,7 @@ def _upsert_order_from_session(session: dict[str, Any]) -> dict[str, Any]:
                 customer_email=excluded.customer_email,
                 stripe_customer_id=excluded.stripe_customer_id,
                 stripe_payment_intent_id=excluded.stripe_payment_intent_id,
+                client_id=COALESCE(excluded.client_id, store_orders.client_id),
                 updated_at=excluded.updated_at,
                 paid_at=COALESCE(store_orders.paid_at, excluded.paid_at)
             """,
@@ -561,6 +589,7 @@ def _upsert_order_from_session(session: dict[str, Any]) -> dict[str, Any]:
                 customer_email,
                 customer_id,
                 payment_intent,
+                client_id,
                 created_at,
                 now,
                 paid_at,
@@ -635,6 +664,7 @@ def _order_public(order: dict[str, Any], request: Request) -> dict[str, Any]:
         "currency": order.get("currency"),
         "customer_email": order.get("customer_email"),
         "paid_at": order.get("paid_at"),
+        "map_linked": bool(order.get("client_id")),
         "pack": _public_paid_pack(pack, request),
     }
     if paid:
@@ -690,6 +720,72 @@ def store_voice_packs(request: Request) -> dict[str, Any]:
     return _store_catalog(request)
 
 
+@router.post("/api/anthbot/store/client/pair")
+def create_store_client_pair(
+    payload: StoreClientPayload,
+    request: Request,
+) -> dict[str, Any]:
+    if not _store_enabled():
+        raise HTTPException(status_code=503, detail="voice store is disabled")
+    pair_code, expires_at = _create_store_pairing(payload.client_token)
+    base = core._public_base_url(request)
+    return {
+        "paired": True,
+        "store_url": f"{base}/store?pair={quote(pair_code)}",
+        "expires_at": _iso_from_epoch(expires_at),
+    }
+
+
+@router.post("/api/anthbot/store/client/entitlements")
+def store_client_entitlements(
+    payload: StoreClientPayload,
+    request: Request,
+) -> dict[str, Any]:
+    client_id = _client_id_from_token(payload.client_token)
+    _init_store_tables()
+    with core._db() as conn:
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM store_orders
+            WHERE client_id = ? AND payment_status = 'paid'
+            ORDER BY COALESCE(paid_at, updated_at) DESC
+            """,
+            (client_id,),
+        ).fetchall()
+
+    packs: list[dict[str, Any]] = []
+    seen_pack_ids: set[str] = set()
+    base = core._public_base_url(request)
+    for row in rows:
+        order = dict(row)
+        pack_id = str(order.get("pack_id", "")).strip()
+        if not pack_id or pack_id in seen_pack_ids:
+            continue
+        try:
+            pack = _find_uploaded_pack(pack_id)
+        except HTTPException:
+            continue
+        if not _is_paid(pack):
+            continue
+
+        license_key = _license_for_order(order)
+        public = _public_paid_pack(pack, request)
+        public["music_url"] = (
+            f"{base}/api/anthbot/store/voice-packs/{quote(pack_id)}/download"
+            f"?license={quote(license_key)}"
+        )
+        public["entitlement"] = "purchased"
+        packs.append(public)
+        seen_pack_ids.add(pack_id)
+
+    return {
+        "licensed": bool(packs),
+        "license_version": 1,
+        "packs": packs,
+    }
+
+
 @router.post("/api/anthbot/store/checkout")
 async def create_store_checkout(
     payload: CheckoutPayload,
@@ -700,7 +796,14 @@ async def create_store_checkout(
     if not _is_paid(record):
         raise HTTPException(status_code=409, detail="voice pack is not a paid product")
 
-    session = await asyncio.to_thread(_create_checkout_session, record, request)
+    client_id = _client_id_from_pairing(payload.pair_code)
+    session = await asyncio.to_thread(
+        _create_checkout_session,
+        record,
+        request,
+        client_id=client_id,
+        pair_code=payload.pair_code,
+    )
     order = _upsert_order_from_session(session)
     checkout_url = session.get("url")
     if not isinstance(checkout_url, str) or not checkout_url.startswith("https://"):
@@ -905,7 +1008,7 @@ def admin_store_orders(limit: int = 200) -> dict[str, Any]:
         rows = conn.execute(
             """
             SELECT stripe_session_id, pack_id, status, payment_status,
-                   amount_total, currency, customer_email,
+                   amount_total, currency, customer_email, client_id,
                    created_at, updated_at, paid_at
             FROM store_orders
             ORDER BY COALESCE(paid_at, updated_at) DESC
