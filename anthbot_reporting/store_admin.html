@@ -11,7 +11,8 @@
     .grid{display:grid;gap:14px}.kpis{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:16px}.card{background:linear-gradient(180deg,rgba(24,34,53,.97),rgba(15,23,38,.97));border:1px solid var(--line);border-radius:17px;box-shadow:0 16px 44px rgba(0,0,0,.25)}.kpi{padding:18px}.label{color:var(--muted);font-size:.82rem}.value{font-size:1.6rem;font-weight:800;margin-top:7px}
     .status{padding:14px 16px;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}.pill{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:4px 8px;font-size:.76rem}.pill.good{color:#baf7e7;border-color:rgba(128,224,199,.3)}.pill.warn{color:#ffe3a7;border-color:rgba(255,204,102,.3)}
     .section{margin-bottom:16px;overflow:hidden}.head{padding:16px 18px;border-bottom:1px solid var(--line);font-weight:750}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:980px}th,td{padding:11px 13px;border-bottom:1px solid var(--line);text-align:left;font-size:.87rem}th{color:var(--muted);background:rgba(255,255,255,.02)}.control{background:#0d1626;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:8px;min-height:38px}.price{width:110px}.currency{width:80px}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.78rem}.small{color:var(--muted);font-size:.78rem}.empty{padding:28px;text-align:center;color:var(--muted)}
-    @media(max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.top{align-items:flex-start;flex-direction:column}.shell{padding:18px 12px}}
+    .analytics-kpis{grid-template-columns:repeat(4,minmax(0,1fr));padding:14px}.analytics-kpis .kpi{background:rgba(255,255,255,.02);box-shadow:none}.analytics-panels{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:12px;padding:0 14px 14px}.analytics-panel{border:1px solid var(--line);border-radius:13px;overflow:hidden;background:rgba(7,14,25,.35)}.analytics-panel .head{font-size:.86rem;padding:11px 13px}.analytics-panel table{min-width:0}.analytics-panel th,.analytics-panel td{font-size:.8rem;padding:8px 10px}.analytics-note{padding:0 16px 14px;color:var(--muted);font-size:.78rem}
+    @media(max-width:900px){.kpis,.analytics-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.analytics-panels{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}.shell{padding:18px 12px}}
   </style>
 </head>
 <body>
@@ -19,6 +20,16 @@
     <div class="top"><div class="title"><h1>ANTHBOT Hangbolt admin</h1><div class="sub">Community hangcsomagok (€7.99), fizetések, licencek és egyedi hangkérések</div></div><div class="actions"><a class="btn" href="/store" target="_blank">Publikus Hangbolt</a><a class="btn" href="/dashboard">Vissza a dashboardra</a><button class="btn primary" id="refresh">Frissítés</button></div></div>
     <div class="grid kpis" id="kpis"></div>
     <div class="card status" id="status">Betöltés…</div>
+    <section class="card section">
+      <div class="head">Weboldal látogatottság · privacy-barát statisztika</div>
+      <div class="grid analytics-kpis" id="analytics-kpis"></div>
+      <div class="analytics-panels">
+        <div class="analytics-panel"><div class="head">Napi bontás · utolsó 30 nap</div><div class="table-wrap"><table><thead><tr><th>Nap</th><th>Megtekintés</th><th>Napi egyedi</th></tr></thead><tbody id="analytics-daily"></tbody></table></div></div>
+        <div class="analytics-panel"><div class="head">Oldalak</div><div class="table-wrap"><table><thead><tr><th>Oldal</th><th>Megtekintés</th><th>Egyedi látogatói nap</th></tr></thead><tbody id="analytics-pages"></tbody></table></div></div>
+        <div class="analytics-panel"><div class="head">Nyelvek</div><div class="table-wrap"><table><thead><tr><th>Nyelv</th><th>Megtekintés</th><th>Egyedi látogatói nap</th></tr></thead><tbody id="analytics-languages"></tbody></table></div></div>
+      </div>
+      <div class="analytics-note" id="analytics-note"></div>
+    </section>
     <section class="card section"><div class="head">Hangcsomagok</div><div class="table-wrap"><table><thead><tr><th>Csomag</th><th>Nyelv / hang</th><th>Verzió</th><th>Hozzáférés</th><th>Ár</th><th>Pénznem</th><th>Eladás</th><th>Bevétel</th><th>Állapot</th></tr></thead><tbody id="packs"></tbody></table></div></section>
     <section class="card section"><div class="head">Egyedi hang kérések · €24.99-tól</div><div class="table-wrap"><table><thead><tr><th>Idő</th><th>Azonosító</th><th>Nyelv</th><th>Hang</th><th>Robot</th><th>Kapcsolat</th><th>Megjegyzés</th><th>Oldal nyelve</th><th>Állapot</th></tr></thead><tbody id="custom-requests"></tbody></table></div></section>
     <section class="card section"><div class="head">Adatvédelmi / GDPR kérelmek</div><div class="table-wrap"><table><thead><tr><th>Idő</th><th>Azonosító</th><th>Típus</th><th>Kapcsolat</th><th>Részletek</th><th>Nyelv</th><th>Állapot</th></tr></thead><tbody id="privacy-requests"></tbody></table></div></section>
@@ -70,6 +81,42 @@
       if(!items.length){body.innerHTML='<tr><td colspan="7" class="empty">Még nincs adatvédelmi kérelem.</td></tr>';return}
       body.innerHTML=items.map(r=>'<tr><td>'+esc(fmt(r.created_at))+'</td><td class="mono">'+esc(r.request_id)+'</td><td><strong>'+esc(r.request_type)+'</strong></td><td>'+esc(r.contact)+'</td><td>'+esc(r.details||'—')+'</td><td>'+esc(r.site_language||'—')+'</td><td><span class="pill '+(r.status==='new'?'warn':'good')+'">'+esc(r.status||'new')+'</span></td></tr>').join('');
     }
+    function analyticsRows(analytics){
+      const today=analytics.today||{};
+      document.getElementById('analytics-kpis').innerHTML=
+        kpi('Ma · megtekintés',today.views||0)+
+        kpi('Ma · egyedi látogató',today.unique_visitors||0)+
+        kpi('7 nap · megtekintés',analytics.views_7d||0)+
+        kpi('30 nap · megtekintés',analytics.views_30d||0);
+
+      const daily=document.getElementById('analytics-daily');
+      const dailyItems=analytics.daily||[];
+      daily.innerHTML=dailyItems.length
+        ? dailyItems.map(r=>'<tr><td>'+esc(r.day)+'</td><td>'+esc(r.views||0)+'</td><td><strong>'+esc(r.unique_visitors||0)+'</strong></td></tr>').join('')
+        : '<tr><td colspan="3" class="empty">Még nincs látogatási adat.</td></tr>';
+
+      const pages=document.getElementById('analytics-pages');
+      const pageItems=analytics.pages||[];
+      pages.innerHTML=pageItems.length
+        ? pageItems.map(r=>'<tr><td class="mono">'+esc(r.path)+'</td><td>'+esc(r.views||0)+'</td><td>'+esc(r.unique_visitor_days||0)+'</td></tr>').join('')
+        : '<tr><td colspan="3" class="empty">Nincs adat.</td></tr>';
+
+      const languages=document.getElementById('analytics-languages');
+      const languageItems=analytics.languages||[];
+      languages.innerHTML=languageItems.length
+        ? languageItems.map(r=>'<tr><td>'+esc(r.language||'—')+'</td><td>'+esc(r.views||0)+'</td><td>'+esc(r.unique_visitor_days||0)+'</td></tr>').join('')
+        : '<tr><td colspan="3" class="empty">Nincs adat.</td></tr>';
+
+      const privacy=analytics.privacy||{};
+      document.getElementById('analytics-note').textContent=
+        (analytics.enabled?'Mérés bekapcsolva. ':'Mérés kikapcsolva. ')+
+        'Nyers IP és User-Agent nem kerül az analitikai adatbázisba; nincs analytics cookie vagy böngésző-azonosító. '+
+        'Az IP csak pillanatnyilag kell a napi HMAC azonosítóhoz, amely UTC naponta megváltozik. '+
+        'Az anonim napi azonosítók legfeljebb '+String(privacy.unique_hash_retention_days||35)+
+        ' napig, az összesített megtekintések '+String(privacy.aggregate_retention_days||400)+' napig maradnak meg. '+
+        'Az „egyedi látogatói nap” nem többnapos személyazonosítás: ugyanaz a látogató más napon új anonim azonosítót kap.';
+    }
+
     function orderRows(items){
       const body=document.getElementById('orders');
       if(!items.length){body.innerHTML='<tr><td colspan="6" class="empty">Még nincs rendelés.</td></tr>';return}
@@ -77,11 +124,11 @@
     }
     async function load(){
       try{
-        const [catalog,stats,orders,customRequests,privacyRequests]=await Promise.all([api('/api/anthbot/admin/store/voice-packs'),api('/api/anthbot/admin/store/stats'),api('/api/anthbot/admin/store/orders?limit=100'),api('/api/anthbot/admin/store/custom-voice-requests?limit=100'),api('/api/anthbot/admin/privacy-requests?limit=100')]);
+        const [catalog,stats,orders,customRequests,privacyRequests,siteAnalytics]=await Promise.all([api('/api/anthbot/admin/store/voice-packs'),api('/api/anthbot/admin/store/stats'),api('/api/anthbot/admin/store/orders?limit=100'),api('/api/anthbot/admin/store/custom-voice-requests?limit=100'),api('/api/anthbot/admin/privacy-requests?limit=100'),api('/api/anthbot/admin/site-analytics?days=30')]);
         const revenue=(stats.revenue||[]).map(x=>money(x.amount,x.currency)).join(' + ')||money(0,'eur');
         document.getElementById('kpis').innerHTML=kpi('Feltöltött csomag',catalog.items.length)+kpi('Rendelés',stats.orders||0)+kpi('Fizetett rendelés',stats.paid_orders||0)+kpi('Bevétel',revenue);
         document.getElementById('status').innerHTML='<span class="pill '+(stats.store_enabled?'good':'warn')+'">Store: '+(stats.store_enabled?'bekapcsolva':'kikapcsolva')+'</span><span class="pill '+(stats.checkout_ready?'good':'warn')+'">Stripe: '+(stats.checkout_ready?'kész':'nincs teljesen konfigurálva')+'</span><span class="pill '+(stats.automatic_tax?'good':'warn')+'">Stripe automatic tax: '+(stats.automatic_tax?'be':'ki')+'</span><span class="small">Fizetősre állított csomag eltűnik a régi ingyenes voice-packs registryből, így közvetlenül nem tölthető le.</span>';
-        packRows(catalog.items||[]);customRequestRows(customRequests.items||[]);privacyRequestRows(privacyRequests.items||[]);orderRows(orders.items||[]);
+        analyticsRows(siteAnalytics);packRows(catalog.items||[]);customRequestRows(customRequests.items||[]);privacyRequestRows(privacyRequests.items||[]);orderRows(orders.items||[]);
       }catch(e){document.getElementById('status').innerHTML='<span style="color:#ffc4cc">Hiba: '+esc(e.message)+'</span>'}
     }
     document.getElementById('refresh').onclick=load;load();
