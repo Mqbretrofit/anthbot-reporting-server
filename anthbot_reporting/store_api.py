@@ -1193,6 +1193,26 @@ def admin_store_stats() -> dict[str, Any]:
     }
 
 
+@router.get("/", response_class=HTMLResponse)
+def public_business_page() -> HTMLResponse:
+    return HTMLResponse(_html_file("public_site.html"))
+
+
+@router.get("/terms", response_class=HTMLResponse)
+def public_terms_page() -> HTMLResponse:
+    return HTMLResponse(_html_file("public_terms.html"))
+
+
+@router.get("/refunds", response_class=HTMLResponse)
+def public_refunds_page() -> HTMLResponse:
+    return HTMLResponse(_html_file("public_refunds.html"))
+
+
+@router.get("/privacy", response_class=HTMLResponse)
+def public_privacy_page() -> HTMLResponse:
+    return HTMLResponse(_html_file("public_privacy.html"))
+
+
 @router.get("/store", response_class=HTMLResponse)
 def store_page() -> HTMLResponse:
     return HTMLResponse(_html_file("store.html"))
