@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 
 import entrypoint
 import store_api
+import web_voice_installer
 
 
 class VoiceStoreTests(unittest.TestCase):
@@ -36,6 +37,10 @@ class VoiceStoreTests(unittest.TestCase):
         os.environ["ANTHBOT_PRIVACY_CONTACT_EMAIL"] = "privacy@example.test"
         os.environ["ANTHBOT_PRIVACY_CONTACT_PHONE"] = "+36 1 000 0000"
         os.environ["ANTHBOT_SITE_ANALYTICS_ENABLED"] = "true"
+        os.environ["ANTHBOT_WEB_VOICE_INSTALLER_ENABLED"] = "true"
+        web_voice_installer._SESSIONS.clear()
+        web_voice_installer._JOBS.clear()
+        web_voice_installer._LOGIN_ATTEMPTS.clear()
         self.client_ctx = TestClient(entrypoint.app, base_url="https://testserver")
         self.client = self.client_ctx.__enter__()
 
@@ -389,6 +394,135 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(item["request_type"], "access")
         self.assertEqual(item["contact"], "person@example.test")
         self.assertEqual(item["status"], "new")
+
+    def test_web_voice_installer_is_integrated_into_store_and_noindex(self) -> None:
+        catalog = self.client.get("/api/anthbot/store/voice-packs")
+        self.assertEqual(catalog.status_code, 200)
+        self.assertTrue(catalog.json()["web_installer_available"])
+
+        store = self.client.get("/store")
+        self.assertEqual(store.status_code, 200)
+        self.assertIn("/voice-installer?pack=", store.text)
+        self.assertIn("Telepítés Home Assistant nélkül", store.text)
+
+        installer = self.client.get("/voice-installer")
+        self.assertEqual(installer.status_code, 200)
+        self.assertIn("ANTHBOT Voice Installer", installer.text)
+        self.assertIn('name="robots" content="noindex,nofollow"', installer.text)
+        self.assertEqual(
+            installer.headers.get("x-robots-tag"),
+            "noindex, nofollow",
+        )
+        self.assertIn("no-store", installer.headers.get("cache-control", ""))
+
+    def test_web_voice_installer_login_keeps_credentials_memory_only(self) -> None:
+        fake_devices = [
+            {
+                "serial": "GENIE1234567890",
+                "serial_masked": "GENI…7890",
+                "alias": "Kert Genie",
+                "category": "Genie 1000",
+                "supported": True,
+            },
+            {
+                "serial": "M9PRO1234567890",
+                "serial_masked": "M9PR…7890",
+                "alias": "M9 Pro",
+                "category": "M9 Pro",
+                "supported": False,
+            },
+        ]
+        with patch.object(
+            web_voice_installer.anthbot,
+            "login_and_devices",
+            return_value=("temporary-access-token", fake_devices),
+        ) as login:
+            response = self.client.post(
+                "/api/anthbot/web-installer/login",
+                json={
+                    "username": "owner@example.test",
+                    "password": "super-secret-password",
+                    "area_code": "36",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["authenticated"])
+        self.assertEqual(len(body["devices"]), 2)
+        self.assertIsNotNone(body["auto_device_id"])
+        self.assertNotIn("serial", body["devices"][0])
+        self.assertEqual(body["devices"][0]["serial_masked"], "GENI…7890")
+        login.assert_called_once_with(
+            "owner@example.test",
+            "super-secret-password",
+            "36",
+        )
+
+        session_dump = repr(web_voice_installer._SESSIONS)
+        self.assertNotIn("super-secret-password", session_dump)
+        self.assertNotIn("owner@example.test", session_dump)
+        self.assertIn("temporary-access-token", session_dump)
+
+        status = self.client.get("/api/anthbot/web-installer/session")
+        self.assertEqual(status.status_code, 200)
+        self.assertTrue(status.json()["authenticated"])
+
+        logout = self.client.post(
+            "/api/anthbot/web-installer/logout",
+            json={},
+        )
+        self.assertEqual(logout.status_code, 200)
+        status = self.client.get("/api/anthbot/web-installer/session")
+        self.assertFalse(status.json()["authenticated"])
+
+    def test_web_voice_installer_rejects_non_genie_before_command(self) -> None:
+        fake_devices = [
+            {
+                "serial": "M9PRO1234567890",
+                "serial_masked": "M9PR…7890",
+                "alias": "M9 Pro",
+                "category": "M9 Pro",
+                "supported": False,
+            },
+        ]
+        with patch.object(
+            web_voice_installer.anthbot,
+            "login_and_devices",
+            return_value=("temporary-access-token", fake_devices),
+        ):
+            login = self.client.post(
+                "/api/anthbot/web-installer/login",
+                json={
+                    "username": "owner@example.test",
+                    "password": "secret",
+                    "area_code": "36",
+                },
+            )
+        self.assertEqual(login.status_code, 200)
+        device_id = login.json()["devices"][0]["device_id"]
+
+        with patch.object(
+            web_voice_installer,
+            "_resolve_pack",
+        ) as resolve_pack:
+            install = self.client.post(
+                "/api/anthbot/web-installer/install",
+                json={"device_id": device_id, "pack_id": "does-not-matter"},
+            )
+        self.assertEqual(install.status_code, 409)
+        self.assertIn("Genie", install.json()["detail"])
+        resolve_pack.assert_not_called()
+
+    def test_privacy_page_discloses_web_installer_credential_processing(self) -> None:
+        response = self.client.get("/privacy")
+        self.assertEqual(response.status_code, 200)
+        html = response.text
+        self.assertIn("Webes hangtelepítő", html)
+        self.assertIn("20 perc", html)
+        self.assertIn("The password is not written to disk", html)
+        self.assertEqual(html.count("installerPrivacyTitle:"), 23)
+        self.assertEqual(html.count("installerPrivacyText:"), 23)
 
     def test_standalone_client_checkout_links_purchase_without_pair_code(self) -> None:
         token = "A" * 48
