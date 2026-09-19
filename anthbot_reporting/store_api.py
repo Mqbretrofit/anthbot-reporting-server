@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 from datetime import datetime, timezone
 import hashlib
@@ -546,7 +547,7 @@ async def create_store_checkout(
     if not _is_paid(record):
         raise HTTPException(status_code=409, detail="voice pack is not a paid product")
 
-    session = await core.asyncio.to_thread(_create_checkout_session, record, request)
+    session = await asyncio.to_thread(_create_checkout_session, record, request)
     order = _upsert_order_from_session(session)
     checkout_url = session.get("url")
     if not isinstance(checkout_url, str) or not checkout_url.startswith("https://"):
@@ -584,6 +585,21 @@ async def stripe_webhook(
         and session.get("object") == "checkout.session"
     ):
         _upsert_order_from_session(session)
+    elif event_type == "charge.refunded" and isinstance(session, dict):
+        payment_intent = session.get("payment_intent")
+        if payment_intent:
+            _init_store_tables()
+            with core._db() as conn:
+                conn.execute(
+                    """
+                    UPDATE store_orders
+                    SET status = 'refunded',
+                        payment_status = 'refunded',
+                        updated_at = ?
+                    WHERE stripe_payment_intent_id = ?
+                    """,
+                    (core._iso(), str(payment_intent)),
+                )
 
     return {"received": True}
 
@@ -599,7 +615,7 @@ async def store_order(session_id: str, request: Request) -> dict[str, Any]:
         or str(order.get("payment_status", "")).casefold() != "paid"
     ):
         _require_checkout_ready()
-        session = await core.asyncio.to_thread(_retrieve_checkout_session, session_id)
+        session = await asyncio.to_thread(_retrieve_checkout_session, session_id)
         order = _upsert_order_from_session(session)
 
     return _order_public(order, request)
