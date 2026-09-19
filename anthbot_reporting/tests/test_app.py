@@ -242,6 +242,83 @@ class ReportingServerTests(unittest.TestCase):
         self.assertEqual(downloaded.status_code, 200)
         self.assertEqual(downloaded.content, content)
 
+    def test_admin_can_seed_official_voice_cache_in_proxy_safe_chunks(self) -> None:
+        content = (b"factory-voice-chunk-" * 60000)[:900000]
+        expected_md5 = hashlib.md5(content, usedforsecurity=False).hexdigest()
+        upload_id = "english-test-upload"
+        offset = 0
+        chunk_size = 300000
+
+        for start in range(0, len(content), chunk_size):
+            chunk = content[start:start + chunk_size]
+            final = start + len(chunk) >= len(content)
+            response = self.client.post(
+                "/api/anthbot/admin/voice-packs/cache-official-upload-chunk",
+                headers={
+                    **self._admin_headers(),
+                    "Content-Type": "application/octet-stream",
+                },
+                params={
+                    "upload_id": upload_id,
+                    "expected_md5": expected_md5,
+                    "offset": offset,
+                    "final": str(final).lower(),
+                },
+                content=chunk,
+            )
+            self.assertEqual(response.status_code, 200)
+            body = response.json()
+            self.assertEqual(body["next_offset"], offset + len(chunk))
+            offset += len(chunk)
+
+        self.assertTrue(body["complete"])
+        self.assertEqual(body["music_md5"], expected_md5)
+        self.assertEqual(body["size"], len(content))
+
+        cached = self.client.post(
+            "/api/anthbot/voice-packs/cache-official",
+            json={
+                "source_url": "https://cdn.example.com/english.pack",
+                "music_md5": expected_md5,
+            },
+        )
+        self.assertEqual(cached.status_code, 200)
+        self.assertTrue(cached.json()["cache_hit"])
+
+    def test_chunked_official_voice_upload_rejects_bad_offset(self) -> None:
+        expected_md5 = hashlib.md5(b"abcdef", usedforsecurity=False).hexdigest()
+        first = self.client.post(
+            "/api/anthbot/admin/voice-packs/cache-official-upload-chunk",
+            headers={
+                **self._admin_headers(),
+                "Content-Type": "application/octet-stream",
+            },
+            params={
+                "upload_id": "offset-test",
+                "expected_md5": expected_md5,
+                "offset": 0,
+                "final": "false",
+            },
+            content=b"abc",
+        )
+        self.assertEqual(first.status_code, 200)
+
+        second = self.client.post(
+            "/api/anthbot/admin/voice-packs/cache-official-upload-chunk",
+            headers={
+                **self._admin_headers(),
+                "Content-Type": "application/octet-stream",
+            },
+            params={
+                "upload_id": "offset-test",
+                "expected_md5": expected_md5,
+                "offset": 1,
+                "final": "true",
+            },
+            content=b"def",
+        )
+        self.assertEqual(second.status_code, 409)
+
     def test_admin_can_seed_known_good_official_voice_cache(self) -> None:
         content = b"known-good-official-english-pack"
         expected_md5 = hashlib.md5(content, usedforsecurity=False).hexdigest()
