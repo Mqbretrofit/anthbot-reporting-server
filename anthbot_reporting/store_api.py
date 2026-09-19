@@ -35,6 +35,7 @@ _PAIR_RE = re.compile(r"^abp_[A-Za-z0-9_-]{24,128}$")
 _CLIENT_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{32,512}$")
 _STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300
 _STORE_PAIR_TTL_SECONDS = 7 * 24 * 60 * 60
+_STRIPE_REFUND_RECONCILE_SECONDS = 5 * 60
 _STANDARD_VOICE_PACK_PRICE_AMOUNT = 799
 _STANDARD_VOICE_PACK_CURRENCY = "eur"
 _CUSTOM_VOICE_STARTING_PRICE_AMOUNT = 2499
@@ -701,6 +702,8 @@ def _init_store_tables() -> None:
             conn.execute("ALTER TABLE store_orders ADD COLUMN client_id TEXT")
         if "community_id" not in columns:
             conn.execute("ALTER TABLE store_orders ADD COLUMN community_id TEXT")
+        if "stripe_checked_at" not in columns:
+            conn.execute("ALTER TABLE store_orders ADD COLUMN stripe_checked_at INTEGER")
         conn.executescript(
             """
             CREATE INDEX IF NOT EXISTS idx_store_orders_client_id
@@ -941,6 +944,108 @@ def _client_id_from_pairing(pair_code: str | None) -> str | None:
     return str(row["client_id"])
 
 
+def _reconcile_paid_order_with_stripe(
+    order: dict[str, Any],
+    *,
+    force: bool = False,
+) -> dict[str, Any]:
+    """Best-effort fallback for refunds missed by the Stripe webhook.
+
+    Live entitlements remain webhook-driven for fast updates, but a paid order
+    is periodically rechecked against Stripe so a missed webhook cannot leave a
+    refunded voice permanently unlocked.
+    """
+    if str(order.get("payment_status", "")).casefold() != "paid":
+        return order
+
+    secret_key = _stripe_secret_key()
+    payment_intent_id = str(order.get("stripe_payment_intent_id") or "").strip()
+    if not secret_key.startswith("sk_live_") or not payment_intent_id:
+        return order
+
+    now_epoch = int(time.time())
+    try:
+        checked_at = int(order.get("stripe_checked_at") or 0)
+    except (TypeError, ValueError):
+        checked_at = 0
+    if (
+        not force
+        and checked_at > 0
+        and now_epoch - checked_at < _STRIPE_REFUND_RECONCILE_SECONDS
+    ):
+        return order
+
+    _configure_stripe()
+    try:
+        payment_intent = stripe.PaymentIntent.retrieve(
+            payment_intent_id,
+            expand=["latest_charge"],
+        )
+        intent_payload = _stripe_session_dict(payment_intent)
+        latest_charge = intent_payload.get("latest_charge")
+        if isinstance(latest_charge, str) and latest_charge:
+            latest_charge = _stripe_session_dict(stripe.Charge.retrieve(latest_charge))
+    except stripe.StripeError as err:
+        _LOGGER.debug(
+            "Stripe refund reconciliation failed for %s: %s",
+            payment_intent_id,
+            _stripe_error_detail(err),
+        )
+        return order
+    except Exception as err:
+        _LOGGER.debug(
+            "Unexpected Stripe refund reconciliation failure for %s: %s",
+            payment_intent_id,
+            err,
+        )
+        return order
+
+    refunded = False
+    if isinstance(latest_charge, dict):
+        try:
+            amount_refunded = int(latest_charge.get("amount_refunded") or 0)
+        except (TypeError, ValueError):
+            amount_refunded = 0
+        refunded = bool(latest_charge.get("refunded")) or amount_refunded > 0
+
+    _init_store_tables()
+    with core._db() as conn:
+        if refunded:
+            conn.execute(
+                """
+                UPDATE store_orders
+                SET status = 'refunded',
+                    payment_status = 'refunded',
+                    updated_at = ?,
+                    stripe_checked_at = ?
+                WHERE stripe_session_id = ?
+                """,
+                (
+                    core._iso(),
+                    now_epoch,
+                    str(order.get("stripe_session_id") or ""),
+                ),
+            )
+        else:
+            conn.execute(
+                """
+                UPDATE store_orders
+                SET stripe_checked_at = ?
+                WHERE stripe_session_id = ?
+                """,
+                (
+                    now_epoch,
+                    str(order.get("stripe_session_id") or ""),
+                ),
+            )
+        row = conn.execute(
+            "SELECT * FROM store_orders WHERE stripe_session_id = ?",
+            (str(order.get("stripe_session_id") or ""),),
+        ).fetchone()
+
+    return dict(row) if row is not None else order
+
+
 def _paid_order_for_client_pack(
     client_id: str,
     record: dict[str, Any],
@@ -965,7 +1070,12 @@ def _paid_order_for_client_pack(
             """,
             (client_id, community_id, community_id, pack_id),
         ).fetchone()
-    return dict(row) if row is not None else None
+    if row is None:
+        return None
+    order = _reconcile_paid_order_with_stripe(dict(row))
+    if str(order.get("payment_status", "")).casefold() != "paid":
+        return None
+    return order
 
 
 def _uploaded_records() -> list[dict[str, Any]]:
@@ -1433,6 +1543,8 @@ def _order_from_license(license_key: str) -> dict[str, Any]:
         raise HTTPException(status_code=401, detail="invalid voice store license")
 
     order = _order_by_session(session_id)
+    if order is not None:
+        order = _reconcile_paid_order_with_stripe(order)
     if order is None or str(order.get("payment_status", "")).casefold() != "paid":
         raise HTTPException(status_code=401, detail="voice store license is not active")
 
@@ -2193,7 +2305,9 @@ def store_client_entitlements(
     seen_voice_ids: set[str] = set()
     base = core._public_base_url(request)
     for row in rows:
-        order = dict(row)
+        order = _reconcile_paid_order_with_stripe(dict(row))
+        if str(order.get("payment_status", "")).casefold() != "paid":
+            continue
         try:
             pack = _resolve_order_pack(order)
         except HTTPException:
