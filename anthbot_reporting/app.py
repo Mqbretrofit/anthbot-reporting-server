@@ -1,17 +1,22 @@
 from __future__ import annotations
 
+import asyncio
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timedelta, timezone
 import hashlib
 import hmac
+import ipaddress
 import json
 import os
 from pathlib import Path
 import re
 import secrets
+import socket
 import sqlite3
 from typing import Any, Literal
-from urllib.parse import parse_qs, quote
+from urllib.error import HTTPError, URLError
+from urllib.parse import parse_qs, quote, urlsplit
+from urllib.request import HTTPRedirectHandler, Request as UrlRequest, build_opener
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile, status
@@ -34,6 +39,7 @@ MAX_DIAGNOSTICS_BYTES = 2 * 1024 * 1024
 MAX_VOICE_PACK_BYTES = 32 * 1024 * 1024
 MAX_VOICE_PACK_UPLOAD_BYTES = MAX_VOICE_PACK_BYTES + 1024 * 1024
 VOICE_PACK_CHUNK_BYTES = 256 * 1024
+_OFFICIAL_VOICE_MD5_RE = re.compile(r"^[0-9a-fA-F]{32}$")
 _VOICE_PACK_SAFE_PART = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 _DASHBOARD_COOKIE = "anthbot_admin_session"
 _DASHBOARD_SESSION_SECONDS = 12 * 60 * 60
