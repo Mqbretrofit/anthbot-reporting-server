@@ -151,6 +151,16 @@ class ReportingServerTests(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 200)
 
+    def test_core_dashboard_headers_allow_known_home_assistant_frames(self) -> None:
+        response = self.client.get("/dashboard")
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("x-frame-options", response.headers)
+        csp = response.headers.get("content-security-policy", "")
+        self.assertIn("frame-ancestors", csp)
+        self.assertIn("http://homeassistant.local:8123", csp)
+        self.assertIn("http://192.168.8.91:8123", csp)
+        self.assertIn("https://ha.mqbretrofithungary.online", csp)
+
     def test_dashboard_login_sets_secure_session_cookie(self) -> None:
         login_page = self.client.get("/dashboard")
         self.assertEqual(login_page.status_code, 200)
