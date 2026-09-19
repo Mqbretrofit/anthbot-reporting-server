@@ -25,6 +25,10 @@ COPY entrypoint.py ./entrypoint.py
 COPY diagnostics_dedupe.py ./diagnostics_dedupe.py
 COPY migration_api.py ./migration_api.py
 COPY voice_packs.json ./voice_packs.json
+COPY store_api.py ./store_api.py
+COPY store.html ./store.html
+COPY store_success.html ./store_success.html
+COPY store_admin.html ./store_admin.html
 COPY dashboard.html ./dashboard.html
 COPY dashboard_login.html ./dashboard_login.html
 COPY developer_agent_api.py ./developer_agent_api.py
