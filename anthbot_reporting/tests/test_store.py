@@ -533,12 +533,6 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertFalse(paid.get("owned", False))
         self.assertNotIn("music_url", paid)
 
-        store_page = self.client.get("/store")
-        self.assertEqual(store_page.status_code, 200)
-        browser_token = self.client.cookies.get("anthbot_voice_store_client")
-        self.assertTrue(browser_token)
-        browser_client_id = store_api._client_id_from_token(browser_token)
-
         checkout_session = {
             "id": "cs_test_paid_123",
             "object": "checkout.session",
@@ -631,6 +625,12 @@ class VoiceStoreTests(unittest.TestCase):
             json={"access": "paid", "price_amount": 100, "currency": "eur"},
         )
         self.assertEqual(priced.status_code, 200)
+
+        store_page = self.client.get("/store")
+        self.assertEqual(store_page.status_code, 200)
+        browser_token = self.client.cookies.get("anthbot_voice_store_client")
+        self.assertTrue(browser_token)
+        browser_client_id = store_api._client_id_from_token(browser_token)
 
         checkout_session = {
             "id": "cs_test_sdk_123",
