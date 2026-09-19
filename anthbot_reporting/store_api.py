@@ -297,6 +297,7 @@ def _create_checkout_session(
         "client_reference_id": pack_id,
         "customer_creation": "always",
         "locale": "auto",
+        "managed_payments": {"enabled": False},
         "line_items": [
             {
                 "price_data": {
