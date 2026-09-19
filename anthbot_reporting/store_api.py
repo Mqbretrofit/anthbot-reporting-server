@@ -238,18 +238,27 @@ def _store_catalog(request: Request) -> dict[str, Any]:
 def _stripe_session_dict(value: Any) -> dict[str, Any]:
     if isinstance(value, dict):
         return dict(value)
-    converter = getattr(value, "to_dict_recursive", None)
-    if callable(converter):
-        payload = converter()
+
+    # stripe-python returns StripeObject instances. Current releases expose
+    # .to_dict(); older releases used .to_dict_recursive().
+    for method_name in ("to_dict", "to_dict_recursive"):
+        converter = getattr(value, method_name, None)
+        if not callable(converter):
+            continue
+        try:
+            payload = converter()
+        except TypeError:
+            continue
         if isinstance(payload, dict):
             return payload
-    try:
-        return dict(value)
-    except (TypeError, ValueError):
-        raise HTTPException(
-            status_code=502,
-            detail="Stripe returned an invalid Checkout Session",
-        )
+
+    raise HTTPException(
+        status_code=502,
+        detail=(
+            "Stripe returned an unsupported Checkout Session object "
+            f"({type(value).__name__})"
+        ),
+    )
 
 
 def _stripe_error_detail(err: BaseException) -> str:
