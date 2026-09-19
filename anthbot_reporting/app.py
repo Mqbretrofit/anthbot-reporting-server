@@ -415,7 +415,11 @@ def _public_voice_pack(record: dict[str, Any], request: Request) -> dict[str, An
     public = dict(record)
     filename = public.pop("filename", None)
     public.pop("uploaded_at", None)
-    if isinstance(filename, str) and filename:
+    if (
+        isinstance(filename, str)
+        and filename
+        and str(public.get("access", "free")).strip().casefold() != "paid"
+    ):
         base = _public_base_url(request)
         public["music_url"] = f"{base}/voice-packs/{quote(filename)}"
     return public
