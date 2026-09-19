@@ -137,6 +137,10 @@ class StoreClientPayload(BaseModel):
         return normalized
 
 
+class StoreClientCheckoutPayload(StoreClientPayload):
+    pack_id: str = Field(min_length=1, max_length=160)
+
+
 class EntitlementPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -1541,6 +1545,45 @@ def create_store_client_pair(
         "paired": True,
         "store_url": f"{base}/store?pair={quote(pair_code)}",
         "expires_at": _iso_from_epoch(expires_at),
+    }
+
+
+@router.post("/api/anthbot/store/client/checkout")
+async def create_store_client_checkout(
+    payload: StoreClientCheckoutPayload,
+    request: Request,
+) -> dict[str, Any]:
+    """Create a paid checkout directly for a persistent standalone client."""
+    _require_checkout_ready()
+    record = _find_uploaded_pack(payload.pack_id)
+    if not _is_paid(record):
+        raise HTTPException(status_code=409, detail="voice pack is not a paid product")
+
+    client_id = _client_id_from_token(payload.client_token)
+    existing_order = _paid_order_for_client_pack(client_id, record)
+    if existing_order is not None:
+        return {
+            "already_owned": True,
+            "pack_id": payload.pack_id,
+            "checkout_url": None,
+            "session_id": existing_order["stripe_session_id"],
+        }
+
+    session = await asyncio.to_thread(
+        _create_checkout_session,
+        record,
+        request,
+        client_id=client_id,
+    )
+    order = _upsert_order_from_session(session)
+    checkout_url = session.get("url")
+    if not isinstance(checkout_url, str) or not checkout_url.startswith("https://"):
+        raise HTTPException(status_code=502, detail="Stripe did not return a checkout URL")
+    return {
+        "already_owned": False,
+        "pack_id": payload.pack_id,
+        "checkout_url": checkout_url,
+        "session_id": order["stripe_session_id"],
     }
 
 
