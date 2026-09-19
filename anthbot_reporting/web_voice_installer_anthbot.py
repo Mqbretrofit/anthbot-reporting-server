@@ -302,10 +302,24 @@ def install_voice(
     pack: dict[str, Any],
     update,
 ) -> None:
-    def stage(progress: int, message: str) -> None:
-        update(progress=progress, message=message)
+    def stage(
+        progress: int,
+        message_key: str,
+        message: str,
+        message_args: dict[str, Any] | None = None,
+    ) -> None:
+        update(
+            progress=progress,
+            message=message,
+            message_key=message_key,
+            message_args=message_args or {},
+        )
 
-    stage(8, "Creating a temporary secure robot connection…")
+    stage(
+        8,
+        "progressConnection",
+        "Creating a temporary secure robot connection…",
+    )
     credentials = iot_credentials(serial, access_token)
     iot = iot_client(credentials)
 
@@ -316,7 +330,7 @@ def install_voice(
         baseline = None
     baseline_summary = status_summary(baseline)
 
-    stage(18, "Preparing the mower for the voice download…")
+    stage(18, "progressPreparing", "Preparing the mower for the voice download…")
     marker = json.dumps(
         {"state": {"desired": {"voice_status": "ip"}}},
         separators=(",", ":"),
@@ -342,7 +356,7 @@ def install_voice(
     ).encode("utf-8")
     topic = f"$aws/things/{serial}/shadow/name/service/update"
 
-    stage(28, "Sending the voice installation command…")
+    stage(28, "progressSending", "Sending the voice installation command…")
     try:
         iot.publish(topic=topic, qos=0, payload=command)
     except ClientError as err:
@@ -353,7 +367,7 @@ def install_voice(
         iot = iot_client(credentials)
         iot.publish(topic=topic, qos=0, payload=command)
 
-    stage(35, "The mower accepted the command. Waiting for download progress…")
+    stage(35, "progressWaiting", "The mower accepted the command. Waiting for download progress…")
     started = time.time()
     deadline = started + 5 * 60
     last_summary = ""
@@ -368,7 +382,15 @@ def install_voice(
         summary = status_summary(status)
         if summary != last_summary:
             last_summary = summary
-            stage(min(92, max(38, int(38 + (time.time() - started) / 3.8))), summary)
+            stage(
+                min(92, max(38, int(38 + (time.time() - started) / 3.8))),
+                "progressRobot",
+                summary,
+                {
+                    "state": str((status or {}).get("state") or "unknown").casefold(),
+                    "progress": str((status or {}).get("progress") if (status or {}).get("progress") is not None else "—"),
+                },
+            )
 
         if status:
             state = str(status.get("state") or "").casefold()
@@ -424,7 +446,7 @@ def install_voice(
             "The mower did not confirm the voice installation within 5 minutes."
         )
 
-    stage(95, "Voice pack installed. Sending the audible test signal…")
+    stage(95, "progressTest", "Voice pack installed. Sending the audible test signal…")
     signal = json.dumps(
         {"state": {"desired": {"cmd": "find_robot", "data": 1}}},
         separators=(",", ":"),
@@ -437,4 +459,6 @@ def install_voice(
         status="success",
         progress=100,
         message="Installation complete. The mower should play its \"here I am\" voice now.",
+        message_key="progressComplete",
+        message_args={},
     )
