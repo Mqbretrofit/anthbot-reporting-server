@@ -1702,7 +1702,7 @@ def site_analytics_script() -> Response:
     navigator.doNotTrack === "1" ||
     window.doNotTrack === "1"
   ) return;
-  const allowed = new Set(["/","/store","/store/success","/privacy","/terms","/refunds"]);
+  const allowed = new Set(["/","/store","/store/success","/privacy","/terms","/refunds","/home-assistant","/models/genie-1000","/models/m9-pro","/models/mgc1000","/voice-packs"]);
   const path = location.pathname.replace(/\/+$/, "") || "/";
   if (!allowed.has(path)) return;
   const language = String(document.documentElement.lang || navigator.language || "en")
