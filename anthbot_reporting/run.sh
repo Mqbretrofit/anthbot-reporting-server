@@ -8,6 +8,10 @@ export ANTHBOT_STRIPE_SECRET_KEY="$(bashio::config 'stripe_secret_key')"
 export ANTHBOT_STRIPE_WEBHOOK_SECRET="$(bashio::config 'stripe_webhook_secret')"
 export ANTHBOT_STORE_LICENSE_SECRET="$(bashio::config 'store_license_secret')"
 export ANTHBOT_STRIPE_AUTOMATIC_TAX="$(bashio::config 'stripe_automatic_tax')"
+export ANTHBOT_PRIVACY_CONTROLLER_NAME="$(bashio::config 'privacy_controller_name')"
+export ANTHBOT_PRIVACY_CONTROLLER_ADDRESS="$(bashio::config 'privacy_controller_address')"
+export ANTHBOT_PRIVACY_CONTACT_EMAIL="$(bashio::config 'privacy_contact_email')"
+export ANTHBOT_PRIVACY_CONTACT_PHONE="$(bashio::config 'privacy_contact_phone')"
 
 bashio::log.info "Starting ANTHBOT Reporting Server on port 8080"
 exec uvicorn entrypoint:app \
