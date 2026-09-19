@@ -31,5 +31,6 @@ After start, `GET /health` should return:
 
 - `POST /api/anthbot/telemetry`
 - `POST /api/anthbot/diagnostics`
+- `GET /api/anthbot/voice-packs`
 - `GET /api/anthbot/admin/stats`
 - `GET /api/anthbot/admin/diagnostics`
