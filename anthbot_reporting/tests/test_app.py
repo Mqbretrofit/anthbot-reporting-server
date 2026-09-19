@@ -242,6 +242,32 @@ class ReportingServerTests(unittest.TestCase):
         self.assertEqual(downloaded.status_code, 200)
         self.assertEqual(downloaded.content, content)
 
+    def test_cache_never_returns_internal_http_url(self) -> None:
+        content = b"cached-official-pack"
+        expected_md5 = hashlib.md5(content, usedforsecurity=False).hexdigest()
+        target = server._cached_official_voice_path(expected_md5)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(content)
+
+        with TestClient(server.app, base_url="http://internal-addon:8080") as client:
+            response = client.post(
+                "/api/anthbot/voice-packs/cache-official",
+                json={
+                    "source_url": "https://cdn.example.com/english.pack",
+                    "music_md5": expected_md5,
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["music_url"],
+            (
+                f"{server.PUBLIC_REPORTING_BASE_URL}/voice-packs/"
+                f"official-{expected_md5}.pack"
+            ),
+        )
+        self.assertTrue(response.json()["music_url"].startswith("https://"))
+
     def test_admin_can_seed_official_voice_cache_in_proxy_safe_chunks(self) -> None:
         content = (b"factory-voice-chunk-" * 60000)[:900000]
         expected_md5 = hashlib.md5(content, usedforsecurity=False).hexdigest()
