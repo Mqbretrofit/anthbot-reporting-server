@@ -1523,16 +1523,6 @@ def _apply_seo_metadata(name: str, html: str) -> str:
     if not page or "</head>" not in html:
         return html
 
-    landing_i18n = json.dumps(
-        _SEO_LANDING_I18N,
-        ensure_ascii=False,
-        separators=(",", ":"),
-    )
-    language_options = "".join(
-        f'<option value="{escape(code, quote=True)}">{escape(label)}</option>'
-        for code, label in _PUBLIC_LANGUAGE_OPTIONS
-    )
-
     title = str(page["title"])
     description = str(page["description"])
     canonical = f"{_PUBLIC_SITE_BASE_URL}{page['path']}"
@@ -1680,6 +1670,16 @@ def _seo_landing_html(path: str) -> str:
     page = _SEO_LANDING_PAGES.get(path)
     if page is None:
         raise HTTPException(status_code=404, detail="page not found")
+
+    landing_i18n = json.dumps(
+        _SEO_LANDING_I18N,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    language_options = "".join(
+        f'<option value="{escape(code, quote=True)}">{escape(label)}</option>'
+        for code, label in _PUBLIC_LANGUAGE_OPTIONS
+    )
 
     title = str(page["title"])
     description = str(page["description"])
@@ -1902,7 +1902,7 @@ a{{color:inherit}}.wrap{{max-width:var(--max);margin:auto;padding:0 22px}}
     if(key==="pageHeading")return page.heading;
     if(key==="pageLead")return page.lead;
     if(key==="pageCta")return page.cta;
-    const match=/^section(\d+)(Title|Text)$/.exec(key);
+    const match=/^section([0-9]+)(Title|Text)$/.exec(key);
     if(match){{
       const item=(page.sections||[])[Number(match[1])];
       if(item)return item[match[2]==="Title"?0:1];
