@@ -30,6 +30,9 @@ _CURRENCY_RE = re.compile(r"^[a-zA-Z]{3}$")
 _SESSION_RE = re.compile(r"^cs_[A-Za-z0-9_]+$")
 _LICENSE_RE = re.compile(r"^abv1\.([A-Za-z0-9_-]+)\.([0-9a-f]{64})$")
 _STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300
+# Stripe Managed Payments requires an eligible product tax code. Community
+# voice packs are one-time downloadable digital audio with permanent access.
+_VOICE_PACK_TAX_CODE = "txcd_10401100"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -302,6 +305,7 @@ def _create_checkout_session(
                     "product_data": {
                         "name": product_name,
                         "description": "ANTHBOT Community voice pack · one-time purchase",
+                        "tax_code": _VOICE_PACK_TAX_CODE,
                     },
                 },
                 "quantity": 1,
