@@ -257,9 +257,22 @@ async def _limit_body_size(request: Request, call_next):
             except ValueError:
                 pass
     response = await call_next(request)
-    if request.url.path.startswith("/dashboard") or request.url.path.startswith(
-        "/api/anthbot/admin/"
-    ):
+    if request.url.path.startswith("/dashboard"):
+        # The admin dashboard is intentionally embeddable only from the known
+        # Home Assistant frontends used by this deployment.  Do this in the
+        # core app as well as the outer ASGI wrapper so a future entrypoint or
+        # proxy change cannot accidentally re-introduce X-Frame-Options: DENY.
+        response.headers["Cache-Control"] = "no-store"
+        response.headers.pop("X-Frame-Options", None)
+        response.headers["Content-Security-Policy"] = (
+            "frame-ancestors 'self' "
+            "http://192.168.8.91:8123 "
+            "http://homeassistant.local:8123 "
+            "https://ha.mqbretrofithungary.online"
+        )
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "no-referrer"
+    elif request.url.path.startswith("/api/anthbot/admin/"):
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -1231,7 +1244,7 @@ async def dashboard_login(request: Request):
         max_age=_DASHBOARD_SESSION_SECONDS,
         httponly=True,
         secure=True,
-        samesite="strict",
+        samesite="none",
         path="/",
     )
     return response
