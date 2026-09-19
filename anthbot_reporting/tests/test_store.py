@@ -558,6 +558,86 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIsNone(duplicate.json()["checkout_url"])
         duplicate_create.assert_not_called()
 
+    def test_standalone_client_checkout_links_purchase_without_pair_code(self) -> None:
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        priced = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        self.assertEqual(priced.status_code, 200)
+
+        client_token = "I" * 48
+        client_id = store_api._client_id_from_token(client_token)
+        checkout_session = {
+            "id": "cs_test_installer_123",
+            "object": "checkout.session",
+            "url": "https://checkout.stripe.com/c/pay/installer-test",
+            "created": int(time.time()),
+            "client_reference_id": pack_id,
+            "metadata": {
+                "pack_id": pack_id,
+                "community_id": "cs_vlasta_standard",
+                "store_client_id": client_id,
+            },
+            "payment_status": "unpaid",
+            "status": "open",
+            "amount_total": 799,
+            "currency": "eur",
+            "customer_details": None,
+            "customer": None,
+            "payment_intent": None,
+        }
+
+        with patch.object(
+            store_api,
+            "_create_checkout_session",
+            return_value=checkout_session,
+        ) as create:
+            checkout = self.client.post(
+                "/api/anthbot/store/client/checkout",
+                json={"client_token": client_token, "pack_id": pack_id},
+            )
+
+        self.assertEqual(checkout.status_code, 200)
+        self.assertFalse(checkout.json()["already_owned"])
+        self.assertEqual(checkout.json()["pack_id"], pack_id)
+        self.assertTrue(checkout.json()["checkout_url"].startswith("https://checkout.stripe.com/"))
+        self.assertEqual(create.call_args.kwargs["client_id"], client_id)
+        self.assertNotIn("pair_code", create.call_args.kwargs)
+
+        paid_session = {
+            **checkout_session,
+            "payment_status": "paid",
+            "status": "complete",
+            "customer_details": {"email": "installer@example.com"},
+            "customer": "cus_installer",
+            "payment_intent": "pi_installer",
+        }
+        stored = store_api._upsert_order_from_session(paid_session)
+        self.assertEqual(stored["client_id"], client_id)
+
+        entitlements = self.client.post(
+            "/api/anthbot/store/client/entitlements",
+            json={"client_token": client_token},
+        )
+        self.assertEqual(entitlements.status_code, 200)
+        self.assertTrue(entitlements.json()["licensed"])
+        entitled_pack = entitlements.json()["packs"][0]
+        self.assertEqual(entitled_pack["id"], pack_id)
+        self.assertIn("license=", entitled_pack["music_url"])
+
+        with patch.object(store_api, "_create_checkout_session") as duplicate_create:
+            duplicate = self.client.post(
+                "/api/anthbot/store/client/checkout",
+                json={"client_token": client_token, "pack_id": pack_id},
+            )
+        self.assertEqual(duplicate.status_code, 200)
+        self.assertTrue(duplicate.json()["already_owned"])
+        self.assertIsNone(duplicate.json()["checkout_url"])
+        duplicate_create.assert_not_called()
+
     def test_unlinked_purchase_is_not_returned_to_map_client(self) -> None:
         pack = self._upload_pack()
         pack_id = pack["id"]
