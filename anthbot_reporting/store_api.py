@@ -114,6 +114,31 @@ _SEO_PAGES: dict[str, dict[str, Any]] = {
     },
 }
 
+_PUBLIC_TYPOGRAPHY_STYLE = """
+<style id="anthbot-compact-typography">
+html{font-size:15px}
+body{font-size:.95rem}
+h1,.hero h1,.legal h1{font-size:clamp(2.05rem,4.7vw,3.65rem)!important;line-height:1.06!important}
+.hero p,.lead,.intro{font-size:.98rem!important;line-height:1.58!important}
+.section h2,.custom h2{font-size:clamp(1.55rem,3vw,1.95rem)!important}
+.feature h3,.legal h2,.policy-body h2,.request h2{font-size:1.08rem!important}
+.links a,.navlinks a{font-size:13px!important}
+.brand{font-size:.98rem}
+.tag,.pill,.repo-meta,.footer,.small,.status,.form-status{font-size:.82rem!important}
+.feature p,.bullet span,.desc,.custom-text,.legal p,.policy-body p,.policy-body li{font-size:.9rem!important;line-height:1.55!important}
+.price-big,.custom-price strong{font-size:1.7rem!important}
+.price{font-size:1.35rem!important}
+.topic-title strong,.demo-title strong{font-size:1.18rem!important}
+.tile strong,.schedule-card strong{font-size:.82rem!important}
+.tile span,.rule span,.schedule-card small{font-size:.72rem!important}
+@media(max-width:760px){
+  html{font-size:14px}
+  h1,.hero h1,.legal h1{font-size:clamp(1.95rem,9vw,3rem)!important}
+  .section h2,.custom h2{font-size:1.6rem!important}
+}
+</style>
+"""
+
 _SEO_LANDING_PAGES: dict[str, dict[str, Any]] = {
     "/home-assistant": {
         "title": "ANTHBOT Home Assistant Integration | ANTHBOT Map",
@@ -1581,6 +1606,7 @@ def _apply_seo_metadata(name: str, html: str) -> str:
         )
 
     html = html.replace("</head>", "\n".join(social) + "\n</head>", 1)
+    html = html.replace("</head>", _PUBLIC_TYPOGRAPHY_STYLE + "</head>", 1)
     if name == "public_site.html" and "</main>" in html:
         explore = """
 <section class="section"><div class="wrap">
@@ -1672,6 +1698,7 @@ def _seo_landing_html(path: str) -> str:
 <meta name="twitter:title" content="{escape(title, quote=True)}">
 <meta name="twitter:description" content="{escape(description, quote=True)}">
 <script type="application/ld+json">{structured}</script>
+{_PUBLIC_TYPOGRAPHY_STYLE}
 <style>
 :root{{
   color-scheme:dark;
