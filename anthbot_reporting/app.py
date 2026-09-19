@@ -402,6 +402,10 @@ def _public_base_url(request: Request) -> str:
     if forwarded_proto == "https" and forwarded_host:
         return f"https://{forwarded_host}".rstrip("/")
 
+    direct_base = str(request.base_url).rstrip("/")
+    if direct_base.startswith("https://"):
+        return direct_base
+
     # The integration and mower access this service through the public HTTPS
     # endpoint. Never leak the add-on's internal http:// URL into voice_set.
     return PUBLIC_REPORTING_BASE_URL
