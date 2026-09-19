@@ -737,6 +737,87 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIsNone(duplicate.json()["checkout_url"])
         duplicate_create.assert_not_called()
 
+    def test_live_entitlement_reconciles_refund_missed_by_webhook(self) -> None:
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        priced = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        self.assertEqual(priced.status_code, 200)
+
+        client_token = "R" * 48
+        client_id = store_api._client_id_from_token(client_token)
+        paid_session = {
+            "id": "cs_live_refund_reconcile_123",
+            "object": "checkout.session",
+            "created": int(time.time()),
+            "client_reference_id": pack_id,
+            "metadata": {
+                "pack_id": pack_id,
+                "community_id": "cs_vlasta_standard",
+                "store_client_id": client_id,
+            },
+            "payment_status": "paid",
+            "status": "complete",
+            "amount_total": 799,
+            "currency": "eur",
+            "customer_details": {"email": "buyer@example.com"},
+            "customer": "cus_refund_reconcile",
+            "payment_intent": "pi_refund_reconcile",
+        }
+        stored = store_api._upsert_order_from_session(paid_session)
+        license_key = store_api._license_for_order(stored)
+
+        refunded_intent = {
+            "id": "pi_refund_reconcile",
+            "object": "payment_intent",
+            "latest_charge": {
+                "id": "ch_refund_reconcile",
+                "object": "charge",
+                "refunded": True,
+                "amount": 799,
+                "amount_refunded": 799,
+            },
+        }
+        with patch.dict(
+            os.environ,
+            {"ANTHBOT_STRIPE_SECRET_KEY": "sk_live_refund_reconcile"},
+        ), patch.object(
+            store_api.stripe.PaymentIntent,
+            "retrieve",
+            return_value=refunded_intent,
+        ) as retrieve:
+            entitlements = self.client.post(
+                "/api/anthbot/store/client/entitlements",
+                json={"client_token": client_token},
+            )
+
+        self.assertEqual(entitlements.status_code, 200)
+        self.assertFalse(entitlements.json()["licensed"])
+        self.assertEqual(entitlements.json()["packs"], [])
+        retrieve.assert_called_once_with(
+            "pi_refund_reconcile",
+            expand=["latest_charge"],
+        )
+
+        with store_api.core._db() as conn:
+            row = conn.execute(
+                "SELECT payment_status, status, stripe_checked_at "
+                "FROM store_orders WHERE stripe_session_id = ?",
+                ("cs_live_refund_reconcile_123",),
+            ).fetchone()
+        self.assertEqual(row["payment_status"], "refunded")
+        self.assertEqual(row["status"], "refunded")
+        self.assertGreater(int(row["stripe_checked_at"]), 0)
+
+        license_response = self.client.post(
+            "/api/anthbot/store/entitlements",
+            json={"license_key": license_key},
+        )
+        self.assertEqual(license_response.status_code, 401)
+
     def test_unlinked_purchase_is_not_returned_to_map_client(self) -> None:
         pack = self._upload_pack()
         pack_id = pack["id"]
