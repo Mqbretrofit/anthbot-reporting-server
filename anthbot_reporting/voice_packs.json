@@ -1,0 +1,21 @@
+{
+  "schema": "anthbot-community-voice-packs-v1",
+  "packs": [
+    {
+      "id": "hu-girl-de-slot-3-v1.2.4",
+      "language": "Magyar",
+      "language_code": "hu",
+      "english_name": "German",
+      "sex": "girl",
+      "music_package": 3,
+      "version": "1.2.4",
+      "music_url": "https://ha.mqbretrofithungary.online/local/anthbot-map-v2/girl_de-1.2.4",
+      "music_md5": "74e1955f019aa422d446a0d367232826",
+      "size": 3117368,
+      "models": [
+        "Anthbot Genie 1000"
+      ],
+      "source": "community"
+    }
+  ]
+}
