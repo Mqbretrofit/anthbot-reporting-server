@@ -217,6 +217,23 @@ class DiagnosticsPayload(BaseModel):
     report: dict[str, Any]
 
 
+class OfficialVoiceCachePayload(BaseModel):
+    """Public, constrained request to mirror one official ANTHBOT voice pack."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    source_url: str = Field(min_length=8, max_length=8192)
+    music_md5: str = Field(min_length=32, max_length=32)
+
+    @field_validator("music_md5")
+    @classmethod
+    def _validate_music_md5(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if not _OFFICIAL_VOICE_MD5_RE.fullmatch(normalized):
+            raise ValueError("music_md5 must be a 32-character hex MD5")
+        return normalized
+
+
 @app.middleware("http")
 async def _limit_body_size(request: Request, call_next):
     if request.method == "POST":
