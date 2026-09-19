@@ -2023,7 +2023,7 @@ def sitemap_xml() -> Response:
 
 
 @router.get("/", response_class=HTMLResponse)
-def public_business_page(request: Request) -> HTMLResponse | RedirectResponse:
+def public_business_page(request: Request) -> Response:
     redirect = _canonical_public_redirect(request, "/")
     if redirect is not None:
         return redirect
@@ -2031,7 +2031,7 @@ def public_business_page(request: Request) -> HTMLResponse | RedirectResponse:
 
 
 @router.get("/terms", response_class=HTMLResponse)
-def public_terms_page(request: Request) -> HTMLResponse | RedirectResponse:
+def public_terms_page(request: Request) -> Response:
     redirect = _canonical_public_redirect(request, "/terms")
     if redirect is not None:
         return redirect
@@ -2039,7 +2039,7 @@ def public_terms_page(request: Request) -> HTMLResponse | RedirectResponse:
 
 
 @router.get("/refunds", response_class=HTMLResponse)
-def public_refunds_page(request: Request) -> HTMLResponse | RedirectResponse:
+def public_refunds_page(request: Request) -> Response:
     redirect = _canonical_public_redirect(request, "/refunds")
     if redirect is not None:
         return redirect
@@ -2047,7 +2047,7 @@ def public_refunds_page(request: Request) -> HTMLResponse | RedirectResponse:
 
 
 @router.get("/privacy", response_class=HTMLResponse)
-def public_privacy_page(request: Request) -> HTMLResponse | RedirectResponse:
+def public_privacy_page(request: Request) -> Response:
     redirect = _canonical_public_redirect(request, "/privacy")
     if redirect is not None:
         return redirect
@@ -2070,7 +2070,7 @@ def public_privacy_page(request: Request) -> HTMLResponse | RedirectResponse:
 
 
 @router.get("/store", response_class=HTMLResponse)
-def store_page(request: Request) -> HTMLResponse | RedirectResponse:
+def store_page(request: Request) -> Response:
     redirect = _canonical_public_redirect(request, "/store")
     if redirect is not None:
         return redirect
@@ -2078,7 +2078,7 @@ def store_page(request: Request) -> HTMLResponse | RedirectResponse:
 
 
 @router.get("/store/success", response_class=HTMLResponse)
-def store_success_page(request: Request) -> HTMLResponse | RedirectResponse:
+def store_success_page(request: Request) -> Response:
     redirect = _canonical_public_redirect(request, "/store/success")
     if redirect is not None:
         return redirect
