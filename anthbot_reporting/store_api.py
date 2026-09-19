@@ -33,6 +33,9 @@ _PAIR_RE = re.compile(r"^abp_[A-Za-z0-9_-]{24,128}$")
 _CLIENT_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{32,512}$")
 _STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300
 _STORE_PAIR_TTL_SECONDS = 7 * 24 * 60 * 60
+_STANDARD_VOICE_PACK_PRICE_AMOUNT = 799
+_STANDARD_VOICE_PACK_CURRENCY = "eur"
+_CUSTOM_VOICE_STARTING_PRICE_AMOUNT = 2499
 # Stripe Managed Payments requires an eligible product tax code. Community
 # voice packs are one-time downloadable digital audio with permanent access.
 _VOICE_PACK_TAX_CODE = "txcd_10401100"
@@ -87,6 +90,29 @@ class StorePricingPayload(BaseModel):
         if self.access == "paid" and self.price_amount <= 0:
             raise ValueError("paid voice packs require price_amount > 0")
         return self
+
+
+class CustomVoiceRequestPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    requested_language: str = Field(min_length=1, max_length=64)
+    voice_style: str = Field(min_length=1, max_length=128)
+    model: str = Field(min_length=1, max_length=128)
+    contact: str = Field(min_length=3, max_length=254)
+    notes: str = Field(default="", max_length=2000)
+    site_language: str = Field(default="en", min_length=2, max_length=16)
+
+    @field_validator(
+        "requested_language",
+        "voice_style",
+        "model",
+        "contact",
+        "notes",
+        "site_language",
+    )
+    @classmethod
+    def _strip_custom_request_text(cls, value: str) -> str:
+        return value.strip()
 
 
 def _iso_from_epoch(value: Any) -> str:
@@ -177,6 +203,21 @@ def _init_store_tables() -> None:
                 ON store_orders(paid_at);
             CREATE INDEX IF NOT EXISTS idx_store_pairings_client_id
                 ON store_client_pairings(client_id);
+
+            CREATE TABLE IF NOT EXISTS store_custom_voice_requests (
+                request_id TEXT PRIMARY KEY,
+                requested_language TEXT NOT NULL,
+                voice_style TEXT NOT NULL,
+                model TEXT NOT NULL,
+                contact TEXT NOT NULL,
+                notes TEXT NOT NULL,
+                site_language TEXT NOT NULL,
+                status TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_store_custom_voice_requests_created
+                ON store_custom_voice_requests(created_at);
             """
         )
 
@@ -314,13 +355,14 @@ def _is_paid(record: dict[str, Any]) -> bool:
 
 
 def _price_amount(record: dict[str, Any]) -> int:
-    try:
-        return max(0, int(record.get("price_amount", 0)))
-    except (TypeError, ValueError):
-        return 0
+    if _is_paid(record):
+        return _STANDARD_VOICE_PACK_PRICE_AMOUNT
+    return 0
 
 
 def _currency(record: dict[str, Any]) -> str:
+    if _is_paid(record):
+        return _STANDARD_VOICE_PACK_CURRENCY
     value = str(record.get("currency", "eur")).strip().lower()
     return value if _CURRENCY_RE.fullmatch(value) else "eur"
 
@@ -912,6 +954,41 @@ def store_client_entitlements(
     }
 
 
+@router.post("/api/anthbot/store/custom-voice-requests", status_code=201)
+def create_custom_voice_request(
+    payload: CustomVoiceRequestPayload,
+) -> dict[str, Any]:
+    _init_store_tables()
+    request_id = f"cvr_{secrets.token_urlsafe(12)}"
+    now = core._iso()
+    with core._db() as conn:
+        conn.execute(
+            """
+            INSERT INTO store_custom_voice_requests (
+                request_id, requested_language, voice_style, model, contact,
+                notes, site_language, status, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'new', ?, ?)
+            """,
+            (
+                request_id,
+                payload.requested_language,
+                payload.voice_style,
+                payload.model,
+                payload.contact,
+                payload.notes,
+                payload.site_language,
+                now,
+                now,
+            ),
+        )
+    return {
+        "submitted": True,
+        "request_id": request_id,
+        "starting_price_amount": _CUSTOM_VOICE_STARTING_PRICE_AMOUNT,
+        "currency": _STANDARD_VOICE_PACK_CURRENCY,
+    }
+
+
 @router.post("/api/anthbot/store/checkout")
 async def create_store_checkout(
     payload: CheckoutPayload,
@@ -1125,8 +1202,8 @@ def update_store_voice_pack(
         raise HTTPException(status_code=404, detail="uploaded voice pack not found")
 
     target["access"] = payload.access
-    target["price_amount"] = payload.price_amount if payload.access == "paid" else 0
-    target["currency"] = payload.currency
+    target["price_amount"] = _STANDARD_VOICE_PACK_PRICE_AMOUNT if payload.access == "paid" else 0
+    target["currency"] = _STANDARD_VOICE_PACK_CURRENCY if payload.access == "paid" else payload.currency
     core._write_uploaded_voice_registry(
         {"schema": core.VOICE_PACKS_SCHEMA, "packs": packs}
     )
@@ -1136,6 +1213,27 @@ def update_store_voice_pack(
     public["price_amount"] = target["price_amount"]
     public["currency"] = target["currency"]
     return {"updated": True, "pack": public}
+
+
+@router.get(
+    "/api/anthbot/admin/store/custom-voice-requests",
+    dependencies=[Depends(core.require_admin)],
+)
+def admin_custom_voice_requests(limit: int = 200) -> dict[str, Any]:
+    _init_store_tables()
+    limit = max(1, min(int(limit), 500))
+    with core._db() as conn:
+        rows = conn.execute(
+            """
+            SELECT request_id, requested_language, voice_style, model, contact,
+                   notes, site_language, status, created_at, updated_at
+            FROM store_custom_voice_requests
+            ORDER BY created_at DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+    return {"count": len(rows), "items": [dict(row) for row in rows]}
 
 
 @router.get(
