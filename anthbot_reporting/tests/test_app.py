@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -208,6 +209,48 @@ class ReportingServerTests(unittest.TestCase):
         self.assertEqual(
             pack["music_md5"], "74e1955f019aa422d446a0d367232826"
         )
+
+    def test_public_cache_mirrors_official_voice_pack_and_reuses_md5(self) -> None:
+        content = b"official-english-voice-pack"
+        expected_md5 = hashlib.md5(content, usedforsecurity=False).hexdigest()
+
+        def fake_fetch(source_url: str, music_md5: str, target: Path) -> int:
+            self.assertEqual(source_url, "https://cdn.example.com/english.pack?sig=test")
+            self.assertEqual(music_md5, expected_md5)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(content)
+            return len(content)
+
+        payload = {
+            "source_url": "https://cdn.example.com/english.pack?sig=test",
+            "music_md5": expected_md5,
+        }
+        with patch.object(server, "_fetch_official_voice_pack", side_effect=fake_fetch) as fetch:
+            first = self.client.post("/api/anthbot/voice-packs/cache-official", json=payload)
+            second = self.client.post("/api/anthbot/voice-packs/cache-official", json=payload)
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertFalse(first.json()["cache_hit"])
+        self.assertTrue(second.json()["cache_hit"])
+        self.assertEqual(fetch.call_count, 1)
+        self.assertEqual(first.json()["music_md5"], expected_md5)
+        self.assertEqual(first.json()["size"], len(content))
+
+        download_path = first.json()["music_url"].removeprefix("https://testserver")
+        downloaded = self.client.get(download_path)
+        self.assertEqual(downloaded.status_code, 200)
+        self.assertEqual(downloaded.content, content)
+
+    def test_public_cache_rejects_invalid_md5(self) -> None:
+        response = self.client.post(
+            "/api/anthbot/voice-packs/cache-official",
+            json={
+                "source_url": "https://cdn.example.com/english.pack",
+                "music_md5": "not-an-md5",
+            },
+        )
+        self.assertEqual(response.status_code, 422)
 
     def test_admin_can_upload_serve_replace_and_delete_voice_pack(self) -> None:
         content_v1 = b"verified-czech-voice-pack-v1"
