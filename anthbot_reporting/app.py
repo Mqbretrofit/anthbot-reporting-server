@@ -39,6 +39,7 @@ MAX_DIAGNOSTICS_BYTES = 2 * 1024 * 1024
 MAX_VOICE_PACK_BYTES = 32 * 1024 * 1024
 MAX_VOICE_PACK_UPLOAD_BYTES = MAX_VOICE_PACK_BYTES + 1024 * 1024
 VOICE_PACK_CHUNK_BYTES = 256 * 1024
+OFFICIAL_UPLOAD_HTTP_CHUNK_BYTES = 384 * 1024
 _OFFICIAL_VOICE_MD5_RE = re.compile(r"^[0-9a-fA-F]{32}$")
 _VOICE_PACK_SAFE_PART = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 _DASHBOARD_COOKIE = "anthbot_admin_session"
@@ -645,6 +646,99 @@ def _installation_from_row(row: sqlite3.Row) -> dict[str, Any]:
 def community_voice_packs(request: Request) -> dict[str, Any]:
     """Return public custom/community voice packs for ANTHBOT Map."""
     return _voice_pack_registry(request)
+
+
+@app.post(
+    "/api/anthbot/admin/voice-packs/cache-official-upload-chunk",
+    dependencies=[Depends(require_admin)],
+)
+async def upload_official_voice_cache_chunk(
+    request: Request,
+    upload_id: str = Query(..., min_length=1, max_length=64),
+    expected_md5: str = Query(..., min_length=32, max_length=32),
+    offset: int = Query(..., ge=0, le=MAX_VOICE_PACK_BYTES),
+    final: bool = Query(default=False),
+) -> dict[str, Any]:
+    """Receive a factory voice pack in proxy-safe raw HTTP chunks."""
+    upload_id = _voice_pack_safe_part(upload_id, field="upload_id")
+    expected_md5 = expected_md5.strip().lower()
+    if not _OFFICIAL_VOICE_MD5_RE.fullmatch(expected_md5):
+        raise HTTPException(status_code=422, detail="expected_md5 must be a 32-character hex MD5")
+
+    chunk = await request.body()
+    if not chunk:
+        raise HTTPException(status_code=422, detail="upload chunk is empty")
+    if len(chunk) > OFFICIAL_UPLOAD_HTTP_CHUNK_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"upload chunk exceeds {OFFICIAL_UPLOAD_HTTP_CHUNK_BYTES} bytes",
+        )
+
+    directory = _voice_pack_dir()
+    directory.mkdir(parents=True, exist_ok=True)
+    temporary = directory / f".official-upload-{upload_id}.part"
+    current_size = temporary.stat().st_size if temporary.exists() else 0
+
+    if offset == 0:
+        if current_size:
+            temporary.unlink(missing_ok=True)
+            current_size = 0
+    elif current_size != offset:
+        raise HTTPException(
+            status_code=409,
+            detail={"expected_offset": current_size, "received_offset": offset},
+        )
+
+    next_size = current_size + len(chunk)
+    if next_size > MAX_VOICE_PACK_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"voice pack exceeds {MAX_VOICE_PACK_BYTES} bytes",
+        )
+
+    mode = "ab" if current_size else "wb"
+    with temporary.open(mode) as output:
+        output.write(chunk)
+
+    if not final:
+        return {
+            "accepted": True,
+            "complete": False,
+            "next_offset": next_size,
+        }
+
+    digest = hashlib.md5(usedforsecurity=False)
+    size = 0
+    with temporary.open("rb") as source:
+        while True:
+            data = source.read(VOICE_PACK_CHUNK_BYTES)
+            if not data:
+                break
+            size += len(data)
+            digest.update(data)
+
+    actual_md5 = digest.hexdigest().lower()
+    if actual_md5 != expected_md5:
+        temporary.unlink(missing_ok=True)
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "uploaded voice MD5 mismatch",
+                "expected_md5": expected_md5,
+                "actual_md5": actual_md5,
+            },
+        )
+
+    target = _cached_official_voice_path(actual_md5)
+    os.replace(temporary, target)
+    return {
+        "accepted": True,
+        "complete": True,
+        "next_offset": size,
+        "music_md5": actual_md5,
+        "size": size,
+        "filename": target.name,
+    }
 
 
 @app.post(
