@@ -3,8 +3,10 @@ from __future__ import annotations
 from app import app as fastapi_app
 from diagnostics_dedupe import DiagnosticsDedupeMiddleware
 from migration_api import router as migration_router
+from store_api import router as store_router
 
 fastapi_app.include_router(migration_router)
+fastapi_app.include_router(store_router)
 
 from asgi import app as dashboard_app  # noqa: E402
 

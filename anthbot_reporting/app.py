@@ -415,7 +415,11 @@ def _public_voice_pack(record: dict[str, Any], request: Request) -> dict[str, An
     public = dict(record)
     filename = public.pop("filename", None)
     public.pop("uploaded_at", None)
-    if isinstance(filename, str) and filename:
+    if (
+        isinstance(filename, str)
+        and filename
+        and str(public.get("access", "free")).strip().casefold() != "paid"
+    ):
         base = _public_base_url(request)
         public["music_url"] = f"{base}/voice-packs/{quote(filename)}"
     return public
@@ -476,12 +480,17 @@ def _voice_pack_registry(request: Request) -> dict[str, Any]:
     for item in bundled:
         if not isinstance(item, dict):
             continue
+        if str(item.get("access", "free")).strip().casefold() == "paid":
+            continue
         if _voice_pack_community_id(item) in uploaded_identities:
             continue
         merged.append(_public_voice_pack(item, request))
     for item in uploaded:
-        if isinstance(item, dict):
-            merged.append(_public_voice_pack(item, request))
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("access", "free")).strip().casefold() == "paid":
+            continue
+        merged.append(_public_voice_pack(item, request))
 
     return {"schema": VOICE_PACKS_SCHEMA, "packs": merged}
 
@@ -863,6 +872,16 @@ def download_voice_pack(filename: str) -> FileResponse:
     """Serve one uploaded voice pack directly to a mower."""
     if Path(filename).name != filename or not _VOICE_PACK_SAFE_PART.fullmatch(filename):
         raise HTTPException(status_code=404, detail="voice pack not found")
+    for item in _uploaded_voice_pack_registry().get("packs", []):
+        if not isinstance(item, dict):
+            continue
+        if (
+            str(item.get("filename", "")) == filename
+            and str(item.get("access", "free")).strip().casefold() == "paid"
+        ):
+            # Paid Community packs are only served by the licensed store endpoint.
+            raise HTTPException(status_code=404, detail="voice pack not found")
+
     path = _voice_pack_dir() / filename
     if not path.is_file():
         raise HTTPException(status_code=404, detail="voice pack not found")
@@ -1056,6 +1075,24 @@ async def upload_voice_pack(
         filename += original_suffix.lower()
     target = directory / filename
 
+    preserved_access = "free"
+    preserved_price_amount = 0
+    preserved_currency = "eur"
+    if isinstance(effective_match, dict):
+        if str(effective_match.get("access", "free")).strip().casefold() == "paid":
+            preserved_access = "paid"
+            try:
+                preserved_price_amount = max(
+                    0, int(effective_match.get("price_amount", 0))
+                )
+            except (TypeError, ValueError):
+                preserved_price_amount = 0
+        candidate_currency = str(
+            effective_match.get("currency", "eur")
+        ).strip().lower()
+        if re.fullmatch(r"[a-z]{3}", candidate_currency):
+            preserved_currency = candidate_currency
+
     record = {
         "id": package_id,
         "community_id": community_id,
@@ -1076,6 +1113,9 @@ async def upload_voice_pack(
         "size": size,
         "models": model_list,
         "source": "community",
+        "access": preserved_access,
+        "price_amount": preserved_price_amount if preserved_access == "paid" else 0,
+        "currency": preserved_currency,
         "uploaded_at": _iso(),
     }
 

@@ -1,5 +1,5 @@
 name: ANTHBOT Reporting Server
-version: "1.0.0-test.39"
+version: "1.0.0-test.40"
 slug: anthbot_reporting
 description: Opt-in telemetry, diagnostics, and admin dashboard backend for the ANTHBOT Map integration
 url: https://github.com/Mqbretrofit/anthbot-reporting-server/tree/main/anthbot_reporting
@@ -16,5 +16,15 @@ ports_description:
 watchdog: http://[HOST]:[PORT:8080]/health
 options:
   admin_token: ""
+  store_enabled: false
+  stripe_secret_key: ""
+  stripe_webhook_secret: ""
+  store_license_secret: ""
+  stripe_automatic_tax: false
 schema:
   admin_token: password?
+  store_enabled: bool
+  stripe_secret_key: password?
+  stripe_webhook_secret: password?
+  store_license_secret: password?
+  stripe_automatic_tax: bool
