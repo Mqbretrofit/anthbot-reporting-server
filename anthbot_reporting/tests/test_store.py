@@ -31,6 +31,10 @@ class VoiceStoreTests(unittest.TestCase):
         os.environ["ANTHBOT_STRIPE_WEBHOOK_SECRET"] = "whsec_test_example"
         os.environ["ANTHBOT_STORE_LICENSE_SECRET"] = "license-secret-for-tests"
         os.environ["ANTHBOT_STRIPE_AUTOMATIC_TAX"] = "false"
+        os.environ["ANTHBOT_PRIVACY_CONTROLLER_NAME"] = "Example Controller"
+        os.environ["ANTHBOT_PRIVACY_CONTROLLER_ADDRESS"] = "Example Address, Hungary"
+        os.environ["ANTHBOT_PRIVACY_CONTACT_EMAIL"] = "privacy@example.test"
+        os.environ["ANTHBOT_PRIVACY_CONTACT_PHONE"] = "+36 1 000 0000"
         self.client_ctx = TestClient(entrypoint.app, base_url="https://testserver")
         self.client = self.client_ctx.__enter__()
 
@@ -76,6 +80,62 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIn('"zh-CN":"← 首页"', html)
         self.assertIn('"km":"← ទំព័រដើម"', html)
         self.assertEqual(html.count('homeNav=label'), 1)
+
+    def test_privacy_page_has_gdpr_information_and_23_languages(self) -> None:
+        response = self.client.get("/privacy")
+        self.assertEqual(response.status_code, 200)
+        html = response.text
+        self.assertIn("Example Controller", html)
+        self.assertIn("Example Address, Hungary", html)
+        self.assertIn("privacy@example.test", html)
+        self.assertIn("+36 1 000 0000", html)
+        self.assertNotIn("__CONTROLLER_NAME__", html)
+        self.assertNotIn("__PRIVACY_CONFIG_WARNING_TEXT__", html)
+
+        for language in (
+            "en", "hu", "de", "fr", "es", "it", "pt", "nl", "pl", "cs", "sk",
+            "ro", "da", "sv", "no", "fi", "zh-CN", "zh-TW", "tr", "th", "vi",
+            "ko", "km",
+        ):
+            marker = f'"{language}":' if "-" in language else f"{language}:"
+            self.assertIn(marker, html)
+
+        self.assertIn("GDPR 6(1)(b)", html)
+        self.assertIn("GDPR 6. cikk (1) b)", html)
+        self.assertIn("Stripe Payments Europe Limited", html)
+        self.assertIn("EU-US Data Privacy Framework", html)
+        self.assertIn("Standard Contractual Clauses", html)
+        self.assertIn("Nemzeti Adatvédelmi és Információszabadság Hatóság", html)
+        self.assertIn("/api/anthbot/privacy-requests", html)
+        self.assertIn("7 days", html)
+        self.assertIn("7 nap", html)
+
+    def test_privacy_request_can_be_submitted_and_seen_by_admin(self) -> None:
+        response = self.client.post(
+            "/api/anthbot/privacy-requests",
+            json={
+                "request_type": "access",
+                "contact": "person@example.test",
+                "details": "Please provide my store and reporting data.",
+                "site_language": "en",
+            },
+        )
+        self.assertEqual(response.status_code, 201)
+        request_id = response.json()["request_id"]
+        self.assertTrue(request_id.startswith("prv_"))
+
+        listing = self.client.get(
+            "/api/anthbot/admin/privacy-requests",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(listing.status_code, 200)
+        item = next(
+            row for row in listing.json()["items"]
+            if row["request_id"] == request_id
+        )
+        self.assertEqual(item["request_type"], "access")
+        self.assertEqual(item["contact"], "person@example.test")
+        self.assertEqual(item["status"], "new")
 
     def test_paid_pack_is_hidden_from_legacy_registry_and_requires_license(self) -> None:
         pack = self._upload_pack()

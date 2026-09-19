@@ -5,6 +5,7 @@ import base64
 from datetime import datetime, timezone
 import hashlib
 import hmac
+from html import escape
 import json
 import logging
 import os
@@ -115,6 +116,30 @@ class CustomVoiceRequestPayload(BaseModel):
         return value.strip()
 
 
+class PrivacyRequestPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    request_type: Literal[
+        "access",
+        "rectification",
+        "erasure",
+        "restriction",
+        "portability",
+        "objection",
+        "withdraw_consent",
+        "complaint",
+        "other",
+    ]
+    contact: str = Field(min_length=3, max_length=254)
+    details: str = Field(default="", max_length=3000)
+    site_language: str = Field(default="en", min_length=2, max_length=16)
+
+    @field_validator("contact", "details", "site_language")
+    @classmethod
+    def _strip_privacy_request_text(cls, value: str) -> str:
+        return value.strip()
+
+
 def _iso_from_epoch(value: Any) -> str:
     try:
         return datetime.fromtimestamp(int(value), tz=timezone.utc).isoformat()
@@ -149,13 +174,44 @@ def _stripe_automatic_tax() -> bool:
     return _env_flag("ANTHBOT_STRIPE_AUTOMATIC_TAX", False)
 
 
+def _privacy_controller_name() -> str:
+    return os.environ.get(
+        "ANTHBOT_PRIVACY_CONTROLLER_NAME",
+        "MQB Retrofit Hungary",
+    ).strip() or "MQB Retrofit Hungary"
+
+
+def _privacy_controller_address() -> str:
+    return os.environ.get("ANTHBOT_PRIVACY_CONTROLLER_ADDRESS", "").strip()
+
+
+def _privacy_contact_email() -> str:
+    return os.environ.get("ANTHBOT_PRIVACY_CONTACT_EMAIL", "").strip()
+
+
+def _privacy_contact_phone() -> str:
+    return os.environ.get(
+        "ANTHBOT_PRIVACY_CONTACT_PHONE",
+        "+36 30 620 9015",
+    ).strip() or "+36 30 620 9015"
+
+
 def _checkout_ready() -> bool:
-    return bool(
+    stripe_key = _stripe_secret_key()
+    base_ready = bool(
         _store_enabled()
-        and _stripe_secret_key()
+        and stripe_key
         and _stripe_webhook_secret()
         and _license_secret()
     )
+    if not base_ready:
+        return False
+    # Sandbox remains usable while legal details are being prepared. Live
+    # commercial checkout requires the controller's postal address so the
+    # public Article 13 notice cannot accidentally go live incomplete.
+    if stripe_key.startswith("sk_live_") and not _privacy_controller_address():
+        return False
+    return True
 
 
 def _require_checkout_ready() -> None:
@@ -167,6 +223,11 @@ def _require_checkout_ready() -> None:
         raise HTTPException(status_code=503, detail="Stripe webhook secret is not configured")
     if not _license_secret():
         raise HTTPException(status_code=503, detail="voice store license secret is not configured")
+    if _stripe_secret_key().startswith("sk_live_") and not _privacy_controller_address():
+        raise HTTPException(
+            status_code=503,
+            detail="privacy controller postal address must be configured before live checkout",
+        )
 
 
 def _init_store_tables() -> None:
@@ -218,6 +279,21 @@ def _init_store_tables() -> None:
             );
             CREATE INDEX IF NOT EXISTS idx_store_custom_voice_requests_created
                 ON store_custom_voice_requests(created_at);
+
+            CREATE TABLE IF NOT EXISTS privacy_requests (
+                request_id TEXT PRIMARY KEY,
+                request_type TEXT NOT NULL,
+                contact TEXT NOT NULL,
+                details TEXT NOT NULL,
+                site_language TEXT NOT NULL,
+                status TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_privacy_requests_created
+                ON privacy_requests(created_at);
+            CREATE INDEX IF NOT EXISTS idx_privacy_requests_status
+                ON privacy_requests(status);
             """
         )
 
@@ -989,6 +1065,38 @@ def create_custom_voice_request(
     }
 
 
+@router.post("/api/anthbot/privacy-requests", status_code=201)
+def create_privacy_request(
+    payload: PrivacyRequestPayload,
+) -> dict[str, Any]:
+    """Receive an electronic GDPR/data-rights request without requiring email."""
+    _init_store_tables()
+    request_id = f"prv_{secrets.token_urlsafe(12)}"
+    now = core._iso()
+    with core._db() as conn:
+        conn.execute(
+            """
+            INSERT INTO privacy_requests (
+                request_id, request_type, contact, details, site_language,
+                status, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, 'new', ?, ?)
+            """,
+            (
+                request_id,
+                payload.request_type,
+                payload.contact,
+                payload.details,
+                payload.site_language,
+                now,
+                now,
+            ),
+        )
+    return {
+        "submitted": True,
+        "request_id": request_id,
+    }
+
+
 @router.post("/api/anthbot/store/checkout")
 async def create_store_checkout(
     payload: CheckoutPayload,
@@ -1259,6 +1367,27 @@ def admin_store_orders(limit: int = 200) -> dict[str, Any]:
 
 
 @router.get(
+    "/api/anthbot/admin/privacy-requests",
+    dependencies=[Depends(core.require_admin)],
+)
+def admin_privacy_requests(limit: int = 200) -> dict[str, Any]:
+    _init_store_tables()
+    limit = max(1, min(int(limit), 500))
+    with core._db() as conn:
+        rows = conn.execute(
+            """
+            SELECT request_id, request_type, contact, details, site_language,
+                   status, created_at, updated_at
+            FROM privacy_requests
+            ORDER BY created_at DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+    return {"count": len(rows), "items": [dict(row) for row in rows]}
+
+
+@router.get(
     "/api/anthbot/admin/store/stats",
     dependencies=[Depends(core.require_admin)],
 )
@@ -1308,7 +1437,22 @@ def public_refunds_page() -> HTMLResponse:
 
 @router.get("/privacy", response_class=HTMLResponse)
 def public_privacy_page() -> HTMLResponse:
-    return HTMLResponse(_html_file("public_privacy.html"))
+    html = _html_file("public_privacy.html")
+    address = _privacy_controller_address()
+    email = _privacy_contact_email()
+    replacements = {
+        "__CONTROLLER_NAME__": escape(_privacy_controller_name()),
+        "__CONTROLLER_ADDRESS__": escape(address or "—"),
+        "__PRIVACY_EMAIL__": escape(email),
+        "__PRIVACY_PHONE__": escape(_privacy_contact_phone()),
+        "__PRIVACY_EMAIL_CARD_CLASS__": "info" if email else "info hidden",
+        "__PRIVACY_CONFIG_WARNING_CLASS__": (
+            "controller-warning" if not address else "hidden"
+        ),
+    }
+    for needle, value in replacements.items():
+        html = html.replace(needle, value)
+    return HTMLResponse(html)
 
 
 @router.get("/store", response_class=HTMLResponse)

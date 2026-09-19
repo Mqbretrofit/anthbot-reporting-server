@@ -27,6 +27,34 @@ After start, `GET /health` should return:
 {"ok":true,"schema":"anthbot-reporting-server-v1"}
 ```
 
+## Privacy / GDPR
+
+The public `/privacy` page describes the actual Reporting Server and Voice
+Store data flows, including purchases, Stripe, ANTHBOT Map entitlement linking,
+custom voice requests, optional telemetry/diagnostics, legal bases, recipients,
+international transfers, retention criteria and data-subject rights.
+
+Configure the controller details in the app options before live commercial use:
+
+- `privacy_controller_name`
+- `privacy_controller_address`
+- `privacy_contact_email`
+- `privacy_contact_phone`
+
+The privacy page is available in the same 23 languages as the Voice Store.
+Visitors can submit a data-protection request without creating an account:
+
+- `POST /api/anthbot/privacy-requests`
+
+Administrators can review submitted requests at the Store admin page or through:
+
+- `GET /api/anthbot/admin/privacy-requests`
+
+The public privacy notice identifies Stripe as the payment provider and points
+users to the GDPR, Stripe Privacy Center and Hungary's NAIH supervisory
+authority. The Reporting Server does not intentionally persist visitor IP
+addresses and does not store full payment-card data.
+
 ## Endpoints
 
 - `POST /api/anthbot/telemetry`

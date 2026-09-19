@@ -20,7 +20,9 @@
     <div class="grid kpis" id="kpis"></div>
     <div class="card status" id="status">Betöltés…</div>
     <section class="card section"><div class="head">Hangcsomagok</div><div class="table-wrap"><table><thead><tr><th>Csomag</th><th>Nyelv / hang</th><th>Verzió</th><th>Hozzáférés</th><th>Ár</th><th>Pénznem</th><th>Eladás</th><th>Bevétel</th><th>Állapot</th></tr></thead><tbody id="packs"></tbody></table></div></section>
-    <section class="card section"><div class="head">Egyedi hang kérések · €24.99-tól</div><div class="table-wrap"><table><thead><tr><th>Idő</th><th>Azonosító</th><th>Nyelv</th><th>Hang</th><th>Robot</th><th>Kapcsolat</th><th>Megjegyzés</th><th>Oldal nyelve</th><th>Állapot</th></tr></thead><tbody id="custom-requests"></tbody></table></div></section><section class="card section"><div class="head">Legutóbbi rendelések</div><div class="table-wrap"><table><thead><tr><th>Idő</th><th>Session</th><th>Csomag</th><th>Állapot</th><th>Email</th><th>Összeg</th></tr></thead><tbody id="orders"></tbody></table></div></section>
+    <section class="card section"><div class="head">Egyedi hang kérések · €24.99-tól</div><div class="table-wrap"><table><thead><tr><th>Idő</th><th>Azonosító</th><th>Nyelv</th><th>Hang</th><th>Robot</th><th>Kapcsolat</th><th>Megjegyzés</th><th>Oldal nyelve</th><th>Állapot</th></tr></thead><tbody id="custom-requests"></tbody></table></div></section>
+    <section class="card section"><div class="head">Adatvédelmi / GDPR kérelmek</div><div class="table-wrap"><table><thead><tr><th>Idő</th><th>Azonosító</th><th>Típus</th><th>Kapcsolat</th><th>Részletek</th><th>Nyelv</th><th>Állapot</th></tr></thead><tbody id="privacy-requests"></tbody></table></div></section>
+    <section class="card section"><div class="head">Legutóbbi rendelések</div><div class="table-wrap"><table><thead><tr><th>Idő</th><th>Session</th><th>Csomag</th><th>Állapot</th><th>Email</th><th>Összeg</th></tr></thead><tbody id="orders"></tbody></table></div></section>
   </main>
   <script>
     const esc=(v)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
@@ -63,6 +65,11 @@
       if(!items.length){body.innerHTML='<tr><td colspan="9" class="empty">Még nincs egyedi hang kérés.</td></tr>';return}
       body.innerHTML=items.map(r=>'<tr><td>'+esc(fmt(r.created_at))+'</td><td class="mono">'+esc(r.request_id)+'</td><td><strong>'+esc(r.requested_language)+'</strong></td><td>'+esc(r.voice_style)+'</td><td>'+esc(r.model)+'</td><td>'+esc(r.contact)+'</td><td>'+esc(r.notes||'—')+'</td><td>'+esc(r.site_language||'—')+'</td><td><span class="pill '+(r.status==='new'?'warn':'good')+'">'+esc(r.status||'new')+'</span></td></tr>').join('');
     }
+    function privacyRequestRows(items){
+      const body=document.getElementById('privacy-requests');
+      if(!items.length){body.innerHTML='<tr><td colspan="7" class="empty">Még nincs adatvédelmi kérelem.</td></tr>';return}
+      body.innerHTML=items.map(r=>'<tr><td>'+esc(fmt(r.created_at))+'</td><td class="mono">'+esc(r.request_id)+'</td><td><strong>'+esc(r.request_type)+'</strong></td><td>'+esc(r.contact)+'</td><td>'+esc(r.details||'—')+'</td><td>'+esc(r.site_language||'—')+'</td><td><span class="pill '+(r.status==='new'?'warn':'good')+'">'+esc(r.status||'new')+'</span></td></tr>').join('');
+    }
     function orderRows(items){
       const body=document.getElementById('orders');
       if(!items.length){body.innerHTML='<tr><td colspan="6" class="empty">Még nincs rendelés.</td></tr>';return}
@@ -70,11 +77,11 @@
     }
     async function load(){
       try{
-        const [catalog,stats,orders,customRequests]=await Promise.all([api('/api/anthbot/admin/store/voice-packs'),api('/api/anthbot/admin/store/stats'),api('/api/anthbot/admin/store/orders?limit=100'),api('/api/anthbot/admin/store/custom-voice-requests?limit=100')]);
+        const [catalog,stats,orders,customRequests,privacyRequests]=await Promise.all([api('/api/anthbot/admin/store/voice-packs'),api('/api/anthbot/admin/store/stats'),api('/api/anthbot/admin/store/orders?limit=100'),api('/api/anthbot/admin/store/custom-voice-requests?limit=100'),api('/api/anthbot/admin/privacy-requests?limit=100')]);
         const revenue=(stats.revenue||[]).map(x=>money(x.amount,x.currency)).join(' + ')||money(0,'eur');
         document.getElementById('kpis').innerHTML=kpi('Feltöltött csomag',catalog.items.length)+kpi('Rendelés',stats.orders||0)+kpi('Fizetett rendelés',stats.paid_orders||0)+kpi('Bevétel',revenue);
         document.getElementById('status').innerHTML='<span class="pill '+(stats.store_enabled?'good':'warn')+'">Store: '+(stats.store_enabled?'bekapcsolva':'kikapcsolva')+'</span><span class="pill '+(stats.checkout_ready?'good':'warn')+'">Stripe: '+(stats.checkout_ready?'kész':'nincs teljesen konfigurálva')+'</span><span class="pill '+(stats.automatic_tax?'good':'warn')+'">Stripe automatic tax: '+(stats.automatic_tax?'be':'ki')+'</span><span class="small">Fizetősre állított csomag eltűnik a régi ingyenes voice-packs registryből, így közvetlenül nem tölthető le.</span>';
-        packRows(catalog.items||[]);customRequestRows(customRequests.items||[]);orderRows(orders.items||[]);
+        packRows(catalog.items||[]);customRequestRows(customRequests.items||[]);privacyRequestRows(privacyRequests.items||[]);orderRows(orders.items||[]);
       }catch(e){document.getElementById('status').innerHTML='<span style="color:#ffc4cc">Hiba: '+esc(e.message)+'</span>'}
     }
     document.getElementById('refresh').onclick=load;load();
