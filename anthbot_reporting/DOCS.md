@@ -76,6 +76,49 @@ The actual mower command path is the beta.15-proven Genie flow: ANTHBOT login,
 The browser installer is deliberately not included in first-party page-view
 analytics.
 
+## Web Voice Installer
+
+The optional browser-based Voice Installer lets compatible ANTHBOT Genie owners
+install Community voice packs directly from the public site without Home
+Assistant or a Windows desktop installer.
+
+Public page:
+
+- `/voice-installer`
+
+User flow:
+
+1. Sign in with the same ANTHBOT account used by the official app.
+2. The server retrieves owner-bound mowers and allows commands only for Genie
+   devices.
+3. If only one compatible Genie is present, the page selects it automatically.
+4. Choose a Community voice pack.
+5. Paid packs open Stripe Checkout in the same browser; after payment the page
+   returns to the installer and synchronizes the entitlement automatically.
+6. The installer obtains short-lived ANTHBOT IoT credentials, sends the existing
+   beta.15-compatible `voice_set` command, monitors the property shadow
+   `voice_status`, and sends `find_robot` as the audible completion signal.
+
+Security and privacy:
+
+- feature is disabled by default with `web_voice_installer_enabled: false`
+- ANTHBOT password is used only for the official ANTHBOT login request and is not
+  written to disk or the Reporting Server database
+- temporary ANTHBOT access tokens, mower serials and install-job state are stored
+  only in process memory
+- sign-in sessions expire after 20 minutes
+- browser receives only masked serial numbers and random per-session device IDs
+- owner-only mower filtering is preserved from the beta.15 installer
+- non-Genie devices are fail-closed before any robot command
+- source IoT endpoint is validated against the AWS IoT hostname pattern
+- Voice Store downloads must use an approved HTTPS host and valid pack metadata
+- login attempts are rate-limited
+- the page is `noindex,nofollow` and excluded from public SEO indexing
+
+The web installer intentionally keeps the existing Home Assistant Voice Store and
+desktop beta.15 flows separate. Enabling this feature does not alter their
+behavior.
+
 ## Privacy-friendly site analytics
 
 The Reporting Server can count public page views and daily unique visitors without
