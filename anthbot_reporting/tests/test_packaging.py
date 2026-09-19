@@ -8,6 +8,20 @@ SERVER_DIR = Path(__file__).resolve().parents[1]
 
 
 class ReportingServerPackagingTests(unittest.TestCase):
+    def test_dockerfile_copies_all_runtime_python_and_html_files(self) -> None:
+        dockerfile = (SERVER_DIR / "Dockerfile").read_text("utf-8")
+        runtime_files = sorted(
+            path.name
+            for path in SERVER_DIR.iterdir()
+            if path.is_file() and path.suffix in {".py", ".html"}
+        )
+        for filename in runtime_files:
+            self.assertIn(
+                f"COPY {filename} ./{filename}",
+                dockerfile,
+                msg=f"{filename} is present in the add-on source but missing from Dockerfile",
+            )
+
     def test_dockerfile_copies_developer_agent_runtime_files(self) -> None:
         dockerfile = (SERVER_DIR / "Dockerfile").read_text("utf-8")
         for filename in (
