@@ -76,3 +76,8 @@ endpoints do not expose the admin token.
 Multiple Community packs may share the same language code. Replacement identity
 is `language_code + variant_id`, so female/male/theme variants coexist. Re-uploading
 the same identity replaces only that exact variant and leaves the others intact.
+
+
+## Community voice identity
+
+Community uploads carry a stable `community_id`, a separate human `voice_gender`, and the fixed Genie technical slot `German_girl`. The server assigns the public robot-visible `1.2.x` version and guarantees uniqueness for new or changed packages. ANTHBOT Map resolves `German_girl + version` back to the exact `community_id` and display name.
