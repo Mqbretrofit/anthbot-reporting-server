@@ -495,10 +495,10 @@ def _analytics_visitor_hash(request: Request, day: str) -> str:
 
 def _analytics_cleanup(conn: Any, today: datetime) -> None:
     unique_cutoff = (
-        today.date() - timedelta(days=_ANALYTICS_UNIQUE_RETENTION_DAYS)
+        today.date() - timedelta(days=_ANALYTICS_UNIQUE_RETENTION_DAYS - 1)
     ).isoformat()
     aggregate_cutoff = (
-        today.date() - timedelta(days=_ANALYTICS_AGGREGATE_RETENTION_DAYS)
+        today.date() - timedelta(days=_ANALYTICS_AGGREGATE_RETENTION_DAYS - 1)
     ).isoformat()
     conn.execute(
         "DELETE FROM site_analytics_unique_visitors WHERE day < ?",
