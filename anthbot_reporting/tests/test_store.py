@@ -126,6 +126,8 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertNotIn("localStorage", script.text)
         self.assertNotIn("document.cookie", script.text)
         self.assertNotIn("userAgent", script.text)
+        self.assertIn("globalPrivacyControl", script.text)
+        self.assertIn("doNotTrack", script.text)
 
     def test_site_analytics_deduplicates_daily_visitors_without_storing_raw_ip(self) -> None:
         first_headers = {"CF-Connecting-IP": "203.0.113.10"}
@@ -191,8 +193,8 @@ class VoiceStoreTests(unittest.TestCase):
         response = self.client.get("/privacy")
         self.assertEqual(response.status_code, 200)
         html = response.text
-        self.assertIn("Anonim, adatvédelmi szempontból kímélő webstatisztika", html)
-        self.assertIn("Anonymous, privacy-friendly website statistics", html)
+        self.assertIn("Adatvédelmi szempontból kímélő, álnevesített webstatisztika", html)
+        self.assertIn("Privacy-friendly, pseudonymous website statistics", html)
         self.assertIn("HMAC", html)
         self.assertIn("35 nap", html)
         self.assertIn("400 nap", html)
@@ -203,6 +205,8 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(html.count("analyticsTitle:"), 23)
         self.assertEqual(html.count("analyticsText:"), 23)
         self.assertEqual(html.count("analyticsAccuracy:"), 23)
+        self.assertIn("Global Privacy Control", html)
+        self.assertIn("Do Not Track", html)
 
     def test_privacy_request_can_be_submitted_and_seen_by_admin(self) -> None:
         response = self.client.post(
