@@ -21,6 +21,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 USAGE_SCHEMA = "anthbot-map-anonymous-usage-v1"
 DIAGNOSTICS_SCHEMA = "anthbot-map-diagnostics-upload-v1"
 VOICE_PACKS_SCHEMA = "anthbot-community-voice-packs-v1"
+COMMUNITY_TECHNICAL_SLOT = "German_girl"
+COMMUNITY_TECHNICAL_LANGUAGE = "German"
+COMMUNITY_TECHNICAL_SEX = "girl"
+COMMUNITY_MUSIC_PACKAGE = 3
+_COMMUNITY_VERSION_RE = re.compile(r"^1\.2\.(\d+)$")
+_COMMUNITY_VERSION_MIN_PATCH = 4
 DEFAULT_DB_PATH = "/data/anthbot_reporting.sqlite3"
 DEFAULT_VOICE_PACK_DIR = "/data/voice_packs"
 MAX_TELEMETRY_BYTES = 64 * 1024
@@ -367,10 +373,44 @@ def _public_voice_pack(record: dict[str, Any], request: Request) -> dict[str, An
 
 
 def _voice_pack_identity(record: dict[str, Any]) -> tuple[str, str]:
-    """Return the stable language + variant identity for one Community pack."""
+    """Return legacy language + variant identity for one Community pack."""
     language_code = str(record.get("language_code", "")).strip().casefold()
     variant_id = str(record.get("variant_id", "")).strip().casefold() or "default"
     return language_code, variant_id
+
+
+def _voice_pack_community_id(record: dict[str, Any]) -> str:
+    """Return the stable Builder/registry identity for one Community voice."""
+    community_id = str(record.get("community_id", "")).strip().casefold()
+    if community_id:
+        return community_id
+    language_code, variant_id = _voice_pack_identity(record)
+    return f"{language_code}_{variant_id}".strip("_")
+
+
+def _voice_pack_technical_slot(record: dict[str, Any]) -> str:
+    slot = str(record.get("technical_slot", "")).strip()
+    if slot:
+        return slot
+    english_name = str(record.get("english_name", "")).strip()
+    sex = str(record.get("sex", "")).strip()
+    if english_name and sex:
+        return f"{english_name}_{sex}"
+    return ""
+
+
+def _next_community_version(records: list[dict[str, Any]]) -> str:
+    """Allocate a unique German_girl Community version from the 1.2.x range."""
+    max_patch = _COMMUNITY_VERSION_MIN_PATCH
+    for item in records:
+        if not isinstance(item, dict):
+            continue
+        if _voice_pack_technical_slot(item).casefold() != COMMUNITY_TECHNICAL_SLOT.casefold():
+            continue
+        match = _COMMUNITY_VERSION_RE.fullmatch(str(item.get("version", "")).strip())
+        if match:
+            max_patch = max(max_patch, int(match.group(1)))
+    return f"1.2.{max_patch + 1}"
 
 
 def _voice_pack_registry(request: Request) -> dict[str, Any]:
@@ -380,14 +420,14 @@ def _voice_pack_registry(request: Request) -> dict[str, Any]:
 
     merged: list[dict[str, Any]] = []
     uploaded_identities = {
-        _voice_pack_identity(item)
+        _voice_pack_community_id(item)
         for item in uploaded
-        if isinstance(item, dict) and str(item.get("language_code", "")).strip()
+        if isinstance(item, dict) and _voice_pack_community_id(item)
     }
     for item in bundled:
         if not isinstance(item, dict):
             continue
-        if _voice_pack_identity(item) in uploaded_identities:
+        if _voice_pack_community_id(item) in uploaded_identities:
             continue
         merged.append(_public_voice_pack(item, request))
     for item in uploaded:
@@ -484,12 +524,15 @@ async def upload_voice_pack(
     file: UploadFile = File(...),
     language: str = Form(..., min_length=1, max_length=64),
     language_code: str = Form(..., min_length=2, max_length=16),
-    version: str = Form(..., min_length=1, max_length=64),
+    version: str = Form(default="", max_length=64),
+    community_id: str = Form(default="", max_length=64),
     variant_id: str = Form(default="default", min_length=1, max_length=64),
     variant_name: str = Form(default="", max_length=128),
-    english_name: str = Form(default="German", min_length=1, max_length=64),
-    sex: str = Form(default="girl", min_length=1, max_length=32),
-    music_package: int = Form(default=3, ge=0, le=9999),
+    voice_gender: str = Form(default="unknown", max_length=32),
+    technical_slot: str = Form(default=COMMUNITY_TECHNICAL_SLOT, max_length=64),
+    english_name: str = Form(default=COMMUNITY_TECHNICAL_LANGUAGE, min_length=1, max_length=64),
+    sex: str = Form(default=COMMUNITY_TECHNICAL_SEX, min_length=1, max_length=32),
+    music_package: int = Form(default=COMMUNITY_MUSIC_PACKAGE, ge=0, le=9999),
     models: str = Form(default="Anthbot Genie 1000", max_length=2048),
 ) -> dict[str, Any]:
     """Persist a custom voice pack and publish it in the community registry."""
@@ -499,31 +542,60 @@ async def upload_voice_pack(
     language_code = _voice_pack_safe_part(
         language_code.strip().lower(), field="language_code"
     )
-    version = _voice_pack_safe_part(version, field="version")
+    requested_version = version.strip()
+    if requested_version:
+        requested_version = _voice_pack_safe_part(
+            requested_version, field="version"
+        )
     variant_id = _voice_pack_safe_part(variant_id.lower(), field="variant_id")
     variant_name = variant_name.strip()
-    sex = _voice_pack_safe_part(sex.lower(), field="sex")
-    english_name = english_name.strip()
-    if not english_name:
-        raise HTTPException(status_code=422, detail="english_name is required")
-    model_list = _voice_pack_models(models)
+    voice_gender = (voice_gender or "unknown").strip().lower()
+    if voice_gender:
+        voice_gender = _voice_pack_safe_part(voice_gender, field="voice_gender")
 
-    package_id = (
-        f"{language_code}-{variant_id}-{sex}-slot-{music_package}-v{version}"
+    if community_id.strip():
+        community_id = _voice_pack_safe_part(
+            community_id.strip().lower(), field="community_id"
+        )
+    else:
+        community_id = _voice_pack_safe_part(
+            f"{language_code}_{variant_id}", field="community_id"
+        )
+
+    technical_slot = _voice_pack_safe_part(
+        technical_slot.strip(), field="technical_slot"
     )
-    filename = package_id
-    original_suffix = Path(file.filename or "").suffix
-    if (
-        original_suffix
-        and len(original_suffix) <= 12
-        and re.fullmatch(r"\.[A-Za-z0-9]+", original_suffix)
-    ):
-        filename += original_suffix.lower()
+    if technical_slot.casefold() != COMMUNITY_TECHNICAL_SLOT.casefold():
+        raise HTTPException(
+            status_code=422,
+            detail=f"community voice technical_slot must be {COMMUNITY_TECHNICAL_SLOT}",
+        )
+
+    # Community packs always occupy the proven Genie German_girl / slot-3 path.
+    # Human speaker gender is carried separately in voice_gender.
+    if english_name.strip().casefold() != COMMUNITY_TECHNICAL_LANGUAGE.casefold():
+        raise HTTPException(
+            status_code=422,
+            detail=f"community voice english_name must be {COMMUNITY_TECHNICAL_LANGUAGE}",
+        )
+    if sex.strip().casefold() != COMMUNITY_TECHNICAL_SEX.casefold():
+        raise HTTPException(
+            status_code=422,
+            detail=f"community voice sex must be {COMMUNITY_TECHNICAL_SEX}",
+        )
+    if music_package != COMMUNITY_MUSIC_PACKAGE:
+        raise HTTPException(
+            status_code=422,
+            detail=f"community voice music_package must be {COMMUNITY_MUSIC_PACKAGE}",
+        )
+    english_name = COMMUNITY_TECHNICAL_LANGUAGE
+    sex = COMMUNITY_TECHNICAL_SEX
+    music_package = COMMUNITY_MUSIC_PACKAGE
+    model_list = _voice_pack_models(models)
 
     directory = _voice_pack_dir()
     directory.mkdir(parents=True, exist_ok=True)
-    target = directory / filename
-    temporary = directory / f".{filename}.{secrets.token_hex(4)}.upload"
+    temporary = directory / f".voice-pack.{secrets.token_hex(8)}.upload"
     digest = hashlib.md5(usedforsecurity=False)
     size = 0
 
@@ -552,45 +624,78 @@ async def upload_voice_pack(
         temporary.unlink(missing_ok=True)
         raise HTTPException(status_code=422, detail="voice pack is empty")
 
+    local_md5 = digest.hexdigest()
+    bundled = [
+        item
+        for item in _bundled_voice_pack_registry().get("packs", [])
+        if isinstance(item, dict)
+    ]
     registry = _uploaded_voice_pack_registry()
     existing = [
         item for item in registry.get("packs", []) if isinstance(item, dict)
     ]
-    exact_identity = (language_code.casefold(), variant_id.casefold())
-    same_language = [
-        item
-        for item in existing
-        if str(item.get("language_code", "")).strip().casefold()
-        == language_code.casefold()
-    ]
-    has_named_variant = any(
-        str(item.get("variant_id", "")).strip()
-        for item in same_language
+
+    stable_id = community_id.casefold()
+    effective_match = next(
+        (
+            item
+            for item in existing + bundled
+            if _voice_pack_community_id(item) == stable_id
+        ),
+        None,
     )
+    same_payload = (
+        isinstance(effective_match, dict)
+        and str(effective_match.get("music_md5", "")).strip().casefold()
+        == local_md5.casefold()
+        and _voice_pack_technical_slot(effective_match).casefold()
+        == COMMUNITY_TECHNICAL_SLOT.casefold()
+    )
+    if same_payload:
+        assigned_version = str(effective_match.get("version", "")).strip()
+    else:
+        assigned_version = _next_community_version(bundled + existing)
+    if not assigned_version:
+        temporary.unlink(missing_ok=True)
+        raise HTTPException(
+            status_code=500, detail="could not allocate community voice version"
+        )
+
     replaced = [
         item
         for item in existing
-        if _voice_pack_identity(item) == exact_identity
-        or (
-            not has_named_variant
-            and item in same_language
-            and not str(item.get("variant_id", "")).strip()
-        )
+        if _voice_pack_community_id(item) == stable_id
     ]
     kept = [item for item in existing if item not in replaced]
 
+    package_id = f"{community_id}-v{assigned_version}"
+    filename = package_id
+    original_suffix = Path(file.filename or "").suffix
+    if (
+        original_suffix
+        and len(original_suffix) <= 12
+        and re.fullmatch(r"\.[A-Za-z0-9]+", original_suffix)
+    ):
+        filename += original_suffix.lower()
+    target = directory / filename
+
     record = {
         "id": package_id,
+        "community_id": community_id,
         "language": language,
         "language_code": language_code,
         "variant_id": variant_id,
         "variant_name": variant_name,
+        "voice_gender": voice_gender or "unknown",
+        "technical_slot": COMMUNITY_TECHNICAL_SLOT,
         "english_name": english_name,
         "sex": sex,
         "music_package": music_package,
-        "version": version,
+        "version": assigned_version,
+        "requested_version": requested_version,
+        "version_source": "reporting_server",
         "filename": filename,
-        "music_md5": digest.hexdigest(),
+        "music_md5": local_md5,
         "size": size,
         "models": model_list,
         "source": "community",
@@ -626,7 +731,12 @@ async def upload_voice_pack(
             (_voice_pack_dir() / old_filename).unlink(missing_ok=True)
 
     public_record = _public_voice_pack(record, request)
-    return {"uploaded": True, "pack": public_record}
+    return {
+        "uploaded": True,
+        "version_assigned_by_server": True,
+        "assigned_version": assigned_version,
+        "pack": public_record,
+    }
 
 
 @app.delete(
