@@ -192,6 +192,10 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(kwargs["client_reference_id"], pack_id)
         self.assertEqual(kwargs["line_items"][0]["price_data"]["currency"], "eur")
         self.assertEqual(kwargs["line_items"][0]["price_data"]["unit_amount"], 100)
+        self.assertEqual(
+            kwargs["line_items"][0]["price_data"]["product_data"]["tax_code"],
+            "txcd_10401100",
+        )
         self.assertEqual(kwargs["metadata"]["pack_id"], pack_id)
         self.assertEqual(
             kwargs["payment_intent_data"]["metadata"]["pack_id"],
