@@ -27,6 +27,10 @@ COPY migration_api.py ./migration_api.py
 COPY voice_packs.json ./voice_packs.json
 COPY store_api.py ./store_api.py
 COPY store.html ./store.html
+COPY public_site.html ./public_site.html
+COPY public_terms.html ./public_terms.html
+COPY public_refunds.html ./public_refunds.html
+COPY public_privacy.html ./public_privacy.html
 COPY store_success.html ./store_success.html
 COPY store_admin.html ./store_admin.html
 COPY dashboard.html ./dashboard.html
