@@ -61,6 +61,22 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(response.status_code, 201)
         return response.json()["pack"]
 
+    def test_store_has_visible_top_navigation_in_all_languages(self) -> None:
+        response = self.client.get("/store")
+        self.assertEqual(response.status_code, 200)
+        html = response.text
+        self.assertIn('<nav class="navlinks"', html)
+        self.assertIn('class="home-link" href="/" data-i18n="homeNav"', html)
+        self.assertIn('href="/refunds" data-i18n="refund"', html)
+        self.assertIn('href="/terms" data-i18n="terms"', html)
+        self.assertIn('href="/privacy" data-i18n="privacy"', html)
+        self.assertIn('"hu":"← Főoldal"', html)
+        self.assertIn('"en":"← Home"', html)
+        self.assertIn('"de":"← Startseite"', html)
+        self.assertIn('"zh-CN":"← 首页"', html)
+        self.assertIn('"km":"← ទំព័រដើម"', html)
+        self.assertEqual(html.count('homeNav=label'), 1)
+
     def test_paid_pack_is_hidden_from_legacy_registry_and_requires_license(self) -> None:
         pack = self._upload_pack()
         pack_id = pack["id"]
