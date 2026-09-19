@@ -263,7 +263,8 @@ async def _limit_body_size(request: Request, call_next):
         # core app as well as the outer ASGI wrapper so a future entrypoint or
         # proxy change cannot accidentally re-introduce X-Frame-Options: DENY.
         response.headers["Cache-Control"] = "no-store"
-        response.headers.pop("X-Frame-Options", None)
+        if "X-Frame-Options" in response.headers:
+            del response.headers["X-Frame-Options"]
         response.headers["Content-Security-Policy"] = (
             "frame-ancestors 'self' "
             "http://192.168.8.91:8123 "
