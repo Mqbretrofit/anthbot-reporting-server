@@ -60,6 +60,8 @@ curl -X POST \
   -F "language=Čeština" \
   -F "language_code=cs" \
   -F "version=1.0.0" \
+  -F "variant_id=vlasta_standard" \
+  -F "variant_name=Vlasta (női) · Standard" \
   -F "english_name=German" \
   -F "sex=girl" \
   -F "music_package=3" \
@@ -69,3 +71,8 @@ curl -X POST \
 
 Only the admin API accepts uploads/deletes. Public registry and package download
 endpoints do not expose the admin token.
+
+
+Multiple Community packs may share the same language code. Replacement identity
+is `language_code + variant_id`, so female/male/theme variants coexist. Re-uploading
+the same identity replaces only that exact variant and leaves the others intact.
