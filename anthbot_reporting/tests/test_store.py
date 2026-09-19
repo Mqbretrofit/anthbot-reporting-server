@@ -176,10 +176,16 @@ class VoiceStoreTests(unittest.TestCase):
             "customer": None,
             "payment_intent": None,
         }
+        checkout_session_object = (
+            store_api.stripe.checkout.Session.construct_from(
+                checkout_session,
+                "sk_test_example",
+            )
+        )
         with patch.object(
             store_api.stripe.checkout.Session,
             "create",
-            return_value=checkout_session,
+            return_value=checkout_session_object,
         ) as create:
             checkout = self.client.post(
                 "/api/anthbot/store/checkout",
