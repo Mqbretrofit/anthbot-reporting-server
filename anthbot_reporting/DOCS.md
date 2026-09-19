@@ -27,6 +27,55 @@ After start, `GET /health` should return:
 {"ok":true,"schema":"anthbot-reporting-server-v1"}
 ```
 
+## Browser-based Genie Voice Installer
+
+The optional web installer exposes a simple browser flow at `/voice-installer`:
+
+1. sign in with the user's own ANTHBOT account;
+2. select an owner-bound Genie mower (a single supported Genie is auto-selected);
+3. select a Community voice pack;
+4. buy through Stripe when needed;
+5. install and watch progress in the browser.
+
+No Home Assistant installation, copied license key, pairing code, or Windows
+installer is required.
+
+The feature is intentionally disabled by default during hardware validation:
+
+```yaml
+web_voice_installer_enabled: false
+```
+
+Set it to `true` only on a server where the operator is ready to test the
+web flow with a real Genie mower.
+
+Security and privacy design:
+
+- the ANTHBOT password is used only for the official ANTHBOT login request and
+  is not written to disk or the application database;
+- the temporary ANTHBOT access token and the selected owner's mower serial are
+  held only in process memory, with a 20-minute session expiry;
+- temporary AWS IoT credentials are created only for the active installation
+  and are not persisted;
+- the browser gets a Secure, HttpOnly, SameSite=Lax functional store-client
+  cookie so a paid purchase can be recognized without copying a license key;
+- the Reporting Server stores only its existing derived opaque client id with
+  the order, not the raw functional cookie value;
+- login attempts are rate-limited using a keyed in-memory identifier derived
+  transiently from the request source address;
+- only owner-bound Genie devices pass the model gate;
+- voice download URLs and metadata are validated server-side before a command
+  is sent to the mower;
+- only one installation job can run per signed-in browser session.
+
+The actual mower command path is the beta.15-proven Genie flow: ANTHBOT login,
+`/device/bind/list`, temporary IoT credentials, named `property` shadow,
+`voice_set`, `voice_status` / `music_package` progress checks, then a
+`find_robot` audible verification signal.
+
+The browser installer is deliberately not included in first-party page-view
+analytics.
+
 ## Privacy-friendly site analytics
 
 The Reporting Server can count public page views and daily unique visitors without
