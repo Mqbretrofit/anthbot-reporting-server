@@ -162,6 +162,81 @@ class VoiceStoreTests(unittest.TestCase):
         )
         self.assertEqual(api.status_code, 200)
 
+    def test_seo_landing_pages_are_indexable_and_factual(self) -> None:
+        pages = {
+            "/home-assistant": (
+                "ANTHBOT Home Assistant Integration | ANTHBOT Map",
+                "native lawn_mower entity",
+            ),
+            "/models/genie-1000": (
+                "ANTHBOT Genie 1000 Home Assistant Support | ANTHBOT Map",
+                "directly hardware-tested",
+            ),
+            "/models/m9-pro": (
+                "ANTHBOT M9 Pro Home Assistant Integration | ANTHBOT Map",
+                "directly hardware-tested",
+            ),
+            "/models/mgc1000": (
+                "ANTHBOT MGC1000 / Pion Home Assistant Support | ANTHBOT Map",
+                "Unverified Pion/MGC setting writes",
+            ),
+            "/voice-packs": (
+                "ANTHBOT Voice Packs for Genie Mowers | ANTHBOT Map",
+                "compatible ANTHBOT Genie robots",
+            ),
+        }
+        for path, (title, factual_marker) in pages.items():
+            response = self.client.get(path)
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(f"<title>{title}</title>", response.text)
+            self.assertIn(
+                f'<link rel="canonical" href="https://anthbotmap.com{path}">',
+                response.text,
+            )
+            self.assertIn(
+                '<meta name="robots" content="index,follow,',
+                response.text,
+            )
+            self.assertIn(factual_marker, response.text)
+            self.assertIn('"@type":"WebPage"', response.text)
+            self.assertIn('<script src="/site-analytics.js?v=1"></script>', response.text)
+
+        unknown = self.client.get("/models/not-a-real-model")
+        self.assertEqual(unknown.status_code, 404)
+
+        home = self.client.get("/")
+        self.assertIn('href="/home-assistant"', home.text)
+        self.assertIn('href="/models/genie-1000"', home.text)
+        self.assertIn('href="/models/m9-pro"', home.text)
+        self.assertIn('href="/models/mgc1000"', home.text)
+        self.assertIn('href="/voice-packs"', home.text)
+
+    def test_seo_sitemap_contains_topic_pages(self) -> None:
+        sitemap = self.client.get("/sitemap.xml")
+        self.assertEqual(sitemap.status_code, 200)
+        for path in (
+            "/home-assistant",
+            "/models/genie-1000",
+            "/models/m9-pro",
+            "/models/mgc1000",
+            "/voice-packs",
+        ):
+            self.assertIn(
+                f"<loc>https://anthbotmap.com{path}</loc>",
+                sitemap.text,
+            )
+
+        legacy = self.client.get(
+            "/models/m9-pro",
+            headers={"host": "reports.mqbretrofithungary.online"},
+            follow_redirects=False,
+        )
+        self.assertEqual(legacy.status_code, 301)
+        self.assertEqual(
+            legacy.headers["location"],
+            "https://anthbotmap.com/models/m9-pro",
+        )
+
     def test_privacy_page_has_gdpr_information_and_23_languages(self) -> None:
         response = self.client.get("/privacy")
         self.assertEqual(response.status_code, 200)

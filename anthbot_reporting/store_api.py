@@ -47,6 +47,11 @@ _ANALYTICS_ALLOWED_PATHS = {
     "/privacy",
     "/terms",
     "/refunds",
+    "/home-assistant",
+    "/models/genie-1000",
+    "/models/m9-pro",
+    "/models/mgc1000",
+    "/voice-packs",
 }
 _ANALYTICS_LANGUAGES = {
     "hu", "en", "de", "fr", "es", "it", "pt", "nl", "pl", "cs", "sk",
@@ -106,6 +111,208 @@ _SEO_PAGES: dict[str, dict[str, Any]] = {
         "title": "ANTHBOT Voice Purchase | ANTHBOT Map",
         "description": "ANTHBOT voice pack purchase confirmation.",
         "index": False,
+    },
+}
+
+_SEO_LANDING_PAGES: dict[str, dict[str, Any]] = {
+    "/home-assistant": {
+        "title": "ANTHBOT Home Assistant Integration | ANTHBOT Map",
+        "description": (
+            "Connect supported ANTHBOT robotic lawn mowers to Home Assistant with "
+            "ANTHBOT Map: live map, zones, native schedules, mower controls, history "
+            "and diagnostics."
+        ),
+        "eyebrow": "Home Assistant integration",
+        "heading": "ANTHBOT in Home Assistant with ANTHBOT Map",
+        "lead": (
+            "ANTHBOT Map is an independent, open-source Home Assistant integration "
+            "and Lovelace map card for supported ANTHBOT robotic lawn mowers."
+        ),
+        "sections": [
+            (
+                "What the integration adds",
+                "ANTHBOT Map connects Home Assistant to the ANTHBOT cloud, creates a "
+                "native lawn_mower entity, mirrors supported ANTHBOT app schedules, "
+                "and provides model-aware controls instead of forcing every mower "
+                "through one generic command path.",
+            ),
+            (
+                "Live map and lawn data",
+                "Where supported by the mower family, the card can render the lawn "
+                "boundary, mowing zones, No-Go areas, mower position, live path and "
+                "mowing coverage. A dedicated WebSocket live-map transport keeps "
+                "high-frequency geometry out of Home Assistant Recorder.",
+            ),
+            (
+                "Schedules and automations",
+                "Native app schedules can be mirrored into Home Assistant and, on "
+                "supported models, edited with write-back. Per-mower next-mow data, "
+                "native mower events and timed mow/park overrides can be used in "
+                "Home Assistant automations.",
+            ),
+            (
+                "Model-aware design",
+                "Genie, M-series, N8 and Pion/MGC devices use separated model routing. "
+                "Capabilities remain conservative when a command or protocol detail "
+                "has not been confirmed.",
+            ),
+        ],
+        "cta": ("View ANTHBOT Map on GitHub", "https://github.com/Mqbretrofit/ha-anthbot-map-v2"),
+    },
+    "/models/genie-1000": {
+        "title": "ANTHBOT Genie 1000 Home Assistant Support | ANTHBOT Map",
+        "description": (
+            "ANTHBOT Genie 1000 support in Home Assistant with ANTHBOT Map, including "
+            "live map/path data, zones, schedules, history, mower controls and diagnostics."
+        ),
+        "eyebrow": "Supported mower",
+        "heading": "ANTHBOT Genie 1000 + Home Assistant",
+        "lead": (
+            "The Genie family is supported by ANTHBOT Map and has been directly "
+            "hardware-tested by the project, including Genie 1000 schedule loading."
+        ),
+        "sections": [
+            (
+                "Direct hardware validation",
+                "The public ANTHBOT Map project documents direct real-device testing "
+                "for the Genie family. Genie 1000 native app schedule loading has also "
+                "been verified on real hardware.",
+            ),
+            (
+                "Maps, zones and mowing history",
+                "ANTHBOT Map keeps Genie-specific map/path diagnostics isolated from "
+                "other mower families and exposes supported lawn boundary, zones, "
+                "No-Go geometry, live mower position, path and historical mowing data.",
+            ),
+            (
+                "Native scheduling",
+                "The integration mirrors the mower's native ANTHBOT app schedule into "
+                "Home Assistant and supports the model-specific schedule path rather "
+                "than translating it through M-series behavior.",
+            ),
+            (
+                "Home Assistant controls",
+                "Supported operations include mower status and common mowing controls, "
+                "with model-specific routing plus Battery Saver and diagnostic tooling "
+                "where the underlying device capabilities are available.",
+            ),
+        ],
+        "cta": ("Install / documentation", "https://github.com/Mqbretrofit/ha-anthbot-map-v2"),
+    },
+    "/models/m9-pro": {
+        "title": "ANTHBOT M9 Pro Home Assistant Integration | ANTHBOT Map",
+        "description": (
+            "ANTHBOT M9 Pro support for Home Assistant with control, status, live map, "
+            "path, zones, mowing history, schedules and diagnostics."
+        ),
+        "eyebrow": "Directly hardware-tested",
+        "heading": "ANTHBOT M9 Pro + Home Assistant",
+        "lead": (
+            "ANTHBOT Map includes a dedicated M-series implementation, and M9 Pro "
+            "control, status, map, path, zone and history handling have been directly "
+            "hardware-tested by the project."
+        ),
+        "sections": [
+            (
+                "Live map architecture",
+                "Real-device M9 Pro validation confirmed live WebSocket path updates, "
+                "Home Assistant restart and reconnect handling, snapshot restore and "
+                "reduced Recorder churn.",
+            ),
+            (
+                "Zones and mowing data",
+                "The M-series path supports map, path, zone and history handling while "
+                "keeping model-specific decoding separate from Genie and N8.",
+            ),
+            (
+                "Native schedule write-back",
+                "Creating an M9 Pro schedule from the ANTHBOT Map card has been "
+                "verified on real hardware, with the created rule appearing in the "
+                "ANTHBOT app.",
+            ),
+            (
+                "Home Assistant automation",
+                "Mower state, next-mow information, lifecycle/schedule events and "
+                "supported controls can be used in dashboards and automations.",
+            ),
+        ],
+        "cta": ("View M9 Pro integration documentation", "https://github.com/Mqbretrofit/ha-anthbot-map-v2"),
+    },
+    "/models/mgc1000": {
+        "title": "ANTHBOT MGC1000 / Pion Home Assistant Support | ANTHBOT Map",
+        "description": (
+            "ANTHBOT MGC1000 and Pion-family support in ANTHBOT Map for Home Assistant: "
+            "isolated model detection, status normalization, native schedules and start routing."
+        ),
+        "eyebrow": "Pion / MGC family",
+        "heading": "ANTHBOT MGC1000 + Home Assistant",
+        "lead": (
+            "ANTHBOT Map has a dedicated Pion/MGC model family for identifiers such "
+            "as MGC500, MGC750 and MGC1000, instead of treating these mowers as Genie."
+        ),
+        "sections": [
+            (
+                "Dedicated model handling",
+                "The integration includes isolated Pion/MGC detection and a flat-shadow "
+                "normalization layer for Home Assistant status data.",
+            ),
+            (
+                "Confirmed status data",
+                "The current implementation exposes confirmed cutting height, mowing "
+                "progress and area, rain state, Wi-Fi/IP, path payload and firmware data "
+                "when supplied by the mower/cloud.",
+            ),
+            (
+                "Native schedules and start routing",
+                "Pion/MGC uses its own native schedule shape and start path. The "
+                "integration preserves its one-appointment-per-day/full-lawn schedule "
+                "behavior instead of applying Genie-only payloads.",
+            ),
+            (
+                "Conservative capability policy",
+                "Unverified Pion/MGC setting writes and curpath decoding remain "
+                "intentionally disabled until protocol and hardware behavior are confirmed.",
+            ),
+        ],
+        "cta": ("Follow Pion / MGC development", "https://github.com/Mqbretrofit/ha-anthbot-map-v2"),
+    },
+    "/voice-packs": {
+        "title": "ANTHBOT Voice Packs for Genie Mowers | ANTHBOT Map",
+        "description": (
+            "ANTHBOT community voice packs and custom mower voices for compatible "
+            "ANTHBOT Genie robots, integrated with the ANTHBOT Map ecosystem."
+        ),
+        "eyebrow": "Community voice packs",
+        "heading": "ANTHBOT voice packs and custom mower voices",
+        "lead": (
+            "The ANTHBOT Map ecosystem includes optional Community voice packs for "
+            "compatible ANTHBOT Genie robots, with ready-made packs and custom voice requests."
+        ),
+        "sections": [
+            (
+                "Ready-made Community packs",
+                "Available voice packs are listed in the ANTHBOT Community Voice Store. "
+                "Compatibility is shown with the pack and can vary by mower model or firmware.",
+            ),
+            (
+                "Custom voice requests",
+                "A separate custom-voice workflow is available for requests that are "
+                "not covered by the ready-made catalogue.",
+            ),
+            (
+                "ANTHBOT Map integration",
+                "Purchased voice entitlements can be linked to ANTHBOT Map so compatible "
+                "installed systems can recognize the purchased pack without exposing paid "
+                "download URLs publicly.",
+            ),
+            (
+                "Independent project",
+                "Community voice packs and ANTHBOT Map are independent project features. "
+                "ANTHBOT is a trademark of its respective owner; this site does not imply "
+                "official ANTHBOT endorsement.",
+            ),
+        ],
+        "cta": ("Open the Voice Pack Store", "/store"),
     },
 }
 
@@ -1366,7 +1573,110 @@ def _apply_seo_metadata(name: str, html: str) -> str:
             f'<script type="application/ld+json">{structured}</script>'
         )
 
-    return html.replace("</head>", "\n".join(social) + "\n</head>", 1)
+    html = html.replace("</head>", "\n".join(social) + "\n</head>", 1)
+    if name == "public_site.html" and "</main>" in html:
+        explore = """
+<section class="section"><div class="wrap">
+  <h2>Explore ANTHBOT Map topics</h2>
+  <p class="lead">Detailed pages for Home Assistant integration, tested mower families and Community voice packs.</p>
+  <div class="policy-links">
+    <a class="btn" href="/home-assistant">ANTHBOT Home Assistant</a>
+    <a class="btn" href="/models/genie-1000">Genie 1000</a>
+    <a class="btn" href="/models/m9-pro">M9 Pro</a>
+    <a class="btn" href="/models/mgc1000">MGC1000 / Pion</a>
+    <a class="btn" href="/voice-packs">ANTHBOT Voice Packs</a>
+  </div>
+</div></section>
+"""
+        html = html.replace("</main>", explore + "</main>", 1)
+    return html
+
+
+def _seo_landing_html(path: str) -> str:
+    page = _SEO_LANDING_PAGES.get(path)
+    if page is None:
+        raise HTTPException(status_code=404, detail="page not found")
+
+    title = str(page["title"])
+    description = str(page["description"])
+    heading = str(page["heading"])
+    lead = str(page["lead"])
+    canonical = f"{_PUBLIC_SITE_BASE_URL}{path}"
+    sections = "".join(
+        (
+            '<section class="card"><h2>'
+            + escape(str(section_title))
+            + '</h2><p>'
+            + escape(str(section_text))
+            + '</p></section>'
+        )
+        for section_title, section_text in page["sections"]
+    )
+    cta_label, cta_href = page["cta"]
+    internal_links = (
+        '<a href="/home-assistant">Home Assistant</a>'
+        '<a href="/models/genie-1000">Genie 1000</a>'
+        '<a href="/models/m9-pro">M9 Pro</a>'
+        '<a href="/models/mgc1000">MGC1000</a>'
+        '<a href="/voice-packs">Voice packs</a>'
+        '<a href="/store">Voice Store</a>'
+    )
+    structured = json.dumps(
+        {
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "name": title,
+            "url": canonical,
+            "description": description,
+            "isPartOf": {
+                "@type": "WebSite",
+                "name": "ANTHBOT Map",
+                "url": f"{_PUBLIC_SITE_BASE_URL}/",
+            },
+            "about": {
+                "@type": "SoftwareApplication",
+                "name": "ANTHBOT Map",
+                "applicationCategory": "HomeAutomationApplication",
+                "operatingSystem": "Home Assistant",
+                "url": f"{_PUBLIC_SITE_BASE_URL}/",
+            },
+        },
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{escape(title)}</title>
+<meta name="description" content="{escape(description, quote=True)}">
+<link rel="canonical" href="{escape(canonical, quote=True)}">
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ANTHBOT Map">
+<meta property="og:title" content="{escape(title, quote=True)}">
+<meta property="og:description" content="{escape(description, quote=True)}">
+<meta property="og:url" content="{escape(canonical, quote=True)}">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="{escape(title, quote=True)}">
+<meta name="twitter:description" content="{escape(description, quote=True)}">
+<script type="application/ld+json">{structured}</script>
+<style>
+:root{{color-scheme:dark;--bg:#081017;--panel:#111820;--panel2:#141d27;--line:rgba(255,255,255,.12);--text:#fff;--muted:rgba(255,255,255,.72);--green:#5ee083;--max:1060px;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}}
+*{{box-sizing:border-box}}body{{margin:0;background:radial-gradient(circle at 14% 0,rgba(40,94,145,.34),transparent 29rem),radial-gradient(circle at 90% 24%,rgba(94,224,131,.09),transparent 26rem),var(--bg);color:var(--text);line-height:1.65}}a{{color:#d9ffe6}}.wrap{{max-width:var(--max);margin:auto;padding:0 22px}}.nav{{position:sticky;top:0;z-index:20;background:rgba(8,16,23,.82);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}}.navin{{min-height:70px;display:flex;align-items:center;justify-content:space-between;gap:20px}}.brand{{font-weight:850;text-decoration:none}}.links{{display:flex;gap:13px;flex-wrap:wrap}}.links a{{text-decoration:none;color:var(--muted);font-size:13px}}.links a:hover{{color:#fff}}.hero{{padding:72px 0 38px}}.eyebrow{{display:inline-flex;padding:6px 11px;border:1px solid var(--line);border-radius:999px;color:var(--green);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}}h1{{font-size:clamp(2.5rem,7vw,4.8rem);line-height:1.02;margin:16px 0}}.lead{{max-width:820px;font-size:1.12rem;color:var(--muted)}}.actions{{display:flex;gap:12px;flex-wrap:wrap;margin-top:25px}}.btn{{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:12px;text-decoration:none;font-weight:800;background:linear-gradient(180deg,#34c759,#248a46);color:#fff}}.btn.secondary{{background:var(--panel2);border:1px solid var(--line)}}.grid{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding:18px 0 72px}}.card{{padding:22px;border:1px solid var(--line);border-radius:19px;background:linear-gradient(180deg,rgba(20,29,39,.96),rgba(12,18,24,.96));box-shadow:0 18px 50px rgba(0,0,0,.24)}}.card h2{{margin:0 0 8px;font-size:1.3rem}}.card p{{margin:0;color:var(--muted)}}.notice{{margin:0 0 58px;padding:17px;border:1px solid rgba(94,224,131,.24);border-radius:15px;background:rgba(94,224,131,.06);color:#d7eee1}}.footer{{border-top:1px solid var(--line);padding:28px 0 44px;color:#94a2ad;font-size:13px}}@media(max-width:760px){{.links{{display:none}}.grid{{grid-template-columns:1fr}}.hero{{padding-top:50px}}}}
+</style>
+</head>
+<body>
+<nav class="nav"><div class="wrap navin"><a class="brand" href="/">ANTHBOT Map</a><div class="links">{internal_links}</div></div></nav>
+<main>
+<section class="hero"><div class="wrap"><span class="eyebrow">{escape(str(page["eyebrow"]))}</span><h1>{escape(heading)}</h1><p class="lead">{escape(lead)}</p><div class="actions"><a class="btn" href="{escape(str(cta_href), quote=True)}">{escape(str(cta_label))}</a><a class="btn secondary" href="/">ANTHBOT Map home</a></div></div></section>
+<div class="wrap"><div class="grid">{sections}</div><div class="notice"><strong>Independent community project.</strong> ANTHBOT is a trademark of its respective owner. ANTHBOT Map is independent and is not an official ANTHBOT product unless explicitly stated otherwise.</div></div>
+</main>
+<footer class="footer"><div class="wrap">© 2026 MQB Retrofit Hungary · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/refunds">Refunds</a></div></footer>
+<script src="/site-analytics.js?v=1"></script>
+</body>
+</html>"""
 
 
 def _html_file(name: str) -> str:
@@ -1392,7 +1702,7 @@ def site_analytics_script() -> Response:
     navigator.doNotTrack === "1" ||
     window.doNotTrack === "1"
   ) return;
-  const allowed = new Set(["/","/store","/store/success","/privacy","/terms","/refunds"]);
+  const allowed = new Set(["/","/store","/store/success","/privacy","/terms","/refunds","/home-assistant","/models/genie-1000","/models/m9-pro","/models/mgc1000","/voice-packs"]);
   const path = location.pathname.replace(/\/+$/, "") || "/";
   if (!allowed.has(path)) return;
   const language = String(document.documentElement.lang || navigator.language || "en")
@@ -2069,7 +2379,18 @@ def robots_txt() -> Response:
 
 @router.get("/sitemap.xml")
 def sitemap_xml() -> Response:
-    urls = ("/", "/store", "/privacy", "/terms", "/refunds")
+    urls = (
+        "/",
+        "/home-assistant",
+        "/models/genie-1000",
+        "/models/m9-pro",
+        "/models/mgc1000",
+        "/voice-packs",
+        "/store",
+        "/privacy",
+        "/terms",
+        "/refunds",
+    )
     entries = "".join(
         f"<url><loc>{_PUBLIC_SITE_BASE_URL}{path}</loc></url>"
         for path in urls
@@ -2082,6 +2403,35 @@ def sitemap_xml() -> Response:
         ),
         media_type="application/xml",
     )
+
+
+@router.get("/home-assistant", response_class=HTMLResponse)
+def home_assistant_landing_page(request: Request) -> Response:
+    path = "/home-assistant"
+    redirect = _canonical_public_redirect(request, path)
+    if redirect is not None:
+        return redirect
+    return HTMLResponse(_seo_landing_html(path))
+
+
+@router.get("/models/{model_slug}", response_class=HTMLResponse)
+def model_landing_page(model_slug: str, request: Request) -> Response:
+    path = f"/models/{model_slug}"
+    if path not in _SEO_LANDING_PAGES:
+        raise HTTPException(status_code=404, detail="model page not found")
+    redirect = _canonical_public_redirect(request, path)
+    if redirect is not None:
+        return redirect
+    return HTMLResponse(_seo_landing_html(path))
+
+
+@router.get("/voice-packs", response_class=HTMLResponse)
+def voice_packs_landing_page(request: Request) -> Response:
+    path = "/voice-packs"
+    redirect = _canonical_public_redirect(request, path)
+    if redirect is not None:
+        return redirect
+    return HTMLResponse(_seo_landing_html(path))
 
 
 @router.get("/", response_class=HTMLResponse)
