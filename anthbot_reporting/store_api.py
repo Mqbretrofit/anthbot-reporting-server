@@ -6,16 +6,16 @@ from datetime import datetime, timezone
 import hashlib
 import hmac
 import json
+import logging
 import os
 from pathlib import Path
 import re
 import secrets
 import time
 from typing import Any, Literal
-from urllib.error import HTTPError, URLError
-from urllib.parse import quote, urlencode
-from urllib.request import Request as UrlRequest, build_opener
+from urllib.parse import quote
 
+import stripe
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -30,7 +30,8 @@ _CURRENCY_RE = re.compile(r"^[a-zA-Z]{3}$")
 _SESSION_RE = re.compile(r"^cs_[A-Za-z0-9_]+$")
 _LICENSE_RE = re.compile(r"^abv1\.([A-Za-z0-9_-]+)\.([0-9a-f]{64})$")
 _STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300
-_STRIPE_API_BASE = "https://api.stripe.com/v1"
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class CheckoutPayload(BaseModel):
@@ -231,47 +232,39 @@ def _store_catalog(request: Request) -> dict[str, Any]:
     }
 
 
-def _stripe_request(
-    method: str,
-    path: str,
-    *,
-    form: list[tuple[str, str]] | None = None,
-) -> dict[str, Any]:
+def _stripe_session_dict(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return dict(value)
+    converter = getattr(value, "to_dict_recursive", None)
+    if callable(converter):
+        payload = converter()
+        if isinstance(payload, dict):
+            return payload
+    try:
+        return dict(value)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=502,
+            detail="Stripe returned an invalid Checkout Session",
+        )
+
+
+def _stripe_error_detail(err: BaseException) -> str:
+    user_message = getattr(err, "user_message", None)
+    if isinstance(user_message, str) and user_message.strip():
+        return user_message.strip()[:500]
+    message = str(err).strip()
+    if message:
+        return message[:500]
+    return "Stripe request failed"
+
+
+def _configure_stripe() -> None:
     key = _stripe_secret_key()
     if not key:
         raise HTTPException(status_code=503, detail="Stripe secret key is not configured")
-
-    data = urlencode(form or []).encode("utf-8") if form is not None else None
-    request = UrlRequest(
-        f"{_STRIPE_API_BASE}{path}",
-        data=data,
-        headers={
-            "Authorization": f"Bearer {key}",
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Accept": "application/json",
-            "User-Agent": "ANTHBOT-Reporting-Store/1.0",
-        },
-        method=method,
-    )
-    try:
-        with build_opener().open(request, timeout=30) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except HTTPError as err:
-        detail = "Stripe request failed"
-        try:
-            payload = json.loads(err.read().decode("utf-8"))
-            message = payload.get("error", {}).get("message")
-            if isinstance(message, str) and message:
-                detail = message
-        except (ValueError, OSError, UnicodeDecodeError):
-            pass
-        raise HTTPException(status_code=502, detail=detail) from err
-    except (URLError, TimeoutError, OSError, ValueError) as err:
-        raise HTTPException(status_code=502, detail="Stripe request failed") from err
-
-    if not isinstance(payload, dict):
-        raise HTTPException(status_code=502, detail="Stripe returned an invalid response")
-    return payload
+    stripe.api_key = key
+    stripe.max_network_retries = 1
 
 
 def _create_checkout_session(
@@ -288,37 +281,87 @@ def _create_checkout_session(
     community_id = str(record.get("community_id", "")).strip()
     language = str(record.get("language", "")).strip() or "ANTHBOT"
     variant = str(record.get("variant_name", "")).strip()
-    product_name = f"{language} · {variant}" if variant else f"{language} · Community voice"
+    product_name = (
+        f"{language} · {variant}"
+        if variant
+        else f"{language} · Community voice"
+    )
 
-    form: list[tuple[str, str]] = [
-        ("mode", "payment"),
-        ("success_url", f"{base}/store/success?session_id={{CHECKOUT_SESSION_ID}}"),
-        ("cancel_url", f"{base}/store?cancelled=1"),
-        ("client_reference_id", pack_id),
-        ("customer_creation", "always"),
-        ("locale", "auto"),
-        ("line_items[0][price_data][currency]", currency),
-        ("line_items[0][price_data][unit_amount]", str(amount)),
-        ("line_items[0][price_data][product_data][name]", product_name),
-        (
-            "line_items[0][price_data][product_data][description]",
-            "ANTHBOT Community voice pack · one-time purchase",
-        ),
-        ("line_items[0][quantity]", "1"),
-        ("metadata[pack_id]", pack_id),
-        ("metadata[community_id]", community_id),
-        ("payment_intent_data[metadata][pack_id]", pack_id),
-    ]
+    params: dict[str, Any] = {
+        "mode": "payment",
+        "success_url": f"{base}/store/success?session_id={{CHECKOUT_SESSION_ID}}",
+        "cancel_url": f"{base}/store?cancelled=1",
+        "client_reference_id": pack_id,
+        "customer_creation": "always",
+        "locale": "auto",
+        "line_items": [
+            {
+                "price_data": {
+                    "currency": currency,
+                    "unit_amount": amount,
+                    "product_data": {
+                        "name": product_name,
+                        "description": "ANTHBOT Community voice pack · one-time purchase",
+                    },
+                },
+                "quantity": 1,
+            }
+        ],
+        "metadata": {
+            "pack_id": pack_id,
+            "community_id": community_id,
+        },
+        "payment_intent_data": {
+            "metadata": {
+                "pack_id": pack_id,
+            }
+        },
+    }
     if _stripe_automatic_tax():
-        form.append(("automatic_tax[enabled]", "true"))
+        params["automatic_tax"] = {"enabled": True}
 
-    return _stripe_request("POST", "/checkout/sessions", form=form)
+    _configure_stripe()
+    try:
+        session = stripe.checkout.Session.create(**params)
+    except stripe.StripeError as err:
+        detail = _stripe_error_detail(err)
+        _LOGGER.warning(
+            "Stripe Checkout Session creation failed: %s (request_id=%s)",
+            detail,
+            getattr(err, "request_id", None),
+        )
+        raise HTTPException(status_code=502, detail=f"Stripe: {detail}") from err
+    except Exception as err:
+        _LOGGER.exception("Unexpected Stripe Checkout Session creation failure")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Stripe connection failed: {type(err).__name__}",
+        ) from err
+    return _stripe_session_dict(session)
 
 
 def _retrieve_checkout_session(session_id: str) -> dict[str, Any]:
     if not _SESSION_RE.fullmatch(session_id):
         raise HTTPException(status_code=422, detail="invalid checkout session id")
-    return _stripe_request("GET", f"/checkout/sessions/{quote(session_id)}")
+
+    _configure_stripe()
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+    except stripe.StripeError as err:
+        detail = _stripe_error_detail(err)
+        _LOGGER.warning(
+            "Stripe Checkout Session retrieval failed: %s (request_id=%s)",
+            detail,
+            getattr(err, "request_id", None),
+        )
+        raise HTTPException(status_code=502, detail=f"Stripe: {detail}") from err
+    except Exception as err:
+        _LOGGER.exception("Unexpected Stripe Checkout Session retrieval failure")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Stripe connection failed: {type(err).__name__}",
+        ) from err
+    return _stripe_session_dict(session)
 
 
 def _session_pack_id(session: dict[str, Any]) -> str:
