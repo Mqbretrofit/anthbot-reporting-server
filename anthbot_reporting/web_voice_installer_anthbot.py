@@ -436,5 +436,5 @@ def install_voice(
     update(
         status="success",
         progress=100,
-        message="Installation complete. The mower should play its find-robot voice now.",
+        message="Installation complete. The mower should play its \"here I am\" voice now.",
     )
