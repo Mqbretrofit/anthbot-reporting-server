@@ -61,6 +61,22 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(response.status_code, 201)
         return response.json()["pack"]
 
+    def test_store_has_visible_top_navigation_in_all_languages(self) -> None:
+        response = self.client.get("/store")
+        self.assertEqual(response.status_code, 200)
+        html = response.text
+        self.assertIn('<nav class="navlinks"', html)
+        self.assertIn('class="home-link" href="/" data-i18n="homeNav"', html)
+        self.assertIn('href="/refunds" data-i18n="refund"', html)
+        self.assertIn('href="/terms" data-i18n="terms"', html)
+        self.assertIn('href="/privacy" data-i18n="privacy"', html)
+        self.assertIn('"hu":"← Főoldal"', html)
+        self.assertIn('"en":"← Home"', html)
+        self.assertIn('"de":"← Startseite"', html)
+        self.assertIn('"zh-CN":"← 首页"', html)
+        self.assertIn('"km":"← ទំព័រដើម"', html)
+        self.assertEqual(html.count('homeNav=label'), 1)
+
     def test_paid_pack_is_hidden_from_legacy_registry_and_requires_license(self) -> None:
         pack = self._upload_pack()
         pack_id = pack["id"]
@@ -89,7 +105,7 @@ class VoiceStoreTests(unittest.TestCase):
             item for item in catalog.json()["packs"] if item.get("id") == pack_id
         )
         self.assertEqual(paid["access"], "paid")
-        self.assertEqual(paid["price_amount"], 499)
+        self.assertEqual(paid["price_amount"], 799)
         self.assertNotIn("music_url", paid)
 
         checkout_session = {
@@ -198,7 +214,7 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(kwargs["client_reference_id"], pack_id)
         self.assertEqual(kwargs["managed_payments"], {"enabled": False})
         self.assertEqual(kwargs["line_items"][0]["price_data"]["currency"], "eur")
-        self.assertEqual(kwargs["line_items"][0]["price_data"]["unit_amount"], 100)
+        self.assertEqual(kwargs["line_items"][0]["price_data"]["unit_amount"], 799)
         self.assertEqual(
             kwargs["line_items"][0]["price_data"]["product_data"]["tax_code"],
             "txcd_10401100",
@@ -399,7 +415,7 @@ class VoiceStoreTests(unittest.TestCase):
         current_pack_id = current_pack["id"]
         self.assertNotEqual(current_pack_id, old_pack_id)
         self.assertEqual(current_pack["access"], "paid")
-        self.assertEqual(current_pack["price_amount"], 299)
+        self.assertEqual(current_pack["price_amount"], 799)
 
         entitlements = self.client.post(
             "/api/anthbot/store/client/entitlements",
