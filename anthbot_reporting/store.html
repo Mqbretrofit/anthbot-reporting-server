@@ -56,6 +56,17 @@
         const res=await fetch('/api/anthbot/store/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
         const data=await res.json().catch(()=>({}));
         if(!res.ok) throw new Error(data.detail||('HTTP '+res.status));
+        if(data.already_owned){
+          button.textContent='Már megvásárolva';
+          button.disabled=true;
+          const n=document.getElementById('notice');
+          n.style.display='block';
+          n.style.borderColor='rgba(127,225,191,.32)';
+          n.style.background='rgba(127,225,191,.07)';
+          n.style.color='#c9ffed';
+          n.textContent='Ezt a hangcsomagot ez az ANTHBOT Map már megvásárolta. Rövid időn belül megjelenik a hangválasztóban.';
+          return;
+        }
         location.href=data.checkout_url;
       }catch(err){ alert('A fizetés indítása nem sikerült: '+err.message); button.disabled=false; button.textContent=original; }
     }

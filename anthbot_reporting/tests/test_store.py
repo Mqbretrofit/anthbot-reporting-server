@@ -293,6 +293,17 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(downloaded.status_code, 200)
         self.assertEqual(downloaded.content, b"paid-community-pack")
 
+        with patch.object(store_api, "_create_checkout_session") as duplicate_create:
+            duplicate = self.client.post(
+                "/api/anthbot/store/checkout",
+                json={"pack_id": pack_id, "pair_code": pair_code},
+            )
+        self.assertEqual(duplicate.status_code, 200)
+        self.assertTrue(duplicate.json()["already_owned"])
+        self.assertEqual(duplicate.json()["pack_id"], pack_id)
+        self.assertIsNone(duplicate.json()["checkout_url"])
+        duplicate_create.assert_not_called()
+
     def test_unlinked_purchase_is_not_returned_to_map_client(self) -> None:
         pack = self._upload_pack()
         pack_id = pack["id"]

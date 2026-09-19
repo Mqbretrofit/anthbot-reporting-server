@@ -248,6 +248,28 @@ def _client_id_from_pairing(pair_code: str | None) -> str | None:
     return str(row["client_id"])
 
 
+def _paid_order_for_client_pack(
+    client_id: str,
+    pack_id: str,
+) -> dict[str, Any] | None:
+    """Return an active paid order so linked clients cannot buy twice."""
+    _init_store_tables()
+    with core._db() as conn:
+        row = conn.execute(
+            """
+            SELECT *
+            FROM store_orders
+            WHERE client_id = ?
+              AND pack_id = ?
+              AND payment_status = 'paid'
+            ORDER BY COALESCE(paid_at, updated_at) DESC
+            LIMIT 1
+            """,
+            (client_id, pack_id),
+        ).fetchone()
+    return dict(row) if row is not None else None
+
+
 def _uploaded_records() -> list[dict[str, Any]]:
     return [
         item
@@ -797,6 +819,16 @@ async def create_store_checkout(
         raise HTTPException(status_code=409, detail="voice pack is not a paid product")
 
     client_id = _client_id_from_pairing(payload.pair_code)
+    if client_id is not None:
+        existing_order = _paid_order_for_client_pack(client_id, payload.pack_id)
+        if existing_order is not None:
+            return {
+                "already_owned": True,
+                "pack_id": payload.pack_id,
+                "checkout_url": None,
+                "session_id": existing_order["stripe_session_id"],
+            }
+
     session = await asyncio.to_thread(
         _create_checkout_session,
         record,
@@ -809,6 +841,7 @@ async def create_store_checkout(
     if not isinstance(checkout_url, str) or not checkout_url.startswith("https://"):
         raise HTTPException(status_code=502, detail="Stripe did not return a checkout URL")
     return {
+        "already_owned": False,
         "checkout_url": checkout_url,
         "session_id": order["stripe_session_id"],
     }
