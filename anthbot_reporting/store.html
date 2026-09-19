@@ -85,7 +85,7 @@ function showQueryNotice(){
 }
 const INSTALLER_LABEL={hu:'Telepítés Home Assistant nélkül',en:'Install without Home Assistant',de:'Ohne Home Assistant installieren',fr:'Installer sans Home Assistant',es:'Instalar sin Home Assistant',it:'Installa senza Home Assistant',pt:'Instalar sem Home Assistant',nl:'Installeren zonder Home Assistant',pl:'Zainstaluj bez Home Assistant',cs:'Nainstalovat bez Home Assistant',sk:'Nainštalovať bez Home Assistant',ro:'Instalează fără Home Assistant',da:'Installer uden Home Assistant',sv:'Installera utan Home Assistant',no:'Installer uten Home Assistant',fi:'Asenna ilman Home Assistantia','zh-CN':'无需 Home Assistant 安装','zh-TW':'無需 Home Assistant 安裝',tr:'Home Assistant olmadan yükle',th:'ติดตั้งโดยไม่ใช้ Home Assistant',vi:'Cài đặt không cần Home Assistant',ko:'Home Assistant 없이 설치',km:'ដំឡើងដោយមិនប្រើ Home Assistant'};
 function installerLabel(){return INSTALLER_LABEL[currentLang]||INSTALLER_LABEL.en}
-let packsCache=null,errorCache=null;
+let packsCache=null,errorCache=null,installerAvailable=false;
 async function buy(packId,button){
   const original=button.textContent;button.disabled=true;button.textContent=t('opening');
   try{
@@ -103,7 +103,7 @@ function card(p){
   const models=Array.isArray(p.models)?p.models.join(', '):'Anthbot Genie 1000';
   const price=paid?money(p.price_amount,p.currency):t('free');
   const action=paid?'<button class="btn" '+(p.checkout_available?'':'disabled')+' onclick="buy(\''+esc(p.id)+'\',this)">'+(p.checkout_available?t('buy'):t('checkoutDisabled'))+'</button>':'<button class="btn secondary" disabled>'+t('availableMap')+'</button>';
-  const webInstall='<a class="btn secondary" href="/voice-installer?pack='+encodeURIComponent(p.id)+'">'+esc(installerLabel())+'</a>';
+  const webInstall=installerAvailable?'<a class="btn secondary" href="/voice-installer?pack='+encodeURIComponent(p.id)+'">'+esc(installerLabel())+'</a>':'';
   return '<article class="card"><div class="row"><div><div class="lang">'+esc(p.language||p.language_code||'Voice pack')+'</div><div class="variant">'+esc(p.variant_name||p.community_id||'Community')+'</div></div><span class="pill">'+(paid?t('paid'):t('free'))+'</span></div><div class="meta"><span class="pill">'+esc(gender)+'</span><span class="pill">'+esc(models)+'</span><span class="pill">v'+esc(p.version||'—')+'</span></div><div class="desc">'+esc(t('desc'))+'</div><div class="price '+(paid?'':'free')+'">'+esc(price)+'</div><div class="card-actions">'+action+webInstall+'</div></article>';
 }
 function renderCurrent(){
@@ -113,7 +113,7 @@ function renderCurrent(){
   root.innerHTML=packsCache.length?'<div class="grid">'+packsCache.map(card).join('')+'</div>':'<div class="empty">'+esc(t('empty'))+'</div>';
 }
 async function boot(){
-  try{const res=await fetch('/api/anthbot/store/voice-packs',{cache:'no-store'});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.detail||('HTTP '+res.status));packsCache=Array.isArray(data.packs)?data.packs:[];errorCache=null}
+  try{const res=await fetch('/api/anthbot/store/voice-packs',{cache:'no-store'});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.detail||('HTTP '+res.status));packsCache=Array.isArray(data.packs)?data.packs:[];installerAvailable=Boolean(data.web_installer_available);errorCache=null}
   catch(err){errorCache=err.message}
   renderCurrent();
 }
