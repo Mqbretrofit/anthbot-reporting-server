@@ -477,6 +477,143 @@ def _voice_pack_models(value: str) -> list[str]:
     return models
 
 
+def _validate_public_https_url(value: str) -> str:
+    """Reject local/private targets so the public cache endpoint cannot be SSRF."""
+    parsed = urlsplit(value.strip())
+    if parsed.scheme.lower() != "https" or not parsed.hostname:
+        raise HTTPException(status_code=422, detail="source_url must use public HTTPS")
+    if parsed.username or parsed.password:
+        raise HTTPException(status_code=422, detail="source_url credentials are not allowed")
+    if parsed.port not in (None, 443):
+        raise HTTPException(status_code=422, detail="source_url must use HTTPS port 443")
+
+    host = parsed.hostname.rstrip(".")
+    if not host or host.casefold() == "localhost" or host.casefold().endswith(".localhost"):
+        raise HTTPException(status_code=422, detail="source_url host is not public")
+
+    try:
+        literal = ipaddress.ip_address(host)
+    except ValueError:
+        literal = None
+
+    addresses: set[str] = set()
+    if literal is not None:
+        addresses.add(str(literal))
+    else:
+        try:
+            for info in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+                addresses.add(str(info[4][0]))
+        except socket.gaierror as err:
+            raise HTTPException(status_code=422, detail="source_url host cannot be resolved") from err
+
+    if not addresses:
+        raise HTTPException(status_code=422, detail="source_url host cannot be resolved")
+    for address in addresses:
+        try:
+            if not ipaddress.ip_address(address).is_global:
+                raise HTTPException(
+                    status_code=422,
+                    detail="source_url must resolve only to public addresses",
+                )
+        except ValueError as err:
+            raise HTTPException(status_code=422, detail="source_url address is invalid") from err
+    return value.strip()
+
+
+class _SafeVoiceRedirectHandler(HTTPRedirectHandler):
+    """Validate every redirect before urllib follows it."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        _validate_public_https_url(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _cached_official_voice_path(music_md5: str) -> Path:
+    return _voice_pack_dir() / f"official-{music_md5.lower()}.pack"
+
+
+def _verify_cached_voice(path: Path, expected_md5: str) -> int | None:
+    if not path.is_file():
+        return None
+    digest = hashlib.md5(usedforsecurity=False)
+    size = 0
+    try:
+        with path.open("rb") as source:
+            while True:
+                chunk = source.read(VOICE_PACK_CHUNK_BYTES)
+                if not chunk:
+                    break
+                size += len(chunk)
+                if size > MAX_VOICE_PACK_BYTES:
+                    return None
+                digest.update(chunk)
+    except OSError:
+        return None
+    if size == 0 or digest.hexdigest().casefold() != expected_md5.casefold():
+        return None
+    return size
+
+
+def _fetch_official_voice_pack(
+    source_url: str,
+    expected_md5: str,
+    target: Path,
+) -> int:
+    """Download and verify one official ANTHBOT pack into persistent cache."""
+    source_url = _validate_public_https_url(source_url)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_name(f".{target.name}.{secrets.token_hex(4)}.tmp")
+    digest = hashlib.md5(usedforsecurity=False)
+    size = 0
+    opener = build_opener(_SafeVoiceRedirectHandler())
+    request = UrlRequest(
+        source_url,
+        headers={
+            "Accept": "*/*",
+            "User-Agent": "ANTHBOT-Reporting-Voice-Cache/1.0",
+        },
+        method="GET",
+    )
+
+    try:
+        with opener.open(request, timeout=30) as response:
+            _validate_public_https_url(response.geturl())
+            raw_length = response.headers.get("Content-Length")
+            if raw_length:
+                try:
+                    if int(raw_length) > MAX_VOICE_PACK_BYTES:
+                        raise HTTPException(status_code=413, detail="official voice pack is too large")
+                except ValueError:
+                    pass
+
+            with temporary.open("wb") as output:
+                while True:
+                    chunk = response.read(VOICE_PACK_CHUNK_BYTES)
+                    if not chunk:
+                        break
+                    size += len(chunk)
+                    if size > MAX_VOICE_PACK_BYTES:
+                        raise HTTPException(status_code=413, detail="official voice pack is too large")
+                    digest.update(chunk)
+                    output.write(chunk)
+    except HTTPException:
+        temporary.unlink(missing_ok=True)
+        raise
+    except (HTTPError, URLError, TimeoutError, OSError) as err:
+        temporary.unlink(missing_ok=True)
+        raise HTTPException(status_code=502, detail="official voice download failed") from err
+
+    if size == 0:
+        temporary.unlink(missing_ok=True)
+        raise HTTPException(status_code=502, detail="official voice download was empty")
+    if digest.hexdigest().casefold() != expected_md5.casefold():
+        temporary.unlink(missing_ok=True)
+        raise HTTPException(status_code=502, detail="official voice MD5 mismatch")
+
+    os.replace(temporary, target)
+    return size
+
+
 def _dashboard_file(name: str) -> str:
     try:
         return Path(__file__).with_name(name).read_text(encoding="utf-8")
