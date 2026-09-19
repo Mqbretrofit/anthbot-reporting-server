@@ -1199,6 +1199,11 @@ def _html_file(name: str) -> str:
 def site_analytics_script() -> Response:
     script = r"""
 (() => {
+  if (
+    navigator.globalPrivacyControl === true ||
+    navigator.doNotTrack === "1" ||
+    window.doNotTrack === "1"
+  ) return;
   const allowed = new Set(["/","/store","/store/success","/privacy","/terms","/refunds"]);
   const path = location.pathname.replace(/\/+$/, "") || "/";
   if (!allowed.has(path)) return;
