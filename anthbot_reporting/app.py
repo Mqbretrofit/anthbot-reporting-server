@@ -647,6 +647,35 @@ def community_voice_packs(request: Request) -> dict[str, Any]:
     return _voice_pack_registry(request)
 
 
+@app.post("/api/anthbot/voice-packs/cache-official")
+async def cache_official_voice_pack(
+    payload: OfficialVoiceCachePayload,
+    request: Request,
+) -> dict[str, Any]:
+    """Mirror one official ANTHBOT pack behind the stable Reporting Server URL."""
+    music_md5 = payload.music_md5.lower()
+    target = _cached_official_voice_path(music_md5)
+    size = _verify_cached_voice(target, music_md5)
+    cache_hit = size is not None
+
+    if size is None:
+        size = await asyncio.to_thread(
+            _fetch_official_voice_pack,
+            payload.source_url,
+            music_md5,
+            target,
+        )
+
+    base = str(request.base_url).rstrip("/")
+    return {
+        "cached": True,
+        "cache_hit": cache_hit,
+        "music_url": f"{base}/voice-packs/{quote(target.name)}",
+        "music_md5": music_md5,
+        "size": size,
+    }
+
+
 @app.get("/voice-packs/{filename}", name="download_voice_pack")
 def download_voice_pack(filename: str) -> FileResponse:
     """Serve one uploaded voice pack directly to a mower."""
