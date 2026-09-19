@@ -82,6 +82,86 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIn('"km":"← ទំព័រដើម"', html)
         self.assertEqual(html.count('homeNav=label'), 1)
 
+    def test_public_seo_targets_anthbotmap_domain(self) -> None:
+        canonical_paths = {
+            "/": "https://anthbotmap.com/",
+            "/store": "https://anthbotmap.com/store",
+            "/privacy": "https://anthbotmap.com/privacy",
+            "/terms": "https://anthbotmap.com/terms",
+            "/refunds": "https://anthbotmap.com/refunds",
+        }
+        for path, canonical in canonical_paths.items():
+            response = self.client.get(path)
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(
+                f'<link rel="canonical" href="{canonical}">',
+                response.text,
+            )
+            self.assertIn(
+                '<meta name="robots" content="index,follow,',
+                response.text,
+            )
+
+        home = self.client.get("/")
+        self.assertIn(
+            "<title>ANTHBOT Map for Home Assistant – Maps, Zones & Voice Packs</title>",
+            home.text,
+        )
+        self.assertIn('"@type":"SoftwareApplication"', home.text)
+        self.assertIn('"name":"ANTHBOT Map"', home.text)
+        self.assertIn(
+            '"downloadUrl":"https://github.com/Mqbretrofit/ha-anthbot-map-v2"',
+            home.text,
+        )
+
+        store = self.client.get("/store")
+        self.assertIn(
+            "<title>ANTHBOT Voice Packs & Custom Voices | ANTHBOT Map</title>",
+            store.text,
+        )
+        self.assertIn(
+            "Browse ANTHBOT community voice packs and request custom mower voices",
+            store.text,
+        )
+
+        success = self.client.get("/store/success")
+        self.assertEqual(success.status_code, 200)
+        self.assertIn('<meta name="robots" content="noindex,nofollow">', success.text)
+        self.assertEqual(
+            success.headers.get("x-robots-tag"),
+            "noindex, nofollow",
+        )
+
+    def test_robots_sitemap_and_legacy_public_redirects(self) -> None:
+        robots = self.client.get("/robots.txt")
+        self.assertEqual(robots.status_code, 200)
+        self.assertIn("Sitemap: https://anthbotmap.com/sitemap.xml", robots.text)
+        self.assertIn("Disallow: /api/", robots.text)
+
+        sitemap = self.client.get("/sitemap.xml")
+        self.assertEqual(sitemap.status_code, 200)
+        self.assertIn("<loc>https://anthbotmap.com/</loc>", sitemap.text)
+        self.assertIn("<loc>https://anthbotmap.com/store</loc>", sitemap.text)
+        self.assertNotIn("reports.mqbretrofithungary.online", sitemap.text)
+
+        redirect = self.client.get(
+            "/store?cancelled=1",
+            headers={"host": "reports.mqbretrofithungary.online"},
+            follow_redirects=False,
+        )
+        self.assertEqual(redirect.status_code, 301)
+        self.assertEqual(
+            redirect.headers["location"],
+            "https://anthbotmap.com/store?cancelled=1",
+        )
+
+        api = self.client.get(
+            "/api/anthbot/voice-packs",
+            headers={"host": "reports.mqbretrofithungary.online"},
+            follow_redirects=False,
+        )
+        self.assertEqual(api.status_code, 200)
+
     def test_privacy_page_has_gdpr_information_and_23_languages(self) -> None:
         response = self.client.get("/privacy")
         self.assertEqual(response.status_code, 200)
