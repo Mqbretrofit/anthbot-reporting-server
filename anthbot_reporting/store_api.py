@@ -116,25 +116,25 @@ _SEO_PAGES: dict[str, dict[str, Any]] = {
 
 _PUBLIC_TYPOGRAPHY_STYLE = """
 <style id="anthbot-compact-typography">
-html{font-size:15px}
-body{font-size:.95rem}
-h1,.hero h1,.legal h1{font-size:clamp(2.05rem,4.7vw,3.65rem)!important;line-height:1.06!important}
-.hero p,.lead,.intro{font-size:.98rem!important;line-height:1.58!important}
-.section h2,.custom h2{font-size:clamp(1.55rem,3vw,1.95rem)!important}
-.feature h3,.legal h2,.policy-body h2,.request h2{font-size:1.08rem!important}
-.links a,.navlinks a{font-size:13px!important}
-.brand{font-size:.98rem}
-.tag,.pill,.repo-meta,.footer,.small,.status,.form-status{font-size:.82rem!important}
-.feature p,.bullet span,.desc,.custom-text,.legal p,.policy-body p,.policy-body li{font-size:.9rem!important;line-height:1.55!important}
-.price-big,.custom-price strong{font-size:1.7rem!important}
-.price{font-size:1.35rem!important}
-.topic-title strong,.demo-title strong{font-size:1.18rem!important}
-.tile strong,.schedule-card strong{font-size:.82rem!important}
-.tile span,.rule span,.schedule-card small{font-size:.72rem!important}
+html{font-size:14px}
+body{font-size:.92rem}
+h1,.hero h1,.legal h1{font-size:clamp(1.85rem,3.7vw,2.95rem)!important;line-height:1.08!important}
+.hero p,.lead,.intro{font-size:.92rem!important;line-height:1.55!important}
+.section h2,.custom h2{font-size:clamp(1.35rem,2.5vw,1.7rem)!important}
+.feature h3,.legal h2,.policy-body h2,.request h2{font-size:1rem!important}
+.links a,.navlinks a{font-size:12px!important}
+.brand{font-size:.92rem}
+.tag,.pill,.repo-meta,.footer,.small,.status,.form-status{font-size:.76rem!important}
+.feature p,.bullet span,.desc,.custom-text,.legal p,.policy-body p,.policy-body li{font-size:.84rem!important;line-height:1.5!important}
+.price-big,.custom-price strong{font-size:1.5rem!important}
+.price{font-size:1.2rem!important}
+.topic-title strong,.demo-title strong{font-size:1.05rem!important}
+.tile strong,.schedule-card strong{font-size:.76rem!important}
+.tile span,.rule span,.schedule-card small{font-size:.68rem!important}
 @media(max-width:760px){
-  html{font-size:14px}
-  h1,.hero h1,.legal h1{font-size:clamp(1.95rem,9vw,3rem)!important}
-  .section h2,.custom h2{font-size:1.6rem!important}
+  html{font-size:13.5px}
+  h1,.hero h1,.legal h1{font-size:clamp(1.7rem,8vw,2.45rem)!important}
+  .section h2,.custom h2{font-size:1.42rem!important}
 }
 </style>
 """

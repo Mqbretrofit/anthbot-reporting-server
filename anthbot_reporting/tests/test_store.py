@@ -278,9 +278,9 @@ class VoiceStoreTests(unittest.TestCase):
             response = self.client.get(path)
             self.assertEqual(response.status_code, 200)
             self.assertIn('id="anthbot-compact-typography"', response.text)
-            self.assertIn("html{font-size:15px}", response.text)
+            self.assertIn("html{font-size:14px}", response.text)
             self.assertIn(
-                "font-size:clamp(2.05rem,4.7vw,3.65rem)!important",
+                "font-size:clamp(1.85rem,3.7vw,2.95rem)!important",
                 response.text,
             )
 
