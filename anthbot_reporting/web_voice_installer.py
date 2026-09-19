@@ -419,12 +419,21 @@ async def _run_install(
             update=lambda **values: _job_update(job_id, **values),
         )
     except HTTPException as err:
-        _job_update(job_id, status="failed", message=str(err.detail))
-    except Exception as err:
         _job_update(
             job_id,
             status="failed",
-            message=str(err)[:400] or "Voice installation failed.",
+            message=str(err.detail),
+            message_key="progressError",
+            message_args={"detail": str(err.detail)},
+        )
+    except Exception as err:
+        detail = str(err)[:400] or "Voice installation failed."
+        _job_update(
+            job_id,
+            status="failed",
+            message=detail,
+            message_key="progressError",
+            message_args={"detail": detail},
         )
 
 
@@ -658,6 +667,8 @@ async def installer_install(payload: InstallPayload, request: Request) -> Respon
             "status": "running",
             "progress": 3,
             "message": "Starting secure voice installation…",
+            "message_key": "progressStarting",
+            "message_args": {},
             "voice_name": voice_name,
             "device_name": str(device.get("alias") or "ANTHBOT Genie"),
             "created_at": time.time(),
@@ -699,6 +710,12 @@ def installer_job(job_id: str, request: Request) -> Response:
             "status": job["status"],
             "progress": int(job.get("progress") or 0),
             "message": str(job.get("message") or ""),
+            "message_key": str(job.get("message_key") or ""),
+            "message_args": (
+                dict(job.get("message_args") or {})
+                if isinstance(job.get("message_args"), dict)
+                else {}
+            ),
             "voice_name": str(job.get("voice_name") or ""),
             "device_name": str(job.get("device_name") or ""),
         }
