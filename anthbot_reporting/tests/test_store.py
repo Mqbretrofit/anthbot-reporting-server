@@ -317,7 +317,14 @@ class VoiceStoreTests(unittest.TestCase):
 
     def test_standalone_client_checkout_links_purchase_without_pair_code(self) -> None:
         token = "A" * 48
-        pack_id = self._first_paid_pack_id()
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        priced = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        self.assertEqual(priced.status_code, 200)
         fake_session = {
             "id": "cs_test_installer_direct",
             "url": "https://checkout.stripe.com/c/pay/test",
