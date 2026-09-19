@@ -34,6 +34,7 @@ _COMMUNITY_VERSION_RE = re.compile(r"^1\.2\.(\d+)$")
 _COMMUNITY_VERSION_MIN_PATCH = 4
 DEFAULT_DB_PATH = "/data/anthbot_reporting.sqlite3"
 DEFAULT_VOICE_PACK_DIR = "/data/voice_packs"
+PUBLIC_REPORTING_BASE_URL = "https://reports.mqbretrofithungary.online"
 MAX_TELEMETRY_BYTES = 64 * 1024
 MAX_DIAGNOSTICS_BYTES = 2 * 1024 * 1024
 MAX_VOICE_PACK_BYTES = 32 * 1024 * 1024
@@ -390,12 +391,28 @@ def _write_uploaded_voice_registry(payload: dict[str, Any]) -> None:
     os.replace(temporary, target)
 
 
+def _public_base_url(request: Request) -> str:
+    """Return the stable externally reachable Reporting Server URL."""
+    configured = os.environ.get("ANTHBOT_PUBLIC_BASE_URL", "").strip().rstrip("/")
+    if configured:
+        return configured
+
+    forwarded_proto = request.headers.get("x-forwarded-proto", "").split(",", 1)[0].strip()
+    forwarded_host = request.headers.get("x-forwarded-host", "").split(",", 1)[0].strip()
+    if forwarded_proto == "https" and forwarded_host:
+        return f"https://{forwarded_host}".rstrip("/")
+
+    # The integration and mower access this service through the public HTTPS
+    # endpoint. Never leak the add-on's internal http:// URL into voice_set.
+    return PUBLIC_REPORTING_BASE_URL
+
+
 def _public_voice_pack(record: dict[str, Any], request: Request) -> dict[str, Any]:
     public = dict(record)
     filename = public.pop("filename", None)
     public.pop("uploaded_at", None)
     if isinstance(filename, str) and filename:
-        base = str(request.base_url).rstrip("/")
+        base = _public_base_url(request)
         public["music_url"] = f"{base}/voice-packs/{quote(filename)}"
     return public
 
@@ -827,7 +844,7 @@ async def cache_official_voice_pack(
             target,
         )
 
-    base = str(request.base_url).rstrip("/")
+    base = _public_base_url(request)
     return {
         "cached": True,
         "cache_hit": cache_hit,
