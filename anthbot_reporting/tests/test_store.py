@@ -105,7 +105,7 @@ class VoiceStoreTests(unittest.TestCase):
             item for item in catalog.json()["packs"] if item.get("id") == pack_id
         )
         self.assertEqual(paid["access"], "paid")
-        self.assertEqual(paid["price_amount"], 499)
+        self.assertEqual(paid["price_amount"], 799)
         self.assertNotIn("music_url", paid)
 
         checkout_session = {
@@ -214,7 +214,7 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(kwargs["client_reference_id"], pack_id)
         self.assertEqual(kwargs["managed_payments"], {"enabled": False})
         self.assertEqual(kwargs["line_items"][0]["price_data"]["currency"], "eur")
-        self.assertEqual(kwargs["line_items"][0]["price_data"]["unit_amount"], 100)
+        self.assertEqual(kwargs["line_items"][0]["price_data"]["unit_amount"], 799)
         self.assertEqual(
             kwargs["line_items"][0]["price_data"]["product_data"]["tax_code"],
             "txcd_10401100",
@@ -415,7 +415,7 @@ class VoiceStoreTests(unittest.TestCase):
         current_pack_id = current_pack["id"]
         self.assertNotEqual(current_pack_id, old_pack_id)
         self.assertEqual(current_pack["access"], "paid")
-        self.assertEqual(current_pack["price_amount"], 299)
+        self.assertEqual(current_pack["price_amount"], 799)
 
         entitlements = self.client.post(
             "/api/anthbot/store/client/entitlements",
