@@ -242,6 +242,37 @@ class ReportingServerTests(unittest.TestCase):
         self.assertEqual(downloaded.status_code, 200)
         self.assertEqual(downloaded.content, content)
 
+    def test_admin_can_seed_known_good_official_voice_cache(self) -> None:
+        content = b"known-good-official-english-pack"
+        expected_md5 = hashlib.md5(content, usedforsecurity=False).hexdigest()
+
+        response = self.client.post(
+            "/api/anthbot/admin/voice-packs/cache-official-upload",
+            headers=self._admin_headers(),
+            files={"file": ("2_girl_en-1.2.2", content, "application/octet-stream")},
+            data={"expected_md5": expected_md5},
+        )
+        self.assertEqual(response.status_code, 201)
+        body = response.json()
+        self.assertTrue(body["uploaded"])
+        self.assertEqual(body["music_md5"], expected_md5)
+        self.assertEqual(body["size"], len(content))
+
+        cached = self.client.post(
+            "/api/anthbot/voice-packs/cache-official",
+            json={
+                "source_url": "https://cdn.example.com/english.pack",
+                "music_md5": expected_md5,
+            },
+        )
+        self.assertEqual(cached.status_code, 200)
+        self.assertTrue(cached.json()["cache_hit"])
+
+        download_path = cached.json()["music_url"].removeprefix("https://testserver")
+        downloaded = self.client.get(download_path)
+        self.assertEqual(downloaded.status_code, 200)
+        self.assertEqual(downloaded.content, content)
+
     def test_public_cache_rejects_invalid_md5(self) -> None:
         response = self.client.post(
             "/api/anthbot/voice-packs/cache-official",
