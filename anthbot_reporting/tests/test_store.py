@@ -16,6 +16,7 @@ import entrypoint
 import store_api
 import web_voice_installer
 import web_voice_installer
+import web_voice_installer
 
 
 class VoiceStoreTests(unittest.TestCase):
@@ -38,6 +39,7 @@ class VoiceStoreTests(unittest.TestCase):
         os.environ["ANTHBOT_PRIVACY_CONTACT_EMAIL"] = "privacy@example.test"
         os.environ["ANTHBOT_PRIVACY_CONTACT_PHONE"] = "+36 1 000 0000"
         os.environ["ANTHBOT_SITE_ANALYTICS_ENABLED"] = "true"
+        os.environ["ANTHBOT_WEB_VOICE_INSTALLER_ENABLED"] = "true"
         os.environ["ANTHBOT_WEB_VOICE_INSTALLER_ENABLED"] = "true"
         os.environ["ANTHBOT_WEB_VOICE_INSTALLER_ENABLED"] = "true"
         web_voice_installer._SESSIONS.clear()
@@ -72,6 +74,103 @@ class VoiceStoreTests(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 201)
         return response.json()["pack"]
+
+    def test_web_voice_installer_page_and_login_keep_password_out_of_session(self) -> None:
+        page = self.client.get("/voice-installer")
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("ANTHBOT Voice Installer", page.text)
+        self.assertIn("noindex,nofollow", page.text)
+        self.assertIn("anthbot_voice_store_client", page.headers.get("set-cookie", ""))
+
+        before = self.client.get("/api/anthbot/web-installer/session")
+        self.assertEqual(before.status_code, 200)
+        self.assertTrue(before.json()["enabled"])
+        self.assertFalse(before.json()["authenticated"])
+
+        devices = [
+            {
+                "serial": "GENIE123456789",
+                "serial_masked": "GENI…6789",
+                "alias": "Kert Genie",
+                "category": "Genie 1000",
+                "supported": True,
+            }
+        ]
+        with patch.object(
+            web_voice_installer.anthbot,
+            "login_and_devices",
+            return_value=("temporary-anthbot-token", devices),
+        ):
+            login = self.client.post(
+                "/api/anthbot/web-installer/login",
+                json={
+                    "username": "owner@example.test",
+                    "password": "do-not-store-this",
+                    "area_code": "36",
+                },
+            )
+        self.assertEqual(login.status_code, 200)
+        body = login.json()
+        self.assertTrue(body["authenticated"])
+        self.assertEqual(len(body["devices"]), 1)
+        self.assertEqual(body["auto_device_id"], body["devices"][0]["device_id"])
+        self.assertNotIn("serial", body["devices"][0])
+        self.assertIn("anthbot_voice_installer_session", login.headers.get("set-cookie", ""))
+
+        with web_voice_installer._LOCK:
+            stored = list(web_voice_installer._SESSIONS.values())
+        self.assertEqual(len(stored), 1)
+        self.assertEqual(stored[0]["access_token"], "temporary-anthbot-token")
+        self.assertNotIn("username", stored[0])
+        self.assertNotIn("password", stored[0])
+        self.assertNotIn("do-not-store-this", repr(stored[0]))
+
+    def test_store_exposes_web_installer_and_direct_checkout_return(self) -> None:
+        page = self.client.get("/voice-installer")
+        self.assertEqual(page.status_code, 200)
+
+        catalog = self.client.get("/api/anthbot/store/voice-packs")
+        self.assertEqual(catalog.status_code, 200)
+        self.assertTrue(catalog.json()["web_installer_available"])
+
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        priced = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        self.assertEqual(priced.status_code, 200)
+
+        fake_session = {
+            "id": "cs_test_web_installer",
+            "url": "https://checkout.stripe.com/c/pay/web-installer",
+            "status": "open",
+            "payment_status": "unpaid",
+            "amount_total": 799,
+            "currency": "eur",
+            "client_reference_id": pack_id,
+            "customer": None,
+            "payment_intent": None,
+            "metadata": {"pack_id": pack_id, "community_id": "cs_vlasta_standard"},
+            "customer_details": None,
+            "created": 1700000000,
+        }
+        with patch.object(
+            store_api,
+            "_create_checkout_session",
+            return_value=fake_session,
+        ) as create_session:
+            checkout = self.client.post(
+                "/api/anthbot/web-installer/checkout",
+                json={"pack_id": pack_id},
+            )
+        self.assertEqual(checkout.status_code, 200)
+        kwargs = create_session.call_args.kwargs
+        self.assertIn("/voice-installer?paid=1", kwargs["success_url_override"])
+        self.assertIn("{CHECKOUT_SESSION_ID}", kwargs["success_url_override"])
+        self.assertIn("/voice-installer?cancelled=1", kwargs["cancel_url_override"])
+        self.assertIsNotNone(kwargs["client_id"])
 
     def test_store_has_visible_top_navigation_in_all_languages(self) -> None:
         response = self.client.get("/store")
