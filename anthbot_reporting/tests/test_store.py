@@ -104,7 +104,7 @@ class VoiceStoreTests(unittest.TestCase):
 
         home = self.client.get("/")
         self.assertIn(
-            "<title>ANTHBOT Map for Home Assistant – Maps, Zones & Voice Packs</title>",
+            "<title>ANTHBOT Map for Home Assistant – Maps, Zones &amp; Voice Packs</title>",
             home.text,
         )
         self.assertIn('"@type":"SoftwareApplication"', home.text)
@@ -116,7 +116,7 @@ class VoiceStoreTests(unittest.TestCase):
 
         store = self.client.get("/store")
         self.assertIn(
-            "<title>ANTHBOT Voice Packs & Custom Voices | ANTHBOT Map</title>",
+            "<title>ANTHBOT Voice Packs &amp; Custom Voices | ANTHBOT Map</title>",
             store.text,
         )
         self.assertIn(
