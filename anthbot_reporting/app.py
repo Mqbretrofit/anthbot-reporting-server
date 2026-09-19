@@ -240,6 +240,10 @@ async def _limit_body_size(request: Request, call_next):
     if request.method == "POST":
         if request.url.path == "/api/anthbot/admin/voice-packs":
             limit = MAX_VOICE_PACK_UPLOAD_BYTES
+        elif request.url.path == "/api/anthbot/admin/voice-packs/cache-official-upload":
+            limit = MAX_VOICE_PACK_UPLOAD_BYTES
+        elif request.url.path == "/api/anthbot/admin/voice-packs/cache-official-upload-chunk":
+            limit = OFFICIAL_UPLOAD_HTTP_CHUNK_BYTES
         elif request.url.path.endswith("/diagnostics"):
             limit = MAX_DIAGNOSTICS_BYTES
         else:
