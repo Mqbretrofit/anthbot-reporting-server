@@ -261,6 +261,29 @@ class VoiceStoreTests(unittest.TestCase):
             self.assertIn('href="/#models"', html)
             self.assertIn('href="/#support"', html)
 
+    def test_public_pages_share_compact_typography(self) -> None:
+        for path in (
+            "/",
+            "/store",
+            "/privacy",
+            "/terms",
+            "/refunds",
+            "/store/success",
+            "/home-assistant",
+            "/models/genie-1000",
+            "/models/m9-pro",
+            "/models/mgc1000",
+            "/voice-packs",
+        ):
+            response = self.client.get(path)
+            self.assertEqual(response.status_code, 200)
+            self.assertIn('id="anthbot-compact-typography"', response.text)
+            self.assertIn("html{font-size:15px}", response.text)
+            self.assertIn(
+                "font-size:clamp(2.05rem,4.7vw,3.65rem)!important",
+                response.text,
+            )
+
     def test_privacy_page_has_gdpr_information_and_23_languages(self) -> None:
         response = self.client.get("/privacy")
         self.assertEqual(response.status_code, 200)
