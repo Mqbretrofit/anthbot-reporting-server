@@ -465,7 +465,7 @@ class DashboardEmbeddingMiddleware:
                         continue
                     if name == "set-cookie":
                         value = raw_value.decode("latin-1")
-                        value = re.sub(r"(?i)samesite=strict", "SameSite=None", value)
+                        value = re.sub(r"(?i)samesite=(?:strict|none)", "SameSite=None", value)
                         raw_value = value.encode("latin-1")
                     headers.append((raw_name, raw_value))
 
