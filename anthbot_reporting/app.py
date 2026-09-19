@@ -7,22 +7,28 @@ import hmac
 import json
 import os
 from pathlib import Path
+import re
 import secrets
 import sqlite3
 from typing import Any, Literal
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, quote
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile, status
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 USAGE_SCHEMA = "anthbot-map-anonymous-usage-v1"
 DIAGNOSTICS_SCHEMA = "anthbot-map-diagnostics-upload-v1"
 VOICE_PACKS_SCHEMA = "anthbot-community-voice-packs-v1"
 DEFAULT_DB_PATH = "/data/anthbot_reporting.sqlite3"
+DEFAULT_VOICE_PACK_DIR = "/data/voice_packs"
 MAX_TELEMETRY_BYTES = 64 * 1024
 MAX_DIAGNOSTICS_BYTES = 2 * 1024 * 1024
+MAX_VOICE_PACK_BYTES = 32 * 1024 * 1024
+MAX_VOICE_PACK_UPLOAD_BYTES = MAX_VOICE_PACK_BYTES + 1024 * 1024
+VOICE_PACK_CHUNK_BYTES = 256 * 1024
+_VOICE_PACK_SAFE_PART = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 _DASHBOARD_COOKIE = "anthbot_admin_session"
 _DASHBOARD_SESSION_SECONDS = 12 * 60 * 60
 
@@ -202,11 +208,12 @@ class DiagnosticsPayload(BaseModel):
 @app.middleware("http")
 async def _limit_body_size(request: Request, call_next):
     if request.method == "POST":
-        limit = (
-            MAX_DIAGNOSTICS_BYTES
-            if request.url.path.endswith("/diagnostics")
-            else MAX_TELEMETRY_BYTES
-        )
+        if request.url.path == "/api/anthbot/admin/voice-packs":
+            limit = MAX_VOICE_PACK_UPLOAD_BYTES
+        elif request.url.path.endswith("/diagnostics"):
+            limit = MAX_DIAGNOSTICS_BYTES
+        else:
+            limit = MAX_TELEMETRY_BYTES
         raw_length = request.headers.get("content-length")
         if raw_length:
             try:
@@ -292,11 +299,23 @@ def require_admin(
         raise HTTPException(status_code=401, detail="invalid admin token")
 
 
-def _voice_pack_registry() -> dict[str, Any]:
-    """Load the public community voice-pack registry shipped with the app."""
+def _voice_pack_dir() -> Path:
+    """Return the persistent directory used for uploaded community packs."""
+    return Path(os.environ.get("ANTHBOT_VOICE_PACK_DIR", DEFAULT_VOICE_PACK_DIR))
+
+
+def _uploaded_voice_registry_path() -> Path:
+    return _voice_pack_dir() / "registry.json"
+
+
+def _load_json_registry(path: Path, *, required: bool) -> dict[str, Any]:
     try:
-        payload = json.loads(
-            Path(__file__).with_name("voice_packs.json").read_text(encoding="utf-8")
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        if not required:
+            return {"schema": VOICE_PACKS_SCHEMA, "packs": []}
+        raise HTTPException(
+            status_code=503, detail="community voice registry unavailable"
         )
     except (OSError, ValueError) as err:
         raise HTTPException(
@@ -312,6 +331,81 @@ def _voice_pack_registry() -> dict[str, Any]:
             status_code=503, detail="community voice registry is invalid"
         )
     return payload
+
+
+def _bundled_voice_pack_registry() -> dict[str, Any]:
+    return _load_json_registry(
+        Path(__file__).with_name("voice_packs.json"),
+        required=True,
+    )
+
+
+def _uploaded_voice_pack_registry() -> dict[str, Any]:
+    return _load_json_registry(_uploaded_voice_registry_path(), required=False)
+
+
+def _write_uploaded_voice_registry(payload: dict[str, Any]) -> None:
+    directory = _voice_pack_dir()
+    directory.mkdir(parents=True, exist_ok=True)
+    target = _uploaded_voice_registry_path()
+    temporary = target.with_name(f".{target.name}.{secrets.token_hex(4)}.tmp")
+    temporary.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    os.replace(temporary, target)
+
+
+def _public_voice_pack(record: dict[str, Any], request: Request) -> dict[str, Any]:
+    public = dict(record)
+    filename = public.pop("filename", None)
+    public.pop("uploaded_at", None)
+    if isinstance(filename, str) and filename:
+        base = str(request.base_url).rstrip("/")
+        public["music_url"] = f"{base}/voice-packs/{quote(filename)}"
+    return public
+
+
+def _voice_pack_registry(request: Request) -> dict[str, Any]:
+    """Return bundled packs plus persistent uploads, with uploads overriding language."""
+    bundled = _bundled_voice_pack_registry().get("packs", [])
+    uploaded = _uploaded_voice_pack_registry().get("packs", [])
+
+    merged: list[dict[str, Any]] = []
+    uploaded_languages = {
+        str(item.get("language_code", "")).strip().casefold()
+        for item in uploaded
+        if isinstance(item, dict) and str(item.get("language_code", "")).strip()
+    }
+    for item in bundled:
+        if not isinstance(item, dict):
+            continue
+        language_code = str(item.get("language_code", "")).strip().casefold()
+        if language_code and language_code in uploaded_languages:
+            continue
+        merged.append(_public_voice_pack(item, request))
+    for item in uploaded:
+        if isinstance(item, dict):
+            merged.append(_public_voice_pack(item, request))
+
+    return {"schema": VOICE_PACKS_SCHEMA, "packs": merged}
+
+
+def _voice_pack_safe_part(value: str, *, field: str) -> str:
+    normalized = value.strip()
+    if not _VOICE_PACK_SAFE_PART.fullmatch(normalized):
+        raise HTTPException(
+            status_code=422,
+            detail=f"{field} must use only letters, numbers, dot, underscore or hyphen",
+        )
+    return normalized
+
+
+def _voice_pack_models(value: str) -> list[str]:
+    models = [item.strip() for item in value.split(",") if item.strip()]
+    if not models or len(models) > 20 or any(len(item) > 128 for item in models):
+        raise HTTPException(status_code=422, detail="invalid voice pack models")
+    return models
 
 
 def _dashboard_file(name: str) -> str:
@@ -342,9 +436,180 @@ def _installation_from_row(row: sqlite3.Row) -> dict[str, Any]:
 
 
 @app.get("/api/anthbot/voice-packs")
-def community_voice_packs() -> dict[str, Any]:
+def community_voice_packs(request: Request) -> dict[str, Any]:
     """Return public custom/community voice packs for ANTHBOT Map."""
-    return _voice_pack_registry()
+    return _voice_pack_registry(request)
+
+
+@app.get("/voice-packs/{filename}", name="download_voice_pack")
+def download_voice_pack(filename: str) -> FileResponse:
+    """Serve one uploaded voice pack directly to a mower."""
+    if Path(filename).name != filename or not _VOICE_PACK_SAFE_PART.fullmatch(filename):
+        raise HTTPException(status_code=404, detail="voice pack not found")
+    path = _voice_pack_dir() / filename
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="voice pack not found")
+    return FileResponse(
+        path,
+        media_type="application/octet-stream",
+        headers={"Cache-Control": "public, max-age=31536000, immutable"},
+    )
+
+
+@app.get(
+    "/api/anthbot/admin/voice-packs",
+    dependencies=[Depends(require_admin)],
+)
+def admin_voice_packs(request: Request) -> dict[str, Any]:
+    """Return the effective registry and persistent uploaded metadata."""
+    return {
+        "effective": _voice_pack_registry(request),
+        "uploaded": _uploaded_voice_pack_registry(),
+    }
+
+
+@app.post(
+    "/api/anthbot/admin/voice-packs",
+    dependencies=[Depends(require_admin)],
+    status_code=201,
+)
+async def upload_voice_pack(
+    request: Request,
+    file: UploadFile = File(...),
+    language: str = Form(..., min_length=1, max_length=64),
+    language_code: str = Form(..., min_length=2, max_length=16),
+    version: str = Form(..., min_length=1, max_length=64),
+    english_name: str = Form(default="German", min_length=1, max_length=64),
+    sex: str = Form(default="girl", min_length=1, max_length=32),
+    music_package: int = Form(default=3, ge=0, le=9999),
+    models: str = Form(default="Anthbot Genie 1000", max_length=2048),
+) -> dict[str, Any]:
+    """Persist a custom voice pack and publish it in the community registry."""
+    language = language.strip()
+    if not language:
+        raise HTTPException(status_code=422, detail="language is required")
+    language_code = _voice_pack_safe_part(
+        language_code.strip().lower(), field="language_code"
+    )
+    version = _voice_pack_safe_part(version, field="version")
+    sex = _voice_pack_safe_part(sex.lower(), field="sex")
+    english_name = english_name.strip()
+    if not english_name:
+        raise HTTPException(status_code=422, detail="english_name is required")
+    model_list = _voice_pack_models(models)
+
+    package_id = f"{language_code}-{sex}-slot-{music_package}-v{version}"
+    filename = package_id
+    original_suffix = Path(file.filename or "").suffix
+    if (
+        original_suffix
+        and len(original_suffix) <= 12
+        and re.fullmatch(r"\.[A-Za-z0-9]+", original_suffix)
+    ):
+        filename += original_suffix.lower()
+
+    directory = _voice_pack_dir()
+    directory.mkdir(parents=True, exist_ok=True)
+    target = directory / filename
+    temporary = directory / f".{filename}.{secrets.token_hex(4)}.upload"
+    digest = hashlib.md5(usedforsecurity=False)
+    size = 0
+
+    try:
+        with temporary.open("wb") as output:
+            while True:
+                chunk = await file.read(VOICE_PACK_CHUNK_BYTES)
+                if not chunk:
+                    break
+                size += len(chunk)
+                if size > MAX_VOICE_PACK_BYTES:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"voice pack exceeds {MAX_VOICE_PACK_BYTES} bytes",
+                    )
+                digest.update(chunk)
+                output.write(chunk)
+    finally:
+        await file.close()
+
+    if size == 0:
+        temporary.unlink(missing_ok=True)
+        raise HTTPException(status_code=422, detail="voice pack is empty")
+
+    registry = _uploaded_voice_pack_registry()
+    existing = [
+        item for item in registry.get("packs", []) if isinstance(item, dict)
+    ]
+    replaced = [
+        item
+        for item in existing
+        if str(item.get("language_code", "")).strip().casefold()
+        == language_code.casefold()
+    ]
+    kept = [item for item in existing if item not in replaced]
+
+    record = {
+        "id": package_id,
+        "language": language,
+        "language_code": language_code,
+        "english_name": english_name,
+        "sex": sex,
+        "music_package": music_package,
+        "version": version,
+        "filename": filename,
+        "music_md5": digest.hexdigest(),
+        "size": size,
+        "models": model_list,
+        "source": "community",
+        "uploaded_at": _iso(),
+    }
+
+    os.replace(temporary, target)
+    try:
+        _write_uploaded_voice_registry(
+            {"schema": VOICE_PACKS_SCHEMA, "packs": kept + [record]}
+        )
+    except Exception:
+        target.unlink(missing_ok=True)
+        raise
+
+    for old in replaced:
+        old_filename = old.get("filename")
+        if (
+            isinstance(old_filename, str)
+            and old_filename != filename
+            and Path(old_filename).name == old_filename
+        ):
+            (_voice_pack_dir() / old_filename).unlink(missing_ok=True)
+
+    public_record = _public_voice_pack(record, request)
+    return {"uploaded": True, "pack": public_record}
+
+
+@app.delete(
+    "/api/anthbot/admin/voice-packs/{pack_id}",
+    dependencies=[Depends(require_admin)],
+)
+def delete_voice_pack(pack_id: str) -> dict[str, Any]:
+    """Delete one persistently uploaded community voice pack."""
+    registry = _uploaded_voice_pack_registry()
+    packs = [item for item in registry.get("packs", []) if isinstance(item, dict)]
+    match = next((item for item in packs if item.get("id") == pack_id), None)
+    if match is None:
+        raise HTTPException(status_code=404, detail="uploaded voice pack not found")
+
+    remaining = [item for item in packs if item is not match]
+    _write_uploaded_voice_registry(
+        {"schema": VOICE_PACKS_SCHEMA, "packs": remaining}
+    )
+    filename = match.get("filename")
+    if (
+        isinstance(filename, str)
+        and filename
+        and Path(filename).name == filename
+    ):
+        (_voice_pack_dir() / filename).unlink(missing_ok=True)
+    return {"deleted": True, "pack_id": pack_id}
 
 
 @app.get("/health")
