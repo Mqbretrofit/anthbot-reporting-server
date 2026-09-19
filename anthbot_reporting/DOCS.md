@@ -137,6 +137,7 @@ Stripe should send at least these Checkout events to
 - `checkout.session.async_payment_succeeded`
 - `checkout.session.async_payment_failed`
 - `checkout.session.expired`
+- `charge.refunded` (revokes the corresponding voice license)
 
 The integration itself remains free; only voice packs explicitly marked as paid
 use the store flow.
