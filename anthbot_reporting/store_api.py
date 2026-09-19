@@ -1104,6 +1104,8 @@ def _create_checkout_session(
     *,
     client_id: str | None = None,
     pair_code: str | None = None,
+    success_url_override: str | None = None,
+    cancel_url_override: str | None = None,
 ) -> dict[str, Any]:
     amount = _price_amount(record)
     currency = _currency(record)
@@ -1121,9 +1123,13 @@ def _create_checkout_session(
         else f"{language} · Community voice"
     )
 
-    cancel_url = f"{base}/store?cancelled=1"
-    if pair_code:
+    cancel_url = cancel_url_override or f"{base}/store?cancelled=1"
+    if pair_code and cancel_url_override is None:
         cancel_url = f"{cancel_url}&pair={quote(pair_code)}"
+    success_url = (
+        success_url_override
+        or f"{base}/store/success?session_id={{CHECKOUT_SESSION_ID}}"
+    )
 
     metadata = {
         "pack_id": pack_id,
@@ -1141,7 +1147,7 @@ def _create_checkout_session(
 
     params: dict[str, Any] = {
         "mode": "payment",
-        "success_url": f"{base}/store/success?session_id={{CHECKOUT_SESSION_ID}}",
+        "success_url": success_url,
         "cancel_url": cancel_url,
         "client_reference_id": pack_id,
         "customer_creation": "always",
