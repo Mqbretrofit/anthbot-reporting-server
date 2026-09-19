@@ -241,8 +241,8 @@ def _create_store_pairing(client_token: str) -> tuple[str, int]:
     now = core._iso()
     with core._db() as conn:
         conn.execute(
-            "DELETE FROM store_client_pairings WHERE expires_at < ? OR client_id = ?",
-            (int(time.time()), client_id),
+            "DELETE FROM store_client_pairings WHERE expires_at < ?",
+            (int(time.time()),),
         )
         conn.execute(
             """
@@ -504,7 +504,10 @@ def _create_checkout_session(
     if client_id:
         metadata["store_client_id"] = client_id
 
-    payment_metadata = {"pack_id": pack_id}
+    payment_metadata = {
+        "pack_id": pack_id,
+        "community_id": community_id,
+    }
     if client_id:
         payment_metadata["store_client_id"] = client_id
 
@@ -1071,16 +1074,16 @@ def admin_store_voice_packs(request: Request) -> dict[str, Any]:
     with core._db() as conn:
         sales_rows = conn.execute(
             """
-            SELECT pack_id,
+            SELECT COALESCE(NULLIF(community_id, ''), pack_id) AS voice_id,
                    COUNT(*) AS sales,
                    COALESCE(SUM(amount_total), 0) AS revenue
             FROM store_orders
             WHERE payment_status = 'paid'
-            GROUP BY pack_id
+            GROUP BY COALESCE(NULLIF(community_id, ''), pack_id)
             """
         ).fetchall()
     sales = {
-        row["pack_id"]: {"sales": row["sales"], "revenue": row["revenue"]}
+        row["voice_id"]: {"sales": row["sales"], "revenue": row["revenue"]}
         for row in sales_rows
     }
 
@@ -1090,8 +1093,12 @@ def admin_store_voice_packs(request: Request) -> dict[str, Any]:
         public["access"] = "paid" if _is_paid(record) else "free"
         public["price_amount"] = _price_amount(record)
         public["currency"] = _currency(record)
-        public["sales"] = int(sales.get(str(record.get("id")), {}).get("sales", 0))
-        public["revenue"] = int(sales.get(str(record.get("id")), {}).get("revenue", 0))
+        voice_id = (
+            str(record.get("community_id", "")).strip()
+            or str(record.get("id", ""))
+        )
+        public["sales"] = int(sales.get(voice_id, {}).get("sales", 0))
+        public["revenue"] = int(sales.get(voice_id, {}).get("revenue", 0))
         items.append(public)
     items.sort(key=lambda item: str(item.get("id", "")).casefold())
     return {
