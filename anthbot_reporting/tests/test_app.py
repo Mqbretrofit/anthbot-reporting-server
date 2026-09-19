@@ -178,6 +178,28 @@ class ReportingServerTests(unittest.TestCase):
         page = self.client.get("/dashboard")
         self.assertNotIn("test-admin-token", page.text)
 
+    def test_public_voice_pack_registry_contains_verified_hungarian_pack(self) -> None:
+        response = self.client.get("/api/anthbot/voice-packs")
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["schema"], server.VOICE_PACKS_SCHEMA)
+        self.assertEqual(len(body["packs"]), 1)
+
+        pack = body["packs"][0]
+        self.assertEqual(pack["language"], "Magyar")
+        self.assertEqual(pack["language_code"], "hu")
+        self.assertEqual(pack["music_package"], 3)
+        self.assertEqual(pack["english_name"], "German")
+        self.assertEqual(pack["sex"], "girl")
+        self.assertEqual(pack["version"], "1.2.4")
+        self.assertEqual(
+            pack["music_url"],
+            "https://ha.mqbretrofithungary.online/local/anthbot-map-v2/girl_de-1.2.4",
+        )
+        self.assertEqual(
+            pack["music_md5"], "74e1955f019aa422d446a0d367232826"
+        )
+
     def test_health(self) -> None:
         response = self.client.get("/health")
         self.assertEqual(response.status_code, 200)
