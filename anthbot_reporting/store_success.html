@@ -45,8 +45,14 @@
         const data=await res.json().catch(()=>({}));
         if(!res.ok)throw new Error(data.detail||('HTTP '+res.status));
         if(data.payment_status==='paid'&&data.license_key){
-          statusEl.className='status good';statusEl.textContent='Sikeres fizetés. A hanglicenc elkészült.';
+          statusEl.className='status good';
+          statusEl.textContent=data.map_linked
+            ? 'Sikeres fizetés. A hang automatikusan hozzákapcsolódott az ANTHBOT Maphoz.'
+            : 'Sikeres fizetés. A hanglicenc elkészült.';
           licenseEl.value=data.license_key;wrap.style.display='block';
+          if(data.map_linked){
+            document.querySelector('#license-wrap p').innerHTML='<strong>Automatikus aktiválás:</strong> az ANTHBOT Map rövid időn belül felismeri a megvásárolt hangot. Az alábbi licenc csak helyreállítási tartalék.';
+          }
           const p=data.pack||{};packEl.innerHTML='Csomag: <strong>'+esc(p.language||'')+'</strong> · '+esc(p.variant_name||p.community_id||p.pack_id||'');
           return;
         }
