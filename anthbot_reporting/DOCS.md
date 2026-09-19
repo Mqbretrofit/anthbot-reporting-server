@@ -140,6 +140,11 @@ Client endpoints:
 Pairing codes expire after seven days. They can associate purchases with a Map
 installation but cannot read entitlements or download paid packs by themselves.
 
+Paid ownership is stored against the stable Community `community_id`, not only
+the versioned package ID. Re-uploading or regenerating the same voice therefore
+keeps existing purchases valid, automatically serves the newest package version,
+and does not allow the linked client to be charged for the same voice again.
+
 Public endpoints:
 
 - `GET /store`
