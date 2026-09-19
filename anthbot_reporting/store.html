@@ -102,8 +102,9 @@ function card(p){
   const gender=p.voice_gender&&p.voice_gender!=='unknown'?p.voice_gender:'community';
   const models=Array.isArray(p.models)?p.models.join(', '):'Anthbot Genie 1000';
   const price=paid?money(p.price_amount,p.currency):t('free');
-  const action=paid?'<button class="btn" '+(p.checkout_available?'':'disabled')+' onclick="buy(\''+esc(p.id)+'\',this)">'+(p.checkout_available?t('buy'):t('checkoutDisabled'))+'</button>':'<button class="btn secondary" disabled>'+t('availableMap')+'</button>';
-  const webInstall=installerAvailable?'<a class="btn secondary" href="/voice-installer?pack='+encodeURIComponent(p.id)+'">'+esc(installerLabel())+'</a>':'';
+  const ownedWeb=paid&&p.owned&&p.ownership==='web';
+  const action=ownedWeb?'<button class="btn secondary" disabled>'+t('alreadyOwned')+'</button>':(paid?'<button class="btn" '+(p.checkout_available?'':'disabled')+' onclick="buy(\''+esc(p.id)+'\',this)">'+(p.checkout_available?t('buy'):t('checkoutDisabled'))+'</button>':'<button class="btn secondary" disabled>'+t('availableMap')+'</button>');
+  const webInstall=installerAvailable?'<a class="btn '+(ownedWeb?'':'secondary')+'" href="/voice-installer?pack='+encodeURIComponent(p.id)+'">'+esc(installerLabel())+'</a>':'';
   return '<article class="card"><div class="row"><div><div class="lang">'+esc(p.language||p.language_code||'Voice pack')+'</div><div class="variant">'+esc(p.variant_name||p.community_id||'Community')+'</div></div><span class="pill">'+(paid?t('paid'):t('free'))+'</span></div><div class="meta"><span class="pill">'+esc(gender)+'</span><span class="pill">'+esc(models)+'</span><span class="pill">v'+esc(p.version||'—')+'</span></div><div class="desc">'+esc(t('desc'))+'</div><div class="price '+(paid?'':'free')+'">'+esc(price)+'</div><div class="card-actions">'+action+webInstall+'</div></article>';
 }
 function renderCurrent(){

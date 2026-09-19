@@ -228,7 +228,12 @@ def _catalog(request: Request, store_token: str) -> dict[str, Any]:
             """
             SELECT pack_id, community_id
             FROM store_orders
-            WHERE client_id = ? AND payment_status = 'paid'
+            WHERE client_id = ?
+              AND payment_status = 'paid'
+              AND (
+                    entitlement_scope = 'web'
+                    OR entitlement_scope IS NULL
+                  )
             """,
             (client_id,),
         ).fetchall()
@@ -309,7 +314,11 @@ def _resolve_pack(
     if raw is not None:
         if store_api._is_paid(raw):
             client_id = store_api._client_id_from_token(store_token)
-            order = store_api._paid_order_for_client_pack(client_id, raw)
+            order = store_api._paid_order_for_client_pack(
+                client_id,
+                raw,
+                entitlement_scope="web",
+            )
             if order is None:
                 raise HTTPException(
                     status_code=402,
@@ -535,7 +544,11 @@ async def installer_checkout(payload: CheckoutPayload, request: Request) -> Resp
         raise HTTPException(status_code=409, detail="This voice pack does not require payment.")
 
     client_id = store_api._client_id_from_token(token)
-    existing = store_api._paid_order_for_client_pack(client_id, record)
+    existing = store_api._paid_order_for_client_pack(
+        client_id,
+        record,
+        entitlement_scope="web",
+    )
     if existing is not None:
         return _json(
             {
@@ -558,6 +571,7 @@ async def installer_checkout(payload: CheckoutPayload, request: Request) -> Resp
         request,
         client_id=client_id,
         pair_code=None,
+        entitlement_scope="web",
         success_url_override=success_url,
         cancel_url_override=cancel_url,
     )
