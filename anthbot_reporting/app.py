@@ -516,21 +516,25 @@ async def upload_voice_pack(
     size = 0
 
     try:
-        with temporary.open("wb") as output:
-            while True:
-                chunk = await file.read(VOICE_PACK_CHUNK_BYTES)
-                if not chunk:
-                    break
-                size += len(chunk)
-                if size > MAX_VOICE_PACK_BYTES:
-                    raise HTTPException(
-                        status_code=413,
-                        detail=f"voice pack exceeds {MAX_VOICE_PACK_BYTES} bytes",
-                    )
-                digest.update(chunk)
-                output.write(chunk)
-    finally:
-        await file.close()
+        try:
+            with temporary.open("wb") as output:
+                while True:
+                    chunk = await file.read(VOICE_PACK_CHUNK_BYTES)
+                    if not chunk:
+                        break
+                    size += len(chunk)
+                    if size > MAX_VOICE_PACK_BYTES:
+                        raise HTTPException(
+                            status_code=413,
+                            detail=f"voice pack exceeds {MAX_VOICE_PACK_BYTES} bytes",
+                        )
+                    digest.update(chunk)
+                    output.write(chunk)
+        finally:
+            await file.close()
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        raise
 
     if size == 0:
         temporary.unlink(missing_ok=True)
@@ -564,14 +568,24 @@ async def upload_voice_pack(
         "uploaded_at": _iso(),
     }
 
-    os.replace(temporary, target)
+    backup: Path | None = None
+    if target.exists():
+        backup = directory / f".{filename}.{secrets.token_hex(4)}.backup"
+        os.replace(target, backup)
+
     try:
+        os.replace(temporary, target)
         _write_uploaded_voice_registry(
             {"schema": VOICE_PACKS_SCHEMA, "packs": kept + [record]}
         )
-    except Exception:
+    except BaseException:
         target.unlink(missing_ok=True)
+        if backup is not None and backup.exists():
+            os.replace(backup, target)
         raise
+    else:
+        if backup is not None:
+            backup.unlink(missing_ok=True)
 
     for old in replaced:
         old_filename = old.get("filename")
