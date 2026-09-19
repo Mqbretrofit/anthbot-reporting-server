@@ -33,6 +33,9 @@ COPY public_refunds.html ./public_refunds.html
 COPY public_privacy.html ./public_privacy.html
 COPY store_success.html ./store_success.html
 COPY store_admin.html ./store_admin.html
+COPY voice_installer.html ./voice_installer.html
+COPY web_voice_installer.py ./web_voice_installer.py
+COPY web_voice_installer_anthbot.py ./web_voice_installer_anthbot.py
 COPY dashboard.html ./dashboard.html
 COPY dashboard_login.html ./dashboard_login.html
 COPY developer_agent_api.py ./developer_agent_api.py
