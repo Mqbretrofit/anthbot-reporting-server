@@ -196,6 +196,8 @@ class ReportingServerTests(unittest.TestCase):
         self.assertEqual(pack["english_name"], "German")
         self.assertEqual(pack["sex"], "girl")
         self.assertEqual(pack["version"], "1.2.4")
+        self.assertEqual(pack["variant_id"], "noemi_standard")
+        self.assertEqual(pack["variant_name"], "Noémi (női) · Standard")
         self.assertEqual(
             pack["music_url"],
             "https://ha.mqbretrofithungary.online/local/anthbot-map-v2/girl_de-1.2.4",
@@ -214,6 +216,8 @@ class ReportingServerTests(unittest.TestCase):
                 "language": "Čeština",
                 "language_code": "cs",
                 "version": "1.0.0",
+                "variant_id": "vlasta_standard",
+                "variant_name": "Vlasta (női) · Standard",
                 "english_name": "German",
                 "sex": "girl",
                 "music_package": "3",
@@ -223,6 +227,8 @@ class ReportingServerTests(unittest.TestCase):
         self.assertEqual(response.status_code, 201)
         pack_v1 = response.json()["pack"]
         self.assertEqual(pack_v1["language"], "Čeština")
+        self.assertEqual(pack_v1["variant_id"], "vlasta_standard")
+        self.assertEqual(pack_v1["variant_name"], "Vlasta (női) · Standard")
         self.assertEqual(
             pack_v1["music_md5"],
             hashlib.md5(content_v1, usedforsecurity=False).hexdigest(),
@@ -238,11 +244,28 @@ class ReportingServerTests(unittest.TestCase):
         self.assertEqual(downloaded.content, content_v1)
         self.assertIn("immutable", downloaded.headers["cache-control"])
 
+        funny = self.client.post(
+            "/api/anthbot/admin/voice-packs",
+            headers=self._admin_headers(),
+            files={"file": ("cs-funny.pack", b"czech-funny", "application/octet-stream")},
+            data={
+                "language": "Čeština",
+                "language_code": "cs",
+                "version": "1.0.0",
+                "variant_id": "vlasta_funny",
+                "variant_name": "Vlasta (női) · Vicces",
+            },
+        )
+        self.assertEqual(funny.status_code, 201)
+
         public = self.client.get("/api/anthbot/voice-packs").json()
-        self.assertEqual(len(public["packs"]), 2)
+        czech = [
+            item for item in public["packs"] if item["language_code"] == "cs"
+        ]
+        self.assertEqual(len(czech), 2)
         self.assertEqual(
-            {item["language_code"] for item in public["packs"]},
-            {"hu", "cs"},
+            {item["variant_id"] for item in czech},
+            {"vlasta_standard", "vlasta_funny"},
         )
 
         content_v2 = b"verified-czech-voice-pack-v2"
@@ -254,6 +277,8 @@ class ReportingServerTests(unittest.TestCase):
                 "language": "Čeština",
                 "language_code": "cs",
                 "version": "1.0.1",
+                "variant_id": "vlasta_standard",
+                "variant_name": "Vlasta (női) · Standard",
             },
         )
         self.assertEqual(replaced.status_code, 201)
@@ -267,8 +292,12 @@ class ReportingServerTests(unittest.TestCase):
         czech = [
             item for item in public["packs"] if item["language_code"] == "cs"
         ]
-        self.assertEqual(len(czech), 1)
-        self.assertEqual(czech[0]["version"], "1.0.1")
+        self.assertEqual(len(czech), 2)
+        standard = [
+            item for item in czech if item["variant_id"] == "vlasta_standard"
+        ]
+        self.assertEqual(len(standard), 1)
+        self.assertEqual(standard[0]["version"], "1.0.1")
 
         deleted = self.client.delete(
             f"/api/anthbot/admin/voice-packs/{pack_v2['id']}",
@@ -278,7 +307,12 @@ class ReportingServerTests(unittest.TestCase):
         self.assertTrue(deleted.json()["deleted"])
 
         public = self.client.get("/api/anthbot/voice-packs").json()
-        self.assertEqual([item["language_code"] for item in public["packs"]], ["hu"])
+        czech = [
+            item for item in public["packs"] if item["language_code"] == "cs"
+        ]
+        self.assertEqual(len(czech), 1)
+        self.assertEqual(czech[0]["variant_id"], "vlasta_funny")
+
 
     def test_voice_pack_upload_requires_admin_and_rejects_empty_file(self) -> None:
         unauthorized = self.client.post(
