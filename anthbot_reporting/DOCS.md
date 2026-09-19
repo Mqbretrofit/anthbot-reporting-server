@@ -27,6 +27,26 @@ After start, `GET /health` should return:
 {"ok":true,"schema":"anthbot-reporting-server-v1"}
 ```
 
+## Standalone Community Voice Installer
+
+A Windows standalone installer can use the same Voice Store without Home
+Assistant. The installer keeps its own random client token locally and never
+sends ANTHBOT account credentials to the Reporting Server.
+
+Public installer flow:
+
+- `GET /api/anthbot/store/voice-packs` — free + paid catalog metadata.
+- `POST /api/anthbot/store/client/entitlements` — purchased packs for the
+  installer's persistent anonymous client token.
+- `POST /api/anthbot/store/client/checkout` — create Stripe Checkout directly
+  for one selected paid pack and bind the resulting purchase to that client.
+- Licensed `music_url` values returned by the entitlement endpoint remain the
+  only way the installer downloads paid packs.
+
+The standalone checkout endpoint intentionally needs no pair code, manual
+license key or Home Assistant installation. Existing Map pairing and manual
+license flows remain unchanged.
+
 ## Privacy-friendly site analytics
 
 The Reporting Server can count public page views and daily unique visitors without
