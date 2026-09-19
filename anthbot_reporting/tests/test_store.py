@@ -284,6 +284,25 @@ class VoiceStoreTests(unittest.TestCase):
                 response.text,
             )
 
+    def test_seo_pages_follow_site_language(self) -> None:
+        genie = self.client.get("/models/genie-1000")
+        self.assertEqual(genie.status_code, 200)
+        self.assertIn('id="site-language"', genie.text)
+        self.assertIn('<option value="hu">Magyar</option>', genie.text)
+        self.assertIn('<option value="en">English</option>', genie.text)
+        self.assertIn('"Támogatott fűnyíró"', genie.text)
+        self.assertIn('"Közvetlen hardveres ellenőrzés"', genie.text)
+        self.assertIn('"Vissza az ANTHBOT Maphez"', genie.text)
+        self.assertIn('localStorage.getItem("mqb-site-language")', genie.text)
+        self.assertIn('data-i18n="pageHeading"', genie.text)
+
+        home = self.client.get("/")
+        self.assertEqual(home.status_code, 200)
+        self.assertIn('id="anthbot-seo-topics-i18n"', home.text)
+        self.assertIn('"ANTHBOT Map témakörök"', home.text)
+        self.assertIn('"ANTHBOT hangcsomagok"', home.text)
+        self.assertIn('data-topic-i18n="title"', home.text)
+
     def test_privacy_page_has_gdpr_information_and_23_languages(self) -> None:
         response = self.client.get("/privacy")
         self.assertEqual(response.status_code, 200)
