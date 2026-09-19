@@ -126,6 +126,27 @@ class WebVoiceInstallerTests(unittest.TestCase):
         self.assertEqual(store.status_code, 200)
         self.assertIn("/voice-installer?pack=", store.text)
 
+    def test_privacy_notice_covers_web_installer_in_all_site_languages(self) -> None:
+        response = self.client.get("/privacy")
+        self.assertEqual(response.status_code, 200)
+        html = response.text
+        self.assertIn(
+            "Opcionális, böngészőből használható ANTHBOT hangtelepítő",
+            html,
+        )
+        self.assertIn(
+            "Optional browser-based ANTHBOT Voice Installer",
+            html,
+        )
+        self.assertIn("20 perc", html)
+        self.assertIn("HttpOnly", html)
+        self.assertIn("AWS IoT", html)
+        self.assertIn("GDPR 6. cikk (1) b)", html)
+        self.assertIn("GDPR 6. cikk (1) f)", html)
+        self.assertEqual(html.count("installerPrivacyTitle:"), 23)
+        self.assertEqual(html.count("installerPrivacyCredentials:"), 23)
+        self.assertEqual(html.count("installerPrivacyStore:"), 23)
+
     def test_login_keeps_password_out_of_session_and_auto_selects_single_genie(self) -> None:
         self._open_installer()
         body = self._login_genie()
