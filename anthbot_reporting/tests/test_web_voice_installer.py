@@ -127,6 +127,20 @@ class WebVoiceInstallerTests(unittest.TestCase):
         self.assertEqual(store.status_code, 200)
         self.assertIn("/voice-installer?pack=", store.text)
 
+        page = self.client.get("/voice-installer")
+        html = page.text
+        for code in (
+            "hu", "en", "de", "fr", "es", "it", "pt", "nl", "pl", "cs", "sk",
+            "ro", "da", "sv", "no", "fi", "zh-CN", "zh-TW", "tr", "th", "vi",
+            "ko", "km",
+        ):
+            self.assertIn(f'<option value="{code}">', html)
+        self.assertEqual(html.count('"progressConnection"'), 23)
+        self.assertIn("progressRobot", html)
+        self.assertIn("jobMessage", html)
+        self.assertIn("itt vagyok", html)
+        self.assertIn("here I am", html)
+
     def test_privacy_notice_covers_web_installer_in_all_site_languages(self) -> None:
         response = self.client.get("/privacy")
         self.assertEqual(response.status_code, 200)
@@ -300,8 +314,19 @@ class WebVoiceInstallerTests(unittest.TestCase):
             self.assertEqual(serial, "25245HGD00050826")
             self.assertIn("license=", pack["music_url"])
             self.assertEqual(pack["music_md5"], owned["music_md5"])
-            update(progress=55, message="Downloading…")
-            update(status="success", progress=100, message="Done")
+            update(
+                progress=55,
+                message="Downloading…",
+                message_key="progressRobot",
+                message_args={"state": "downloading", "progress": "55"},
+            )
+            update(
+                status="success",
+                progress=100,
+                message="Done",
+                message_key="progressComplete",
+                message_args={},
+            )
 
         patcher = patch.object(
             web_voice_installer.anthbot,
@@ -331,6 +356,8 @@ class WebVoiceInstallerTests(unittest.TestCase):
             self.assertIsNotNone(job)
             self.assertEqual(job["status"], "success")
             self.assertEqual(job["progress"], 100)
+            self.assertEqual(job["message_key"], "progressComplete")
+            self.assertEqual(job["message_args"], {})
         finally:
             patcher.stop()
 
