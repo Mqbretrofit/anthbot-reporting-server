@@ -533,6 +533,12 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertFalse(paid.get("owned", False))
         self.assertNotIn("music_url", paid)
 
+        store_page = self.client.get("/store")
+        self.assertEqual(store_page.status_code, 200)
+        browser_token = self.client.cookies.get("anthbot_voice_store_client")
+        self.assertTrue(browser_token)
+        browser_client_id = store_api._client_id_from_token(browser_token)
+
         checkout_session = {
             "id": "cs_test_paid_123",
             "object": "checkout.session",
@@ -669,9 +675,15 @@ class VoiceStoreTests(unittest.TestCase):
             "txcd_10401100",
         )
         self.assertEqual(kwargs["metadata"]["pack_id"], pack_id)
+        self.assertEqual(kwargs["metadata"]["store_client_id"], browser_client_id)
+        self.assertEqual(kwargs["metadata"]["entitlement_scope"], "web")
         self.assertEqual(
             kwargs["payment_intent_data"]["metadata"]["pack_id"],
             pack_id,
+        )
+        self.assertEqual(
+            kwargs["payment_intent_data"]["metadata"]["entitlement_scope"],
+            "web",
         )
 
     def test_map_client_pairing_unlocks_paid_pack_without_manual_license(self) -> None:
