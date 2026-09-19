@@ -197,12 +197,21 @@ def _privacy_contact_phone() -> str:
 
 
 def _checkout_ready() -> bool:
-    return bool(
+    stripe_key = _stripe_secret_key()
+    base_ready = bool(
         _store_enabled()
-        and _stripe_secret_key()
+        and stripe_key
         and _stripe_webhook_secret()
         and _license_secret()
     )
+    if not base_ready:
+        return False
+    # Sandbox remains usable while legal details are being prepared. Live
+    # commercial checkout requires the controller's postal address so the
+    # public Article 13 notice cannot accidentally go live incomplete.
+    if stripe_key.startswith("sk_live_") and not _privacy_controller_address():
+        return False
+    return True
 
 
 def _require_checkout_ready() -> None:
@@ -214,6 +223,11 @@ def _require_checkout_ready() -> None:
         raise HTTPException(status_code=503, detail="Stripe webhook secret is not configured")
     if not _license_secret():
         raise HTTPException(status_code=503, detail="voice store license secret is not configured")
+    if _stripe_secret_key().startswith("sk_live_") and not _privacy_controller_address():
+        raise HTTPException(
+            status_code=503,
+            detail="privacy controller postal address must be configured before live checkout",
+        )
 
 
 def _init_store_tables() -> None:
@@ -1428,27 +1442,16 @@ def public_privacy_page() -> HTMLResponse:
     email = _privacy_contact_email()
     replacements = {
         "__CONTROLLER_NAME__": escape(_privacy_controller_name()),
-        "__CONTROLLER_ADDRESS__": escape(address or "Not configured"),
-        "__PRIVACY_EMAIL__": escape(email or "Not configured"),
+        "__CONTROLLER_ADDRESS__": escape(address or "—"),
+        "__PRIVACY_EMAIL__": escape(email),
         "__PRIVACY_PHONE__": escape(_privacy_contact_phone()),
+        "__PRIVACY_EMAIL_CARD_CLASS__": "info" if email else "info hidden",
+        "__PRIVACY_CONFIG_WARNING_CLASS__": (
+            "controller-warning" if not address else "hidden"
+        ),
     }
     for needle, value in replacements.items():
         html = html.replace(needle, value)
-    if not address or not email:
-        html = html.replace(
-            "__PRIVACY_CONFIG_WARNING_CLASS__",
-            "controller-warning",
-        ).replace(
-            "__PRIVACY_CONFIG_WARNING_TEXT__",
-            (
-                "Controller postal address and privacy email must be configured "
-                "before live commercial use."
-            ),
-        )
-    else:
-        html = html.replace("__PRIVACY_CONFIG_WARNING_CLASS__", "hidden").replace(
-            "__PRIVACY_CONFIG_WARNING_TEXT__", ""
-        )
     return HTMLResponse(html)
 
 
