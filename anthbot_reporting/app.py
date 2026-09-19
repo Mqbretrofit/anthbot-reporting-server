@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 USAGE_SCHEMA = "anthbot-map-anonymous-usage-v1"
 DIAGNOSTICS_SCHEMA = "anthbot-map-diagnostics-upload-v1"
+VOICE_PACKS_SCHEMA = "anthbot-community-voice-packs-v1"
 DEFAULT_DB_PATH = "/data/anthbot_reporting.sqlite3"
 MAX_TELEMETRY_BYTES = 64 * 1024
 MAX_DIAGNOSTICS_BYTES = 2 * 1024 * 1024
@@ -291,6 +292,28 @@ def require_admin(
         raise HTTPException(status_code=401, detail="invalid admin token")
 
 
+def _voice_pack_registry() -> dict[str, Any]:
+    """Load the public community voice-pack registry shipped with the app."""
+    try:
+        payload = json.loads(
+            Path(__file__).with_name("voice_packs.json").read_text(encoding="utf-8")
+        )
+    except (OSError, ValueError) as err:
+        raise HTTPException(
+            status_code=503, detail="community voice registry unavailable"
+        ) from err
+
+    if (
+        not isinstance(payload, dict)
+        or payload.get("schema") != VOICE_PACKS_SCHEMA
+        or not isinstance(payload.get("packs"), list)
+    ):
+        raise HTTPException(
+            status_code=503, detail="community voice registry is invalid"
+        )
+    return payload
+
+
 def _dashboard_file(name: str) -> str:
     try:
         return Path(__file__).with_name(name).read_text(encoding="utf-8")
@@ -316,6 +339,12 @@ def _installation_from_row(row: sqlite3.Row) -> dict[str, Any]:
         "device_count": row["device_count"],
         "model_counts": model_counts,
     }
+
+
+@app.get("/api/anthbot/voice-packs")
+def community_voice_packs() -> dict[str, Any]:
+    """Return public custom/community voice packs for ANTHBOT Map."""
+    return _voice_pack_registry()
 
 
 @app.get("/health")
