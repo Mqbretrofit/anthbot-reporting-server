@@ -150,6 +150,7 @@ def _init_store_tables() -> None:
             CREATE TABLE IF NOT EXISTS store_orders (
                 stripe_session_id TEXT PRIMARY KEY,
                 pack_id TEXT NOT NULL,
+                community_id TEXT,
                 status TEXT NOT NULL,
                 payment_status TEXT NOT NULL,
                 amount_total INTEGER,
@@ -185,12 +186,41 @@ def _init_store_tables() -> None:
         }
         if "client_id" not in columns:
             conn.execute("ALTER TABLE store_orders ADD COLUMN client_id TEXT")
-        conn.execute(
+        if "community_id" not in columns:
+            conn.execute("ALTER TABLE store_orders ADD COLUMN community_id TEXT")
+        conn.executescript(
             """
             CREATE INDEX IF NOT EXISTS idx_store_orders_client_id
-            ON store_orders(client_id)
+            ON store_orders(client_id);
+            CREATE INDEX IF NOT EXISTS idx_store_orders_community_id
+            ON store_orders(community_id);
             """
         )
+
+        # Backfill older orders while their purchased pack is still present.
+        records = {
+            str(item.get("id", "")): str(item.get("community_id", "")).strip()
+            for item in _uploaded_voice_pack_registry_records()
+            if str(item.get("community_id", "")).strip()
+        }
+        for old_pack_id, community_id in records.items():
+            conn.execute(
+                """
+                UPDATE store_orders
+                SET community_id = ?
+                WHERE pack_id = ?
+                  AND (community_id IS NULL OR community_id = '')
+                """,
+                (community_id, old_pack_id),
+            )
+
+
+def _uploaded_voice_pack_registry_records() -> list[dict[str, Any]]:
+    return [
+        item
+        for item in core._uploaded_voice_pack_registry().get("packs", [])
+        if isinstance(item, dict)
+    ]
 
 
 def _client_id_from_token(client_token: str) -> str:
@@ -250,32 +280,33 @@ def _client_id_from_pairing(pair_code: str | None) -> str | None:
 
 def _paid_order_for_client_pack(
     client_id: str,
-    pack_id: str,
+    record: dict[str, Any],
 ) -> dict[str, Any] | None:
-    """Return an active paid order so linked clients cannot buy twice."""
+    """Return an active purchase for the stable Community voice identity."""
     _init_store_tables()
+    pack_id = str(record.get("id", "")).strip()
+    community_id = str(record.get("community_id", "")).strip()
     with core._db() as conn:
         row = conn.execute(
             """
             SELECT *
             FROM store_orders
             WHERE client_id = ?
-              AND pack_id = ?
               AND payment_status = 'paid'
+              AND (
+                    (? != '' AND community_id = ?)
+                    OR pack_id = ?
+                  )
             ORDER BY COALESCE(paid_at, updated_at) DESC
             LIMIT 1
             """,
-            (client_id, pack_id),
+            (client_id, community_id, community_id, pack_id),
         ).fetchone()
     return dict(row) if row is not None else None
 
 
 def _uploaded_records() -> list[dict[str, Any]]:
-    return [
-        item
-        for item in core._uploaded_voice_pack_registry().get("packs", [])
-        if isinstance(item, dict)
-    ]
+    return _uploaded_voice_pack_registry_records()
 
 
 def _is_paid(record: dict[str, Any]) -> bool:
@@ -302,6 +333,48 @@ def _find_uploaded_pack(pack_id: str) -> dict[str, Any]:
     if match is None:
         raise HTTPException(status_code=404, detail="voice pack not found")
     return match
+
+
+def _find_uploaded_pack_by_community_id(
+    community_id: str,
+) -> dict[str, Any]:
+    normalized = community_id.strip()
+    match = next(
+        (
+            item
+            for item in _uploaded_records()
+            if str(item.get("community_id", "")).strip() == normalized
+        ),
+        None,
+    )
+    if match is None:
+        raise HTTPException(status_code=404, detail="voice pack not found")
+    return match
+
+
+def _resolve_order_pack(order: dict[str, Any]) -> dict[str, Any]:
+    """Resolve an old purchase to the current version of the same voice."""
+    community_id = str(order.get("community_id", "")).strip()
+    if community_id:
+        try:
+            return _find_uploaded_pack_by_community_id(community_id)
+        except HTTPException:
+            pass
+    return _find_uploaded_pack(str(order.get("pack_id", "")).strip())
+
+
+def _order_covers_pack(
+    order: dict[str, Any],
+    pack: dict[str, Any],
+) -> bool:
+    order_community_id = str(order.get("community_id", "")).strip()
+    pack_community_id = str(pack.get("community_id", "")).strip()
+    if order_community_id and pack_community_id:
+        return secrets.compare_digest(order_community_id, pack_community_id)
+    return secrets.compare_digest(
+        str(order.get("pack_id", "")).strip(),
+        str(pack.get("id", "")).strip(),
+    )
 
 
 def _public_paid_pack(record: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -431,7 +504,10 @@ def _create_checkout_session(
     if client_id:
         metadata["store_client_id"] = client_id
 
-    payment_metadata = {"pack_id": pack_id}
+    payment_metadata = {
+        "pack_id": pack_id,
+        "community_id": community_id,
+    }
     if client_id:
         payment_metadata["store_client_id"] = client_id
 
@@ -518,6 +594,17 @@ def _session_pack_id(session: dict[str, Any]) -> str:
     return str(session.get("client_reference_id", "")).strip()
 
 
+def _session_community_id(session: dict[str, Any]) -> str | None:
+    metadata = session.get("metadata")
+    if not isinstance(metadata, dict):
+        return None
+    value = metadata.get("community_id")
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip()
+    return normalized[:160] if normalized else None
+
+
 def _session_client_id(session: dict[str, Any]) -> str | None:
     metadata = session.get("metadata")
     if not isinstance(metadata, dict):
@@ -553,6 +640,15 @@ def _upsert_order_from_session(session: dict[str, Any]) -> dict[str, Any]:
     if not pack_id:
         raise HTTPException(status_code=422, detail="checkout session is missing pack_id")
 
+    community_id = _session_community_id(session)
+    if not community_id:
+        try:
+            community_id = str(
+                _find_uploaded_pack(pack_id).get("community_id", "")
+            ).strip() or None
+        except HTTPException:
+            community_id = None
+
     payment_status = str(session.get("payment_status", "unpaid")).strip().lower() or "unpaid"
     checkout_status = str(session.get("status", "open")).strip().lower() or "open"
     status_value = "paid" if payment_status == "paid" else checkout_status
@@ -584,12 +680,13 @@ def _upsert_order_from_session(session: dict[str, Any]) -> dict[str, Any]:
         conn.execute(
             """
             INSERT INTO store_orders (
-                stripe_session_id, pack_id, status, payment_status,
+                stripe_session_id, pack_id, community_id, status, payment_status,
                 amount_total, currency, customer_email, stripe_customer_id,
                 stripe_payment_intent_id, client_id, created_at, updated_at, paid_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(stripe_session_id) DO UPDATE SET
                 pack_id=excluded.pack_id,
+                community_id=COALESCE(excluded.community_id, store_orders.community_id),
                 status=excluded.status,
                 payment_status=excluded.payment_status,
                 amount_total=excluded.amount_total,
@@ -604,6 +701,7 @@ def _upsert_order_from_session(session: dict[str, Any]) -> dict[str, Any]:
             (
                 session_id,
                 pack_id,
+                community_id,
                 status_value,
                 payment_status,
                 amount_total,
@@ -675,7 +773,7 @@ def _order_from_license(license_key: str) -> dict[str, Any]:
 
 
 def _order_public(order: dict[str, Any], request: Request) -> dict[str, Any]:
-    pack = _find_uploaded_pack(str(order.get("pack_id", "")))
+    pack = _resolve_order_pack(order)
     paid = str(order.get("payment_status", "")).casefold() == "paid"
     body: dict[str, Any] = {
         "stripe_session_id": order.get("stripe_session_id"),
@@ -777,29 +875,35 @@ def store_client_entitlements(
         ).fetchall()
 
     packs: list[dict[str, Any]] = []
-    seen_pack_ids: set[str] = set()
+    seen_voice_ids: set[str] = set()
     base = core._public_base_url(request)
     for row in rows:
         order = dict(row)
-        pack_id = str(order.get("pack_id", "")).strip()
-        if not pack_id or pack_id in seen_pack_ids:
-            continue
         try:
-            pack = _find_uploaded_pack(pack_id)
+            pack = _resolve_order_pack(order)
         except HTTPException:
             continue
         if not _is_paid(pack):
             continue
 
+        current_pack_id = str(pack.get("id", "")).strip()
+        stable_voice_id = (
+            str(pack.get("community_id", "")).strip()
+            or str(order.get("community_id", "")).strip()
+            or current_pack_id
+        )
+        if not current_pack_id or stable_voice_id in seen_voice_ids:
+            continue
+
         license_key = _license_for_order(order)
         public = _public_paid_pack(pack, request)
         public["music_url"] = (
-            f"{base}/api/anthbot/store/voice-packs/{quote(pack_id)}/download"
+            f"{base}/api/anthbot/store/voice-packs/{quote(current_pack_id)}/download"
             f"?license={quote(license_key)}"
         )
         public["entitlement"] = "purchased"
         packs.append(public)
-        seen_pack_ids.add(pack_id)
+        seen_voice_ids.add(stable_voice_id)
 
     return {
         "licensed": bool(packs),
@@ -820,7 +924,7 @@ async def create_store_checkout(
 
     client_id = _client_id_from_pairing(payload.pair_code)
     if client_id is not None:
-        existing_order = _paid_order_for_client_pack(client_id, payload.pack_id)
+        existing_order = _paid_order_for_client_pack(client_id, record)
         if existing_order is not None:
             return {
                 "already_owned": True,
@@ -918,7 +1022,7 @@ def store_entitlements(
     request: Request,
 ) -> dict[str, Any]:
     order = _order_from_license(payload.license_key)
-    pack = _find_uploaded_pack(str(order.get("pack_id", "")))
+    pack = _resolve_order_pack(order)
     if not _is_paid(pack):
         raise HTTPException(status_code=409, detail="licensed voice pack is no longer paid")
 
@@ -942,10 +1046,10 @@ def download_paid_voice_pack(
     license: str,
 ) -> FileResponse:
     order = _order_from_license(license)
-    if str(order.get("pack_id", "")) != pack_id:
+    pack = _find_uploaded_pack(pack_id)
+    if not _order_covers_pack(order, pack):
         raise HTTPException(status_code=403, detail="license does not cover this voice pack")
 
-    pack = _find_uploaded_pack(pack_id)
     if not _is_paid(pack):
         raise HTTPException(status_code=404, detail="paid voice pack not found")
     filename = str(pack.get("filename", ""))
@@ -970,16 +1074,16 @@ def admin_store_voice_packs(request: Request) -> dict[str, Any]:
     with core._db() as conn:
         sales_rows = conn.execute(
             """
-            SELECT pack_id,
+            SELECT COALESCE(NULLIF(community_id, ''), pack_id) AS voice_id,
                    COUNT(*) AS sales,
                    COALESCE(SUM(amount_total), 0) AS revenue
             FROM store_orders
             WHERE payment_status = 'paid'
-            GROUP BY pack_id
+            GROUP BY COALESCE(NULLIF(community_id, ''), pack_id)
             """
         ).fetchall()
     sales = {
-        row["pack_id"]: {"sales": row["sales"], "revenue": row["revenue"]}
+        row["voice_id"]: {"sales": row["sales"], "revenue": row["revenue"]}
         for row in sales_rows
     }
 
@@ -989,8 +1093,12 @@ def admin_store_voice_packs(request: Request) -> dict[str, Any]:
         public["access"] = "paid" if _is_paid(record) else "free"
         public["price_amount"] = _price_amount(record)
         public["currency"] = _currency(record)
-        public["sales"] = int(sales.get(str(record.get("id")), {}).get("sales", 0))
-        public["revenue"] = int(sales.get(str(record.get("id")), {}).get("revenue", 0))
+        voice_id = (
+            str(record.get("community_id", "")).strip()
+            or str(record.get("id", ""))
+        )
+        public["sales"] = int(sales.get(voice_id, {}).get("sales", 0))
+        public["revenue"] = int(sales.get(voice_id, {}).get("revenue", 0))
         items.append(public)
     items.sort(key=lambda item: str(item.get("id", "")).casefold())
     return {
@@ -1040,7 +1148,7 @@ def admin_store_orders(limit: int = 200) -> dict[str, Any]:
     with core._db() as conn:
         rows = conn.execute(
             """
-            SELECT stripe_session_id, pack_id, status, payment_status,
+            SELECT stripe_session_id, pack_id, community_id, status, payment_status,
                    amount_total, currency, customer_email, client_id,
                    created_at, updated_at, paid_at
             FROM store_orders
