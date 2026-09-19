@@ -1,5 +1,5 @@
 name: ANTHBOT Reporting Server
-version: "1.0.0-test.55"
+version: "1.0.0-test.56"
 slug: anthbot_reporting
 description: Opt-in telemetry, diagnostics, and admin dashboard backend for the ANTHBOT Map integration
 url: https://github.com/Mqbretrofit/anthbot-reporting-server/tree/main/anthbot_reporting
@@ -21,6 +21,10 @@ options:
   stripe_webhook_secret: ""
   store_license_secret: ""
   stripe_automatic_tax: false
+  privacy_controller_name: "MQB Retrofit Hungary"
+  privacy_controller_address: ""
+  privacy_contact_email: ""
+  privacy_contact_phone: "+36 30 620 9015"
 schema:
   admin_token: password?
   store_enabled: bool
@@ -28,3 +32,7 @@ schema:
   stripe_webhook_secret: password?
   store_license_secret: password?
   stripe_automatic_tax: bool
+  privacy_controller_name: str
+  privacy_controller_address: str?
+  privacy_contact_email: str?
+  privacy_contact_phone: str
