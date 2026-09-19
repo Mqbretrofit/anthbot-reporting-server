@@ -28,10 +28,10 @@ a{color:#cfe0ff}.wrap{max-width:var(--max);margin:auto;padding:0 22px}.nav{posit
 <div class="controller">
   <div class="info"><b data-i18n="controllerName"></b><span>__CONTROLLER_NAME__</span></div>
   <div class="info"><b data-i18n="controllerAddress"></b><span>__CONTROLLER_ADDRESS__</span></div>
-  <div class="info"><b data-i18n="privacyEmail"></b><span>__PRIVACY_EMAIL__</span></div>
+  <div class="__PRIVACY_EMAIL_CARD_CLASS__"><b data-i18n="privacyEmail"></b><span>__PRIVACY_EMAIL__</span></div>
   <div class="info"><b data-i18n="privacyPhone"></b><span>__PRIVACY_PHONE__</span></div>
 </div>
-<div class="__PRIVACY_CONFIG_WARNING_CLASS__">__PRIVACY_CONFIG_WARNING_TEXT__</div>
+<div class="__PRIVACY_CONFIG_WARNING_CLASS__" data-i18n="configWarning"></div>
 
 <div class="legal-card"><div id="policy-body" class="policy-body"></div></div>
 
@@ -303,6 +303,33 @@ vi:{title:"Chính sách quyền riêng tư",legal:"Bảo vệ dữ liệu",updat
 ko:{title:"개인정보 처리방침",legal:"데이터 보호",updated:"최종 업데이트: 2026년 9월 19일",intro:"이 안내는 ANTHBOT Community 웹사이트, 음성 스토어, Reporting Server 및 지원에서 개인정보가 어떻게 처리되는지 투명하게 설명합니다.",home:"홈",store:"음성 스토어",terms:"이용약관",refunds:"환불",privacy:"개인정보",controllerName:"개인정보 처리자",controllerAddress:"우편 주소",privacyEmail:"개인정보 이메일",privacyPhone:"전화",requestTitle:"개인정보 보호 권리 행사",requestIntro:"계정을 만들지 않고 GDPR 요청을 제출할 수 있습니다. 확인과 답변을 위해 연락처를 제공하세요.",requestType:"요청 유형",requestContact:"이메일 또는 전화",requestDetails:"데이터를 찾는 데 도움이 되는 상세정보 / 식별자",requestSubmit:"요청 제출",sending:"전송 중…",sent:"요청을 받았습니다. 참조: {id}",error:"요청을 전송할 수 없습니다",sourceNote:"참고 자료:",types:["열람","정정","삭제","처리 제한","이동권","반대","동의 철회","불만","기타"]},
 km:{title:"គោលការណ៍ឯកជនភាព",legal:"ការការពារទិន្នន័យ",updated:"បានធ្វើបច្ចុប្បន្នភាពចុងក្រោយ៖ 19 កញ្ញា 2026",intro:"សេចក្តីជូនដំណឹងនេះពន្យល់ដោយតម្លាភាពអំពីការដំណើរការទិន្នន័យផ្ទាល់ខ្លួនលើគេហទំព័រ ANTHBOT Community ហាងសំឡេង Reporting Server និងការគាំទ្រ។",home:"ទំព័រដើម",store:"ហាងសំឡេង",terms:"លក្ខខណ្ឌ",refunds:"ការសងប្រាក់",privacy:"ឯកជនភាព",controllerName:"អ្នកគ្រប់គ្រងទិន្នន័យ",controllerAddress:"អាសយដ្ឋានប្រៃសណីយ៍",privacyEmail:"អ៊ីមែលឯកជនភាព",privacyPhone:"ទូរស័ព្ទ",requestTitle:"អនុវត្តសិទ្ធិការពារទិន្នន័យ",requestIntro:"អ្នកអាចផ្ញើសំណើ GDPR ដោយមិនបង្កើតគណនី។ សូមផ្តល់វិធីទំនាក់ទំនងសម្រាប់ផ្ទៀងផ្ទាត់ និងឆ្លើយតប។",requestType:"ប្រភេទសំណើ",requestContact:"អ៊ីមែល ឬទូរស័ព្ទ",requestDetails:"ព័ត៌មានលម្អិត / អត្តសញ្ញាណសម្គាល់ដើម្បីជួយស្វែងរកទិន្នន័យ",requestSubmit:"ផ្ញើសំណើ",sending:"កំពុងផ្ញើ…",sent:"បានទទួលសំណើ។ លេខយោង៖ {id}",error:"មិនអាចផ្ញើសំណើបាន",sourceNote:"ឯកសារយោង៖",types:["ចូលប្រើ","កែតម្រូវ","លុប","កម្រិត","ផ្ទេរទិន្នន័យ","ជំទាស់","ដកការយល់ព្រម","បណ្តឹង","ផ្សេងទៀត"]}
 };
+
+const CONFIG_WARNING={
+  en:"The controller's real postal address is not configured yet. Add it in the Reporting Server app settings before enabling live Stripe payments.",
+  hu:"Az adatkezelő valós postai címe / székhelye még nincs beállítva. Éles Stripe-fizetés előtt add meg a Reporting Server alkalmazás beállításaiban.",
+  de:"Die tatsächliche Postanschrift des Verantwortlichen ist noch nicht konfiguriert. Vor Live-Stripe-Zahlungen in den Reporting-Server-Einstellungen eintragen.",
+  fr:"L'adresse postale réelle du responsable n'est pas encore configurée. Ajoutez-la dans les paramètres du Reporting Server avant d'activer les paiements Stripe en production.",
+  es:"La dirección postal real del responsable aún no está configurada. Añádela en los ajustes de Reporting Server antes de activar pagos Stripe reales.",
+  it:"L'indirizzo postale reale del titolare non è ancora configurato. Inseriscilo nelle impostazioni del Reporting Server prima di attivare pagamenti Stripe reali.",
+  pt:"A morada postal real do responsável ainda não está configurada. Adicione-a nas definições do Reporting Server antes de ativar pagamentos Stripe reais.",
+  nl:"Het werkelijke postadres van de verwerkingsverantwoordelijke is nog niet ingesteld. Voeg dit toe in de Reporting Server-instellingen vóór live Stripe-betalingen.",
+  pl:"Rzeczywisty adres pocztowy administratora nie jest jeszcze skonfigurowany. Uzupełnij go w ustawieniach Reporting Server przed włączeniem prawdziwych płatności Stripe.",
+  cs:"Skutečná poštovní adresa správce ještě není nastavena. Doplňte ji v nastavení Reporting Serveru před zapnutím ostrých plateb Stripe.",
+  sk:"Skutočná poštová adresa prevádzkovateľa ešte nie je nastavená. Doplňte ju v nastaveniach Reporting Servera pred zapnutím ostrých platieb Stripe.",
+  ro:"Adresa poștală reală a operatorului nu este încă configurată. Adăugați-o în setările Reporting Server înainte de activarea plăților Stripe live.",
+  da:"Den dataansvarliges faktiske postadresse er endnu ikke konfigureret. Tilføj den i Reporting Server-indstillingerne før live Stripe-betalinger aktiveres.",
+  sv:"Den personuppgiftsansvariges verkliga postadress är ännu inte konfigurerad. Lägg till den i Reporting Server-inställningarna innan livebetalningar via Stripe aktiveras.",
+  no:"Den behandlingsansvarliges faktiske postadresse er ikke konfigurert ennå. Legg den inn i Reporting Server-innstillingene før live Stripe-betalinger aktiveres.",
+  fi:"Rekisterinpitäjän todellista postiosoitetta ei ole vielä määritetty. Lisää se Reporting Serverin asetuksiin ennen Stripe-live-maksujen käyttöönottoa.",
+  "zh-CN":"数据控制者的真实邮寄地址尚未配置。启用 Stripe 正式支付前，请在 Reporting Server 设置中填写。",
+  "zh-TW":"資料控制者的實際郵寄地址尚未設定。啟用 Stripe 正式付款前，請在 Reporting Server 設定中填寫。",
+  tr:"Veri sorumlusunun gerçek posta adresi henüz yapılandırılmadı. Canlı Stripe ödemelerini açmadan önce Reporting Server ayarlarına ekleyin.",
+  th:"ยังไม่ได้ตั้งค่าที่อยู่ไปรษณีย์จริงของผู้ควบคุมข้อมูล โปรดเพิ่มในตั้งค่า Reporting Server ก่อนเปิดใช้การชำระเงิน Stripe แบบจริง",
+  vi:"Địa chỉ bưu chính thực tế của bên kiểm soát chưa được cấu hình. Hãy thêm trong cài đặt Reporting Server trước khi bật thanh toán Stripe thật.",
+  ko:"개인정보 처리자의 실제 우편 주소가 아직 설정되지 않았습니다. Stripe 실결제를 활성화하기 전에 Reporting Server 설정에 추가하세요.",
+  km:"អាសយដ្ឋានប្រៃសណីយ៍ពិតរបស់អ្នកគ្រប់គ្រងទិន្នន័យមិនទាន់បានកំណត់ទេ។ សូមបន្ថែមក្នុងការកំណត់ Reporting Server មុនពេលបើកការទូទាត់ Stripe ពិតប្រាកដ។"
+};
+for(const [lang,value] of Object.entries(CONFIG_WARNING)){if(TEXT[lang])TEXT[lang].configWarning=value;}
 
 const SUPPORTED=["hu","en","de","fr","es","it","pt","nl","pl","cs","sk","ro","da","sv","no","fi","zh-CN","zh-TW","tr","th","vi","ko","km"];
 const BASE_BODY=COMMON_BODY.en;
