@@ -198,6 +198,9 @@ class ReportingServerTests(unittest.TestCase):
         self.assertEqual(pack["version"], "1.2.4")
         self.assertEqual(pack["variant_id"], "noemi_standard")
         self.assertEqual(pack["variant_name"], "Noémi (női) · Standard")
+        self.assertEqual(pack["community_id"], "hu_noemi_standard")
+        self.assertEqual(pack["voice_gender"], "female")
+        self.assertEqual(pack["technical_slot"], "German_girl")
         self.assertEqual(
             pack["music_url"],
             "https://ha.mqbretrofithungary.online/local/anthbot-map-v2/girl_de-1.2.4",
@@ -216,8 +219,11 @@ class ReportingServerTests(unittest.TestCase):
                 "language": "Čeština",
                 "language_code": "cs",
                 "version": "1.0.0",
+                "community_id": "cs_vlasta_standard",
                 "variant_id": "vlasta_standard",
                 "variant_name": "Vlasta (női) · Standard",
+                "voice_gender": "female",
+                "technical_slot": "German_girl",
                 "english_name": "German",
                 "sex": "girl",
                 "music_package": "3",
@@ -225,10 +231,19 @@ class ReportingServerTests(unittest.TestCase):
             },
         )
         self.assertEqual(response.status_code, 201)
-        pack_v1 = response.json()["pack"]
+        response_v1 = response.json()
+        self.assertTrue(response_v1["version_assigned_by_server"])
+        self.assertEqual(response_v1["assigned_version"], "1.2.5")
+        pack_v1 = response_v1["pack"]
         self.assertEqual(pack_v1["language"], "Čeština")
+        self.assertEqual(pack_v1["community_id"], "cs_vlasta_standard")
         self.assertEqual(pack_v1["variant_id"], "vlasta_standard")
         self.assertEqual(pack_v1["variant_name"], "Vlasta (női) · Standard")
+        self.assertEqual(pack_v1["voice_gender"], "female")
+        self.assertEqual(pack_v1["technical_slot"], "German_girl")
+        self.assertEqual(pack_v1["version"], "1.2.5")
+        self.assertEqual(pack_v1["requested_version"], "1.0.0")
+        self.assertEqual(pack_v1["version_source"], "reporting_server")
         self.assertEqual(
             pack_v1["music_md5"],
             hashlib.md5(content_v1, usedforsecurity=False).hexdigest(),
@@ -252,11 +267,17 @@ class ReportingServerTests(unittest.TestCase):
                 "language": "Čeština",
                 "language_code": "cs",
                 "version": "1.0.0",
+                "community_id": "cs_vlasta_funny",
                 "variant_id": "vlasta_funny",
                 "variant_name": "Vlasta (női) · Vicces",
+                "voice_gender": "female",
+                "technical_slot": "German_girl",
             },
         )
         self.assertEqual(funny.status_code, 201)
+        funny_pack = funny.json()["pack"]
+        self.assertEqual(funny_pack["version"], "1.2.6")
+        self.assertEqual(funny_pack["community_id"], "cs_vlasta_funny")
 
         public = self.client.get("/api/anthbot/voice-packs").json()
         czech = [
@@ -264,8 +285,12 @@ class ReportingServerTests(unittest.TestCase):
         ]
         self.assertEqual(len(czech), 2)
         self.assertEqual(
-            {item["variant_id"] for item in czech},
-            {"vlasta_standard", "vlasta_funny"},
+            {item["community_id"] for item in czech},
+            {"cs_vlasta_standard", "cs_vlasta_funny"},
+        )
+        self.assertEqual(
+            {item["version"] for item in czech},
+            {"1.2.5", "1.2.6"},
         )
 
         content_v2 = b"verified-czech-voice-pack-v2"
@@ -276,13 +301,18 @@ class ReportingServerTests(unittest.TestCase):
             data={
                 "language": "Čeština",
                 "language_code": "cs",
-                "version": "1.0.1",
+                "version": "9.9.9",
+                "community_id": "cs_vlasta_standard",
                 "variant_id": "vlasta_standard",
                 "variant_name": "Vlasta (női) · Standard",
+                "voice_gender": "female",
+                "technical_slot": "German_girl",
             },
         )
         self.assertEqual(replaced.status_code, 201)
         pack_v2 = replaced.json()["pack"]
+        self.assertEqual(pack_v2["version"], "1.2.7")
+        self.assertEqual(pack_v2["requested_version"], "9.9.9")
         self.assertNotEqual(pack_v1["music_url"], pack_v2["music_url"])
 
         old_download = self.client.get(download_path)
@@ -294,10 +324,10 @@ class ReportingServerTests(unittest.TestCase):
         ]
         self.assertEqual(len(czech), 2)
         standard = [
-            item for item in czech if item["variant_id"] == "vlasta_standard"
+            item for item in czech if item["community_id"] == "cs_vlasta_standard"
         ]
         self.assertEqual(len(standard), 1)
-        self.assertEqual(standard[0]["version"], "1.0.1")
+        self.assertEqual(standard[0]["version"], "1.2.7")
 
         deleted = self.client.delete(
             f"/api/anthbot/admin/voice-packs/{pack_v2['id']}",
@@ -311,7 +341,7 @@ class ReportingServerTests(unittest.TestCase):
             item for item in public["packs"] if item["language_code"] == "cs"
         ]
         self.assertEqual(len(czech), 1)
-        self.assertEqual(czech[0]["variant_id"], "vlasta_funny")
+        self.assertEqual(czech[0]["community_id"], "cs_vlasta_funny")
 
 
     def test_voice_pack_upload_requires_admin_and_rejects_empty_file(self) -> None:
