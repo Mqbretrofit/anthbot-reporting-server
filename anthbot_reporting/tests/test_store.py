@@ -315,6 +315,37 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(item["contact"], "person@example.test")
         self.assertEqual(item["status"], "new")
 
+    def test_standalone_client_checkout_links_purchase_without_pair_code(self) -> None:
+        token = "A" * 48
+        pack_id = self._first_paid_pack_id()
+        fake_session = {
+            "id": "cs_test_installer_direct",
+            "url": "https://checkout.stripe.com/c/pay/test",
+            "status": "open",
+            "payment_status": "unpaid",
+            "amount_total": 799,
+            "currency": "eur",
+            "client_reference_id": pack_id,
+            "customer": "cus_installer",
+            "payment_intent": "pi_installer",
+            "metadata": {"pack_id": pack_id, "community_id": "hu_noemi"},
+            "customer_details": {"email": "buyer@example.test"},
+            "created": 1700000000,
+        }
+        with patch.object(store_api, "_create_checkout_session", return_value=fake_session) as create_session:
+            response = self.client.post(
+                "/api/anthbot/store/client/checkout",
+                json={"client_token": token, "pack_id": pack_id},
+            )
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertFalse(body["already_owned"])
+        self.assertEqual(body["pack_id"], pack_id)
+        self.assertTrue(body["checkout_url"].startswith("https://checkout.stripe.com/"))
+        kwargs = create_session.call_args.kwargs
+        self.assertIsNotNone(kwargs["client_id"])
+        self.assertIsNone(kwargs["pair_code"])
+
     def test_paid_pack_is_hidden_from_legacy_registry_and_requires_license(self) -> None:
         pack = self._upload_pack()
         pack_id = pack["id"]
