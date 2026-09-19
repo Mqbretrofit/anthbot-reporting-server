@@ -237,6 +237,30 @@ class VoiceStoreTests(unittest.TestCase):
             "https://anthbotmap.com/models/m9-pro",
         )
 
+    def test_seo_landing_pages_match_main_site_visual_shell(self) -> None:
+        for path in (
+            "/home-assistant",
+            "/models/genie-1000",
+            "/models/m9-pro",
+            "/models/mgc1000",
+            "/voice-packs",
+        ):
+            response = self.client.get(path)
+            self.assertEqual(response.status_code, 200)
+            html = response.text
+            self.assertIn('<div class="bg-grid"></div>', html)
+            self.assertIn('<nav class="nav">', html)
+            self.assertIn('<span class="logo">M</span>', html)
+            self.assertIn("<span>MQB Retrofit Hungary</span>", html)
+            self.assertIn('class="hero"', html)
+            self.assertIn('class="topic-stage glass"', html)
+            self.assertIn('class="feature-grid"', html)
+            self.assertIn('<footer class="footer">', html)
+            self.assertIn('href="/#anthbot-map"', html)
+            self.assertIn('href="/#features"', html)
+            self.assertIn('href="/#models"', html)
+            self.assertIn('href="/#support"', html)
+
     def test_privacy_page_has_gdpr_information_and_23_languages(self) -> None:
         response = self.client.get("/privacy")
         self.assertEqual(response.status_code, 200)
