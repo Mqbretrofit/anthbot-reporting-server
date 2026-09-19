@@ -27,6 +27,36 @@ After start, `GET /health` should return:
 {"ok":true,"schema":"anthbot-reporting-server-v1"}
 ```
 
+## Privacy-friendly site analytics
+
+The Reporting Server can count public page views and daily unique visitors without
+persisting raw IP addresses, User-Agent strings, analytics cookies, localStorage
+visitor IDs or browser fingerprints.
+
+For each page load, the first-party site script sends only the public page path
+and selected site language. The source IP is used transiently in memory to derive
+a secret-keyed HMAC pseudonym. The HMAC key is domain-separated by UTC day, so the
+same source address receives a different pseudonym on the next day. The private
+master secret is stored separately from the SQLite analytics data.
+
+Retention:
+
+- daily pseudonymous visitor hashes: 35 days
+- aggregate page-view counters: 400 days
+- raw source IP: never persisted by the Reporting Server analytics code
+- User-Agent: not persisted by the Reporting Server analytics code
+
+The unique count is intentionally approximate because NAT/shared public IP
+addresses can merge multiple people and dynamic IP changes can split one person.
+
+Admin endpoint:
+
+- `GET /api/anthbot/admin/site-analytics?days=30`
+
+The Store admin page shows today's page views and daily unique count, 7/30-day
+page views, plus daily, page and language breakdowns. The feature can be disabled
+with `site_analytics_enabled: false`.
+
 ## Privacy / GDPR
 
 The public `/privacy` page describes the actual Reporting Server and Voice
