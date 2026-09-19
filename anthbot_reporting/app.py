@@ -644,15 +644,21 @@ async def upload_voice_pack(
         ),
         None,
     )
+    effective_version = (
+        str(effective_match.get("version", "")).strip()
+        if isinstance(effective_match, dict)
+        else ""
+    )
     same_payload = (
         isinstance(effective_match, dict)
         and str(effective_match.get("music_md5", "")).strip().casefold()
         == local_md5.casefold()
         and _voice_pack_technical_slot(effective_match).casefold()
         == COMMUNITY_TECHNICAL_SLOT.casefold()
+        and _COMMUNITY_VERSION_RE.fullmatch(effective_version) is not None
     )
     if same_payload:
-        assigned_version = str(effective_match.get("version", "")).strip()
+        assigned_version = effective_version
     else:
         assigned_version = _next_community_version(bundled + existing)
     if not assigned_version:
