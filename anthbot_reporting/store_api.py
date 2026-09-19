@@ -1602,25 +1602,28 @@ def _seo_landing_html(path: str) -> str:
     heading = str(page["heading"])
     lead = str(page["lead"])
     canonical = f"{_PUBLIC_SITE_BASE_URL}{path}"
+    section_items = list(page["sections"])
     sections = "".join(
         (
-            '<section class="card"><h2>'
+            '<div class="feature glass"><div class="feature-icon">✦</div><h3>'
             + escape(str(section_title))
-            + '</h2><p>'
+            + '</h3><p>'
             + escape(str(section_text))
-            + '</p></section>'
+            + '</p></div>'
         )
-        for section_title, section_text in page["sections"]
+        for section_title, section_text in section_items
+    )
+    preview_rows = "".join(
+        (
+            '<div class="tile"><strong>'
+            + escape(str(section_title))
+            + '</strong><span>'
+            + escape(str(section_text))
+            + '</span></div>'
+        )
+        for section_title, section_text in section_items[:3]
     )
     cta_label, cta_href = page["cta"]
-    internal_links = (
-        '<a href="/home-assistant">Home Assistant</a>'
-        '<a href="/models/genie-1000">Genie 1000</a>'
-        '<a href="/models/m9-pro">M9 Pro</a>'
-        '<a href="/models/mgc1000">MGC1000</a>'
-        '<a href="/voice-packs">Voice packs</a>'
-        '<a href="/store">Voice Store</a>'
-    )
     structured = json.dumps(
         {
             "@context": "https://schema.org",
@@ -1663,21 +1666,128 @@ def _seo_landing_html(path: str) -> str:
 <meta name="twitter:description" content="{escape(description, quote=True)}">
 <script type="application/ld+json">{structured}</script>
 <style>
-:root{{color-scheme:dark;--bg:#081017;--panel:#111820;--panel2:#141d27;--line:rgba(255,255,255,.12);--text:#fff;--muted:rgba(255,255,255,.72);--green:#5ee083;--max:1060px;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}}
-*{{box-sizing:border-box}}body{{margin:0;background:radial-gradient(circle at 14% 0,rgba(40,94,145,.34),transparent 29rem),radial-gradient(circle at 90% 24%,rgba(94,224,131,.09),transparent 26rem),var(--bg);color:var(--text);line-height:1.65}}a{{color:#d9ffe6}}.wrap{{max-width:var(--max);margin:auto;padding:0 22px}}.nav{{position:sticky;top:0;z-index:20;background:rgba(8,16,23,.82);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}}.navin{{min-height:70px;display:flex;align-items:center;justify-content:space-between;gap:20px}}.brand{{font-weight:850;text-decoration:none}}.links{{display:flex;gap:13px;flex-wrap:wrap}}.links a{{text-decoration:none;color:var(--muted);font-size:13px}}.links a:hover{{color:#fff}}.hero{{padding:72px 0 38px}}.eyebrow{{display:inline-flex;padding:6px 11px;border:1px solid var(--line);border-radius:999px;color:var(--green);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}}h1{{font-size:clamp(2.5rem,7vw,4.8rem);line-height:1.02;margin:16px 0}}.lead{{max-width:820px;font-size:1.12rem;color:var(--muted)}}.actions{{display:flex;gap:12px;flex-wrap:wrap;margin-top:25px}}.btn{{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:12px;text-decoration:none;font-weight:800;background:linear-gradient(180deg,#34c759,#248a46);color:#fff}}.btn.secondary{{background:var(--panel2);border:1px solid var(--line)}}.grid{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding:18px 0 72px}}.card{{padding:22px;border:1px solid var(--line);border-radius:19px;background:linear-gradient(180deg,rgba(20,29,39,.96),rgba(12,18,24,.96));box-shadow:0 18px 50px rgba(0,0,0,.24)}}.card h2{{margin:0 0 8px;font-size:1.3rem}}.card p{{margin:0;color:var(--muted)}}.notice{{margin:0 0 58px;padding:17px;border:1px solid rgba(94,224,131,.24);border-radius:15px;background:rgba(94,224,131,.06);color:#d7eee1}}.footer{{border-top:1px solid var(--line);padding:28px 0 44px;color:#94a2ad;font-size:13px}}@media(max-width:760px){{.links{{display:none}}.grid{{grid-template-columns:1fr}}.hero{{padding-top:50px}}}}
+:root{{
+  color-scheme:dark;
+  --bg:#081017;--card:#111820;--card2:#141d27;--card3:#0c1218;
+  --text:#fff;--muted:rgba(255,255,255,.7);--faint:rgba(255,255,255,.48);
+  --line:rgba(255,255,255,.11);--line2:rgba(255,255,255,.18);
+  --green:#5ee083;--blue:#03a9f4;--red:#ff5252;--violet:#6f6bff;
+  --max:1200px;
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif
+}}
+*{{box-sizing:border-box}}
+html{{scroll-behavior:smooth}}
+body{{margin:0;background:
+  radial-gradient(circle at 14% 0,rgba(40,94,145,.34),transparent 29rem),
+  radial-gradient(circle at 90% 24%,rgba(94,224,131,.10),transparent 26rem),
+  var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}}
+a{{color:inherit}}.wrap{{max-width:var(--max);margin:auto;padding:0 22px}}
+.bg-grid{{position:fixed;inset:0;pointer-events:none;opacity:.12;background-image:
+ linear-gradient(rgba(94,224,131,.14) 1px,transparent 1px),
+ linear-gradient(90deg,rgba(94,224,131,.14) 1px,transparent 1px);background-size:46px 46px;
+ mask-image:linear-gradient(to bottom,#000,transparent 80%)}}
+.nav{{position:sticky;top:0;z-index:50;background:rgba(8,16,23,.76);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}}
+.navin{{height:72px;display:flex;align-items:center;justify-content:space-between;gap:22px}}
+.brand{{display:flex;gap:11px;align-items:center;text-decoration:none;font-weight:850}}
+.logo{{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(145deg,#31bf62,#249c4d);box-shadow:0 0 30px rgba(94,224,131,.18)}}
+.links{{display:flex;gap:16px;flex-wrap:wrap;align-items:center}}
+.links a{{text-decoration:none;color:var(--muted);font-size:14px}}.links a:hover{{color:#fff}}
+.hero{{padding:74px 0 46px}}
+.hero-grid{{display:grid;grid-template-columns:.95fr 1.05fr;gap:34px;align-items:center}}
+.eyebrow{{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line2);background:rgba(20,29,39,.72);border-radius:999px;padding:7px 12px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#dfe8ee}}
+.dotlive{{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 14px rgba(94,224,131,.85);animation:blink 1.6s ease-in-out infinite}}
+.hero h1{{font-size:clamp(2.7rem,6vw,4.9rem);line-height:1.02;margin:18px 0 18px}}
+.grad{{background:linear-gradient(135deg,#dfffea,var(--green));-webkit-background-clip:text;background-clip:text;color:transparent}}
+.hero p{{font-size:1.14rem;color:var(--muted);max-width:690px}}
+.tags{{display:flex;gap:9px;flex-wrap:wrap;margin-top:21px}}.tag{{font-size:13px;padding:7px 11px;border-radius:999px;border:1px solid var(--line2);background:rgba(20,29,39,.72);color:#d6e0e7}}
+.cta{{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}}
+.btn{{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 17px;border-radius:12px;border:1px solid var(--line2);background:var(--card2);text-decoration:none;font-weight:800;transition:.18s}}
+.btn:hover{{transform:translateY(-2px);border-color:rgba(255,255,255,.34)}}.btn.primary{{background:linear-gradient(180deg,#34c759,#248a46);border:0;color:#fff;box-shadow:0 16px 34px rgba(36,138,70,.25)}}
+.repo-meta{{display:flex;gap:18px;flex-wrap:wrap;margin-top:22px;color:var(--faint);font-size:13px}}.repo-meta strong{{color:#fff}}
+.glass{{background:linear-gradient(180deg,rgba(17,24,32,.88),rgba(12,18,24,.82));border:1px solid var(--line);box-shadow:0 22px 70px rgba(0,0,0,.26);backdrop-filter:blur(12px)}}
+.topic-stage{{position:relative;min-height:420px;border-radius:26px;padding:22px;overflow:hidden;display:flex;align-items:center}}
+.topic-stage:before{{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 30%,rgba(94,224,131,.12),transparent 42%),linear-gradient(180deg,rgba(20,29,39,.7),rgba(8,16,23,.82))}}
+.topic-panel{{position:relative;z-index:2;width:100%;border:1px solid rgba(255,255,255,.13);border-radius:22px;background:#111820;box-shadow:0 26px 80px rgba(0,0,0,.42);overflow:hidden}}
+.topic-top{{padding:18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:16px;align-items:center}}
+.topic-title strong{{display:block;font-size:20px}}.topic-title span{{display:block;color:var(--muted);font-size:12px;margin-top:2px}}
+.cloud{{display:flex;align-items:center;gap:8px;color:#aeb7c2;font-size:12px;font-weight:800}}.cloud i{{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 12px rgba(94,224,131,.8)}}
+.topic-body{{padding:14px;display:grid;gap:9px}}
+.tile{{min-height:78px;border-radius:15px;border:1px solid var(--line);background:#141d27;padding:12px}}
+.tile strong{{display:block;font-size:13px}}.tile span{{display:block;font-size:11px;color:var(--muted);margin-top:3px}}
+.section{{padding:68px 0}}.section h2{{font-size:2.2rem;line-height:1.15;margin:0 0 12px}}.lead{{font-size:1.02rem;color:var(--muted);max-width:830px}}
+.feature-grid{{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:25px}}
+.feature{{padding:22px;border-radius:20px}}.feature-icon{{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;background:#141d27;border:1px solid var(--line2);font-size:22px;margin-bottom:13px}}
+.feature h3{{margin:5px 0 8px}}.feature p{{margin:0;color:var(--muted);font-size:14px}}
+.open-source{{padding:23px;border-radius:20px;display:grid;grid-template-columns:1fr auto;gap:20px;align-items:center}}
+.open-source p{{margin:6px 0 0;color:var(--muted)}}
+.footer{{margin-top:36px;border-top:1px solid var(--line);padding:28px 0 44px;color:#94a2ad;font-size:13px}}
+.foot{{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px}}.foot a{{color:#c3ced5}}
+@keyframes blink{{0%,100%{{opacity:.6}}50%{{opacity:1}}}}
+@media(max-width:1050px){{.hero-grid{{grid-template-columns:1fr}}.topic-stage{{min-height:360px}}.feature-grid{{grid-template-columns:1fr}}}}
+@media(max-width:760px){{.links{{display:none}}.hero{{padding-top:54px}}.hero h1{{font-size:clamp(2.35rem,11vw,4rem)}}.hero p{{font-size:1.02rem}}.topic-stage{{min-height:auto;padding:12px 0 0}}.open-source{{grid-template-columns:1fr}}}}
 </style>
 </head>
 <body>
-<nav class="nav"><div class="wrap navin"><a class="brand" href="/">ANTHBOT Map</a><div class="links">{internal_links}</div></div></nav>
+<div class="bg-grid"></div>
+<nav class="nav"><div class="wrap navin">
+  <a class="brand" href="/"><span class="logo">M</span><span>MQB Retrofit Hungary</span></a>
+  <div class="links">
+    <a href="/#anthbot-map">ANTHBOT Map</a>
+    <a href="/#features">Features</a>
+    <a href="/#models">Models</a>
+    <a href="/store">Voice Store</a>
+    <a href="/#support">Support</a>
+    <a href="/terms">Terms</a>
+    <a href="/privacy">Privacy</a>
+  </div>
+</div></nav>
+
+<header class="hero"><div class="wrap hero-grid">
+  <div>
+    <span class="eyebrow"><i class="dotlive"></i>{escape(str(page["eyebrow"]))}</span>
+    <h1>{escape(heading)}</h1>
+    <p>{escape(lead)}</p>
+    <div class="tags">
+      <span class="tag">Home Assistant</span>
+      <span class="tag">ANTHBOT Map</span>
+      <span class="tag">Model-aware</span>
+      <span class="tag">Independent community project</span>
+    </div>
+    <div class="cta">
+      <a class="btn primary" href="{escape(str(cta_href), quote=True)}">{escape(str(cta_label))}</a>
+      <a class="btn" href="/">Back to ANTHBOT Map</a>
+    </div>
+    <div class="repo-meta"><span>Project <strong>ANTHBOT Map</strong></span><span>Platform <strong>Home Assistant</strong></span><span>License <strong>MIT</strong></span></div>
+  </div>
+
+  <div class="topic-stage glass">
+    <div class="topic-panel">
+      <div class="topic-top"><div class="topic-title"><strong>{escape(heading)}</strong><span>Anthbot Map Card · Home Assistant</span></div><div class="cloud"><i></i> CLOUD LIVE</div></div>
+      <div class="topic-body">{preview_rows}</div>
+    </div>
+  </div>
+</div></header>
+
 <main>
-<section class="hero"><div class="wrap"><span class="eyebrow">{escape(str(page["eyebrow"]))}</span><h1>{escape(heading)}</h1><p class="lead">{escape(lead)}</p><div class="actions"><a class="btn" href="{escape(str(cta_href), quote=True)}">{escape(str(cta_label))}</a><a class="btn secondary" href="/">ANTHBOT Map home</a></div></div></section>
-<div class="wrap"><div class="grid">{sections}</div><div class="notice"><strong>Independent community project.</strong> ANTHBOT is a trademark of its respective owner. ANTHBOT Map is independent and is not an official ANTHBOT product unless explicitly stated otherwise.</div></div>
+<section class="section"><div class="wrap">
+  <span class="eyebrow">ANTHBOT Map</span>
+  <h2>Built around the same project as the main site.</h2>
+  <p class="lead">{escape(description)}</p>
+  <div class="feature-grid">{sections}</div>
+</div></section>
+
+<section class="section"><div class="wrap">
+  <div class="open-source glass">
+    <div><strong>Independent project / trademark notice</strong><p>ANTHBOT is a trademark of its respective owner. ANTHBOT Map and MQB Retrofit Hungary are independent and are not official ANTHBOT products unless explicitly stated otherwise.</p></div>
+    <a class="btn" href="https://github.com/Mqbretrofit/ha-anthbot-map-v2" target="_blank" rel="noopener">ANTHBOT Map GitHub</a>
+  </div>
+</div></section>
 </main>
-<footer class="footer"><div class="wrap">© 2026 MQB Retrofit Hungary · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/refunds">Refunds</a></div></footer>
+
+<footer class="footer"><div class="wrap">© 2026 MQB Retrofit Hungary. All rights reserved.<div class="foot"><a href="/">Home</a><a href="https://github.com/Mqbretrofit/ha-anthbot-map-v2" target="_blank" rel="noopener">ANTHBOT Map GitHub</a><a href="/store">Voice Pack Store</a><a href="/refunds">Refunds</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a></div></div></footer>
 <script src="/site-analytics.js?v=1"></script>
 </body>
 </html>"""
-
 
 def _html_file(name: str) -> str:
     try:
