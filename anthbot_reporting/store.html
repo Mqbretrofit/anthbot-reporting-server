@@ -27,7 +27,7 @@
     </section>
     <div class="notice" id="notice"></div>
     <div id="content"><div class="empty">Hangcsomagok betöltése…</div></div>
-    <div class="footer">A fizetés a Stripe biztonságos fizetési oldalán történik. A Reporting Server nem tárol bankkártyaadatot. Sikeres fizetés után egy ANTHBOT hanglicencet kapsz, amelyet később az ANTHBOT Map integrációhoz lehet kapcsolni.</div>
+    <div class="footer">A fizetés a Stripe biztonságos fizetési oldalán történik. A Reporting Server nem tárol bankkártyaadatot. Ha a Hangboltot az ANTHBOT Mapból nyitottad meg, a sikeres vásárlás automatikusan megjelenik az integrációban; a licenckulcs csak helyreállítási tartalék.</div>
   </main>
   <script>
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
@@ -36,13 +36,24 @@
       catch(_) { return (Number(amount||0)/100).toFixed(2)+' '+String(currency||'EUR').toUpperCase(); }
     };
     const qs = new URLSearchParams(location.search);
+    const pairCode = qs.get('pair') || '';
+    if (pairCode) {
+      const n=document.getElementById('notice');
+      n.style.display='block';
+      n.style.borderColor='rgba(127,225,191,.32)';
+      n.style.background='rgba(127,225,191,.07)';
+      n.style.color='#c9ffed';
+      n.textContent='ANTHBOT Map csatlakoztatva. A sikeres vásárlás automatikusan megjelenik az integrációban.';
+    }
     if (qs.get('cancelled')) {
       const n=document.getElementById('notice'); n.style.display='block'; n.textContent='A fizetést megszakítottad. Nem történt terhelés.';
     }
     async function buy(packId,button){
       const original=button.textContent; button.disabled=true; button.textContent='Fizetési oldal megnyitása…';
       try{
-        const res=await fetch('/api/anthbot/store/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pack_id:packId})});
+        const payload={pack_id:packId};
+        if(pairCode) payload.pair_code=pairCode;
+        const res=await fetch('/api/anthbot/store/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
         const data=await res.json().catch(()=>({}));
         if(!res.ok) throw new Error(data.detail||('HTTP '+res.status));
         location.href=data.checkout_url;
