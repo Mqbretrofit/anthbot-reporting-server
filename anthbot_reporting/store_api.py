@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import base64
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 import hmac
+import ipaddress
 from html import escape
 import json
 import logging
@@ -17,7 +18,7 @@ from typing import Any, Literal
 from urllib.parse import quote
 
 import stripe
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -37,6 +38,29 @@ _STORE_PAIR_TTL_SECONDS = 7 * 24 * 60 * 60
 _STANDARD_VOICE_PACK_PRICE_AMOUNT = 799
 _STANDARD_VOICE_PACK_CURRENCY = "eur"
 _CUSTOM_VOICE_STARTING_PRICE_AMOUNT = 2499
+_ANALYTICS_UNIQUE_RETENTION_DAYS = 35
+_ANALYTICS_AGGREGATE_RETENTION_DAYS = 400
+_ANALYTICS_ALLOWED_PATHS = {
+    "/",
+    "/store",
+    "/store/success",
+    "/privacy",
+    "/terms",
+    "/refunds",
+}
+_ANALYTICS_LANGUAGES = {
+    "hu", "en", "de", "fr", "es", "it", "pt", "nl", "pl", "cs", "sk",
+    "ro", "da", "sv", "no", "fi", "zh-CN", "zh-TW", "tr", "th", "vi",
+    "ko", "km",
+}
+_ANALYTICS_PUBLIC_HTML = {
+    "public_site.html",
+    "public_terms.html",
+    "public_refunds.html",
+    "public_privacy.html",
+    "store.html",
+    "store_success.html",
+}
 # Stripe Managed Payments requires an eligible product tax code. Community
 # voice packs are one-time downloadable digital audio with permanent access.
 _VOICE_PACK_TAX_CODE = "txcd_10401100"
@@ -116,6 +140,27 @@ class CustomVoiceRequestPayload(BaseModel):
         return value.strip()
 
 
+class SiteVisitPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    path: str = Field(min_length=1, max_length=64)
+    language: str = Field(default="en", min_length=2, max_length=16)
+
+    @field_validator("path")
+    @classmethod
+    def _validate_path(cls, value: str) -> str:
+        normalized = value.strip()
+        if normalized not in _ANALYTICS_ALLOWED_PATHS:
+            raise ValueError("unsupported analytics path")
+        return normalized
+
+    @field_validator("language")
+    @classmethod
+    def _validate_language(cls, value: str) -> str:
+        normalized = value.strip()
+        return normalized if normalized in _ANALYTICS_LANGUAGES else "en"
+
+
 class PrivacyRequestPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -172,6 +217,10 @@ def _license_secret() -> str:
 
 def _stripe_automatic_tax() -> bool:
     return _env_flag("ANTHBOT_STRIPE_AUTOMATIC_TAX", False)
+
+
+def _site_analytics_enabled() -> bool:
+    return _env_flag("ANTHBOT_SITE_ANALYTICS_ENABLED", True)
 
 
 def _privacy_controller_name() -> str:
@@ -294,6 +343,42 @@ def _init_store_tables() -> None:
                 ON privacy_requests(created_at);
             CREATE INDEX IF NOT EXISTS idx_privacy_requests_status
                 ON privacy_requests(status);
+
+            CREATE TABLE IF NOT EXISTS site_analytics_views (
+                day TEXT NOT NULL,
+                path TEXT NOT NULL,
+                language TEXT NOT NULL,
+                views INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY(day, path, language)
+            );
+            CREATE INDEX IF NOT EXISTS idx_site_analytics_views_day
+                ON site_analytics_views(day);
+
+            CREATE TABLE IF NOT EXISTS site_analytics_unique_visitors (
+                day TEXT NOT NULL,
+                visitor_hash TEXT NOT NULL,
+                PRIMARY KEY(day, visitor_hash)
+            );
+            CREATE INDEX IF NOT EXISTS idx_site_analytics_unique_day
+                ON site_analytics_unique_visitors(day);
+
+            CREATE TABLE IF NOT EXISTS site_analytics_unique_page_visitors (
+                day TEXT NOT NULL,
+                path TEXT NOT NULL,
+                visitor_hash TEXT NOT NULL,
+                PRIMARY KEY(day, path, visitor_hash)
+            );
+            CREATE INDEX IF NOT EXISTS idx_site_analytics_unique_page_day
+                ON site_analytics_unique_page_visitors(day);
+
+            CREATE TABLE IF NOT EXISTS site_analytics_unique_language_visitors (
+                day TEXT NOT NULL,
+                language TEXT NOT NULL,
+                visitor_hash TEXT NOT NULL,
+                PRIMARY KEY(day, language, visitor_hash)
+            );
+            CREATE INDEX IF NOT EXISTS idx_site_analytics_unique_language_day
+                ON site_analytics_unique_language_visitors(day);
             """
         )
 
@@ -330,6 +415,156 @@ def _init_store_tables() -> None:
                 """,
                 (community_id, old_pack_id),
             )
+
+
+def _analytics_secret_path() -> Path:
+    return core._db_path().with_name(".site_analytics_secret")
+
+
+def _analytics_master_secret() -> bytes:
+    """Load or create a private secret kept outside the analytics database."""
+    path = _analytics_secret_path()
+    try:
+        raw = path.read_text(encoding="ascii").strip()
+        secret = bytes.fromhex(raw)
+        if len(secret) >= 32:
+            return secret
+    except (OSError, ValueError):
+        pass
+
+    secret = secrets.token_bytes(32)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{secrets.token_hex(4)}.tmp")
+    temporary.write_text(secret.hex(), encoding="ascii")
+    try:
+        os.chmod(temporary, 0o600)
+    except OSError:
+        pass
+    os.replace(temporary, path)
+    try:
+        os.chmod(path, 0o600)
+    except OSError:
+        pass
+    return secret
+
+
+def _normalized_ip(value: str | None) -> str | None:
+    if not value:
+        return None
+    candidate = value.strip()
+    if not candidate:
+        return None
+    try:
+        return ipaddress.ip_address(candidate).compressed
+    except ValueError:
+        return None
+
+
+def _analytics_source_ip(request: Request) -> str | None:
+    """Resolve the source address for counting only; never persist the raw IP."""
+    for header in ("cf-connecting-ip", "x-real-ip"):
+        normalized = _normalized_ip(request.headers.get(header))
+        if normalized:
+            return normalized
+
+    forwarded = request.headers.get("x-forwarded-for", "")
+    for item in forwarded.split(","):
+        normalized = _normalized_ip(item)
+        if normalized:
+            return normalized
+
+    if request.client is not None:
+        return _normalized_ip(request.client.host)
+    return None
+
+
+def _analytics_visitor_hash(request: Request, day: str) -> str:
+    source_ip = _analytics_source_ip(request) or "source-unavailable"
+    master = _analytics_master_secret()
+    day_key = hmac.new(
+        master,
+        f"anthbot-site-analytics:v1:{day}".encode("utf-8"),
+        hashlib.sha256,
+    ).digest()
+    return hmac.new(
+        day_key,
+        source_ip.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()[:32]
+
+
+def _analytics_cleanup(conn: Any, today: datetime) -> None:
+    unique_cutoff = (
+        today.date() - timedelta(days=_ANALYTICS_UNIQUE_RETENTION_DAYS - 1)
+    ).isoformat()
+    aggregate_cutoff = (
+        today.date() - timedelta(days=_ANALYTICS_AGGREGATE_RETENTION_DAYS - 1)
+    ).isoformat()
+    conn.execute(
+        "DELETE FROM site_analytics_unique_visitors WHERE day < ?",
+        (unique_cutoff,),
+    )
+    conn.execute(
+        "DELETE FROM site_analytics_unique_page_visitors WHERE day < ?",
+        (unique_cutoff,),
+    )
+    conn.execute(
+        "DELETE FROM site_analytics_unique_language_visitors WHERE day < ?",
+        (unique_cutoff,),
+    )
+    conn.execute(
+        "DELETE FROM site_analytics_views WHERE day < ?",
+        (aggregate_cutoff,),
+    )
+
+
+def _record_site_visit(
+    request: Request,
+    *,
+    path: str,
+    language: str,
+) -> None:
+    if not _site_analytics_enabled():
+        return
+
+    _init_store_tables()
+    now = datetime.now(timezone.utc)
+    day = now.date().isoformat()
+    visitor_hash = _analytics_visitor_hash(request, day)
+    with core._db() as conn:
+        conn.execute(
+            """
+            INSERT INTO site_analytics_views(day, path, language, views)
+            VALUES (?, ?, ?, 1)
+            ON CONFLICT(day, path, language)
+            DO UPDATE SET views = views + 1
+            """,
+            (day, path, language),
+        )
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO site_analytics_unique_visitors(day, visitor_hash)
+            VALUES (?, ?)
+            """,
+            (day, visitor_hash),
+        )
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO site_analytics_unique_page_visitors(
+                day, path, visitor_hash
+            ) VALUES (?, ?, ?)
+            """,
+            (day, path, visitor_hash),
+        )
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO site_analytics_unique_language_visitors(
+                day, language, visitor_hash
+            ) VALUES (?, ?, ?)
+            """,
+            (day, language, visitor_hash),
+        )
+        _analytics_cleanup(conn, now)
 
 
 def _uploaded_voice_pack_registry_records() -> list[dict[str, Any]]:
@@ -948,9 +1183,176 @@ def _verify_stripe_signature(body: bytes, signature_header: str | None) -> None:
 
 def _html_file(name: str) -> str:
     try:
-        return Path(__file__).with_name(name).read_text(encoding="utf-8")
+        html = Path(__file__).with_name(name).read_text(encoding="utf-8")
     except OSError as err:
         raise HTTPException(status_code=503, detail="voice store asset unavailable") from err
+    if name in _ANALYTICS_PUBLIC_HTML and "</body>" in html:
+        html = html.replace(
+            "</body>",
+            '<script src="/site-analytics.js?v=1"></script></body>',
+            1,
+        )
+    return html
+
+
+@router.get("/site-analytics.js")
+def site_analytics_script() -> Response:
+    script = r"""
+(() => {
+  if (
+    navigator.globalPrivacyControl === true ||
+    navigator.doNotTrack === "1" ||
+    window.doNotTrack === "1"
+  ) return;
+  const allowed = new Set(["/","/store","/store/success","/privacy","/terms","/refunds"]);
+  const path = location.pathname.replace(/\/+$/, "") || "/";
+  if (!allowed.has(path)) return;
+  const language = String(document.documentElement.lang || navigator.language || "en")
+    .slice(0, 16);
+  const payload = JSON.stringify({path, language});
+  setTimeout(() => {
+    fetch("/api/anthbot/site/visit", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: payload,
+      credentials: "omit",
+      cache: "no-store",
+      keepalive: true
+    }).catch(() => {});
+  }, 0);
+})();
+"""
+    return Response(
+        content=script,
+        media_type="application/javascript",
+        headers={
+            "Cache-Control": "public, max-age=3600",
+            "Referrer-Policy": "no-referrer",
+        },
+    )
+
+
+@router.post("/api/anthbot/site/visit", status_code=204)
+def record_site_visit(
+    payload: SiteVisitPayload,
+    request: Request,
+) -> Response:
+    _record_site_visit(
+        request,
+        path=payload.path,
+        language=payload.language,
+    )
+    return Response(status_code=204)
+
+
+@router.get(
+    "/api/anthbot/admin/site-analytics",
+    dependencies=[Depends(core.require_admin)],
+)
+def admin_site_analytics(days: int = 30) -> dict[str, Any]:
+    _init_store_tables()
+    days = max(1, min(int(days), _ANALYTICS_UNIQUE_RETENTION_DAYS))
+    today = datetime.now(timezone.utc).date()
+    start_day = (today - timedelta(days=days - 1)).isoformat()
+    today_key = today.isoformat()
+    seven_day = (today - timedelta(days=6)).isoformat()
+    thirty_day = (today - timedelta(days=29)).isoformat()
+
+    with core._db() as conn:
+        today_views = int(
+            conn.execute(
+                "SELECT COALESCE(SUM(views), 0) FROM site_analytics_views WHERE day = ?",
+                (today_key,),
+            ).fetchone()[0]
+        )
+        today_unique = int(
+            conn.execute(
+                "SELECT COUNT(*) FROM site_analytics_unique_visitors WHERE day = ?",
+                (today_key,),
+            ).fetchone()[0]
+        )
+        views_7d = int(
+            conn.execute(
+                "SELECT COALESCE(SUM(views), 0) FROM site_analytics_views WHERE day >= ?",
+                (seven_day,),
+            ).fetchone()[0]
+        )
+        views_30d = int(
+            conn.execute(
+                "SELECT COALESCE(SUM(views), 0) FROM site_analytics_views WHERE day >= ?",
+                (thirty_day,),
+            ).fetchone()[0]
+        )
+        daily_rows = conn.execute(
+            """
+            SELECT v.day,
+                   SUM(v.views) AS views,
+                   (
+                     SELECT COUNT(*)
+                     FROM site_analytics_unique_visitors u
+                     WHERE u.day = v.day
+                   ) AS unique_visitors
+            FROM site_analytics_views v
+            WHERE v.day >= ?
+            GROUP BY v.day
+            ORDER BY v.day DESC
+            """,
+            (start_day,),
+        ).fetchall()
+        page_rows = conn.execute(
+            """
+            SELECT v.path,
+                   SUM(v.views) AS views,
+                   (
+                     SELECT COUNT(*)
+                     FROM site_analytics_unique_page_visitors u
+                     WHERE u.path = v.path AND u.day >= ?
+                   ) AS unique_visitor_days
+            FROM site_analytics_views v
+            WHERE v.day >= ?
+            GROUP BY v.path
+            ORDER BY views DESC, v.path
+            """,
+            (start_day, start_day),
+        ).fetchall()
+        language_rows = conn.execute(
+            """
+            SELECT v.language,
+                   SUM(v.views) AS views,
+                   (
+                     SELECT COUNT(*)
+                     FROM site_analytics_unique_language_visitors u
+                     WHERE u.language = v.language AND u.day >= ?
+                   ) AS unique_visitor_days
+            FROM site_analytics_views v
+            WHERE v.day >= ?
+            GROUP BY v.language
+            ORDER BY views DESC, v.language
+            """,
+            (start_day, start_day),
+        ).fetchall()
+
+    return {
+        "enabled": _site_analytics_enabled(),
+        "window_days": days,
+        "today": {
+            "views": today_views,
+            "unique_visitors": today_unique,
+        },
+        "views_7d": views_7d,
+        "views_30d": views_30d,
+        "daily": [dict(row) for row in daily_rows],
+        "pages": [dict(row) for row in page_rows],
+        "languages": [dict(row) for row in language_rows],
+        "privacy": {
+            "raw_ip_persisted": False,
+            "user_agent_persisted": False,
+            "analytics_cookie": False,
+            "unique_identifier_rotation": "daily_utc",
+            "unique_hash_retention_days": _ANALYTICS_UNIQUE_RETENTION_DAYS,
+            "aggregate_retention_days": _ANALYTICS_AGGREGATE_RETENTION_DAYS,
+        },
+    }
 
 
 @router.get("/api/anthbot/store/voice-packs")

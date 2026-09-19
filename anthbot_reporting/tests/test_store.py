@@ -35,6 +35,7 @@ class VoiceStoreTests(unittest.TestCase):
         os.environ["ANTHBOT_PRIVACY_CONTROLLER_ADDRESS"] = "Example Address, Hungary"
         os.environ["ANTHBOT_PRIVACY_CONTACT_EMAIL"] = "privacy@example.test"
         os.environ["ANTHBOT_PRIVACY_CONTACT_PHONE"] = "+36 1 000 0000"
+        os.environ["ANTHBOT_SITE_ANALYTICS_ENABLED"] = "true"
         self.client_ctx = TestClient(entrypoint.app, base_url="https://testserver")
         self.client = self.client_ctx.__enter__()
 
@@ -109,6 +110,103 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIn("/api/anthbot/privacy-requests", html)
         self.assertIn("7 days", html)
         self.assertIn("7 nap", html)
+
+    def test_public_pages_include_first_party_analytics_without_tracker_ids(self) -> None:
+        for path in ("/", "/store", "/privacy", "/terms", "/refunds"):
+            response = self.client.get(path)
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(
+                '<script src="/site-analytics.js?v=1"></script>',
+                response.text,
+            )
+        script = self.client.get("/site-analytics.js")
+        self.assertEqual(script.status_code, 200)
+        self.assertIn("/api/anthbot/site/visit", script.text)
+        self.assertIn('credentials: "omit"', script.text)
+        self.assertNotIn("localStorage", script.text)
+        self.assertNotIn("document.cookie", script.text)
+        self.assertNotIn("userAgent", script.text)
+        self.assertIn("globalPrivacyControl", script.text)
+        self.assertIn("doNotTrack", script.text)
+
+    def test_site_analytics_deduplicates_daily_visitors_without_storing_raw_ip(self) -> None:
+        first_headers = {"CF-Connecting-IP": "203.0.113.10"}
+        second_headers = {"CF-Connecting-IP": "203.0.113.11"}
+
+        for _ in range(3):
+            response = self.client.post(
+                "/api/anthbot/site/visit",
+                headers=first_headers,
+                json={"path": "/store", "language": "hu"},
+            )
+            self.assertEqual(response.status_code, 204)
+
+        response = self.client.post(
+            "/api/anthbot/site/visit",
+            headers=second_headers,
+            json={"path": "/privacy", "language": "en"},
+        )
+        self.assertEqual(response.status_code, 204)
+
+        analytics = self.client.get(
+            "/api/anthbot/admin/site-analytics?days=30",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(analytics.status_code, 200)
+        body = analytics.json()
+        self.assertTrue(body["enabled"])
+        self.assertEqual(body["today"]["views"], 4)
+        self.assertEqual(body["today"]["unique_visitors"], 2)
+        self.assertEqual(body["views_7d"], 4)
+        self.assertEqual(body["views_30d"], 4)
+
+        store = next(item for item in body["pages"] if item["path"] == "/store")
+        privacy = next(item for item in body["pages"] if item["path"] == "/privacy")
+        self.assertEqual(store["views"], 3)
+        self.assertEqual(store["unique_visitor_days"], 1)
+        self.assertEqual(privacy["views"], 1)
+        self.assertEqual(privacy["unique_visitor_days"], 1)
+
+        hu = next(item for item in body["languages"] if item["language"] == "hu")
+        self.assertEqual(hu["views"], 3)
+        self.assertEqual(hu["unique_visitor_days"], 1)
+
+        self.assertFalse(body["privacy"]["raw_ip_persisted"])
+        self.assertFalse(body["privacy"]["user_agent_persisted"])
+        self.assertFalse(body["privacy"]["analytics_cookie"])
+        self.assertEqual(body["privacy"]["unique_identifier_rotation"], "daily_utc")
+        self.assertEqual(body["privacy"]["unique_hash_retention_days"], 35)
+        self.assertEqual(body["privacy"]["aggregate_retention_days"], 400)
+
+        with store_api.core._db() as conn:
+            stored = [
+                str(row["visitor_hash"])
+                for row in conn.execute(
+                    "SELECT visitor_hash FROM site_analytics_unique_visitors"
+                ).fetchall()
+            ]
+        self.assertEqual(len(stored), 2)
+        self.assertTrue(all(len(value) == 32 for value in stored))
+        self.assertTrue(all("203.0.113." not in value for value in stored))
+
+    def test_privacy_page_discloses_anonymous_analytics_in_23_languages(self) -> None:
+        response = self.client.get("/privacy")
+        self.assertEqual(response.status_code, 200)
+        html = response.text
+        self.assertIn("Adatvédelmi szempontból kímélő, álnevesített webstatisztika", html)
+        self.assertIn("Privacy-friendly, pseudonymous website statistics", html)
+        self.assertIn("HMAC", html)
+        self.assertIn("35 nap", html)
+        self.assertIn("400 nap", html)
+        self.assertIn("GDPR 6. cikk (1) f)", html)
+        self.assertIn("browser fingerprinting", html)
+        self.assertIn("跨天画像", html)
+        self.assertIn("일일 HMAC", html)
+        self.assertEqual(html.count("analyticsTitle:"), 23)
+        self.assertEqual(html.count("analyticsText:"), 23)
+        self.assertEqual(html.count("analyticsAccuracy:"), 23)
+        self.assertIn("Global Privacy Control", html)
+        self.assertIn("Do Not Track", html)
 
     def test_privacy_request_can_be_submitted_and_seen_by_admin(self) -> None:
         response = self.client.post(
