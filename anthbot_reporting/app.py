@@ -647,6 +647,69 @@ def community_voice_packs(request: Request) -> dict[str, Any]:
     return _voice_pack_registry(request)
 
 
+@app.post(
+    "/api/anthbot/admin/voice-packs/cache-official-upload",
+    dependencies=[Depends(require_admin)],
+    status_code=201,
+)
+async def upload_official_voice_cache(
+    file: UploadFile = File(...),
+    expected_md5: str = Form(default="", max_length=32),
+) -> dict[str, Any]:
+    """Seed one known-good official ANTHBOT voice binary into persistent cache."""
+    expected_md5 = expected_md5.strip().lower()
+    if expected_md5 and not _OFFICIAL_VOICE_MD5_RE.fullmatch(expected_md5):
+        raise HTTPException(
+            status_code=422,
+            detail="expected_md5 must be a 32-character hex MD5",
+        )
+
+    directory = _voice_pack_dir()
+    directory.mkdir(parents=True, exist_ok=True)
+    temporary = directory / f".official-voice.{secrets.token_hex(8)}.upload"
+    digest = hashlib.md5(usedforsecurity=False)
+    size = 0
+
+    try:
+        try:
+            with temporary.open("wb") as output:
+                while True:
+                    chunk = await file.read(VOICE_PACK_CHUNK_BYTES)
+                    if not chunk:
+                        break
+                    size += len(chunk)
+                    if size > MAX_VOICE_PACK_BYTES:
+                        raise HTTPException(
+                            status_code=413,
+                            detail=f"voice pack exceeds {MAX_VOICE_PACK_BYTES} bytes",
+                        )
+                    digest.update(chunk)
+                    output.write(chunk)
+        finally:
+            await file.close()
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        raise
+
+    if size == 0:
+        temporary.unlink(missing_ok=True)
+        raise HTTPException(status_code=422, detail="voice pack is empty")
+
+    actual_md5 = digest.hexdigest().lower()
+    if expected_md5 and actual_md5 != expected_md5:
+        temporary.unlink(missing_ok=True)
+        raise HTTPException(status_code=422, detail="uploaded voice MD5 mismatch")
+
+    target = _cached_official_voice_path(actual_md5)
+    os.replace(temporary, target)
+    return {
+        "uploaded": True,
+        "music_md5": actual_md5,
+        "size": size,
+        "filename": target.name,
+    }
+
+
 @app.post("/api/anthbot/voice-packs/cache-official")
 async def cache_official_voice_pack(
     payload: OfficialVoiceCachePayload,
