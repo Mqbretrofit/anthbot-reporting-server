@@ -123,6 +123,26 @@ class CheckoutPayload(BaseModel):
     pair_code: str | None = Field(default=None, min_length=20, max_length=160)
 
 
+class StoreClientCheckoutPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    client_token: str = Field(min_length=32, max_length=512)
+    pack_id: str = Field(min_length=1, max_length=160)
+
+    @field_validator("client_token")
+    @classmethod
+    def _validate_client_token(cls, value: str) -> str:
+        normalized = value.strip()
+        if not _CLIENT_TOKEN_RE.fullmatch(normalized):
+            raise ValueError("invalid store client token")
+        return normalized
+
+    @field_validator("pack_id")
+    @classmethod
+    def _validate_pack_id(cls, value: str) -> str:
+        return value.strip()
+
+
 class StoreClientPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -1526,6 +1546,48 @@ def admin_site_analytics(days: int = 30) -> dict[str, Any]:
 @router.get("/api/anthbot/store/voice-packs")
 def store_voice_packs(request: Request) -> dict[str, Any]:
     return _store_catalog(request)
+
+
+@router.post("/api/anthbot/store/client/checkout")
+async def create_store_client_checkout(
+    payload: StoreClientCheckoutPayload,
+    request: Request,
+) -> dict[str, Any]:
+    """Create a checkout directly for trusted first-party clients such as the
+    standalone Voice Installer, without asking the user to copy a pairing code.
+    """
+    _require_checkout_ready()
+    record = _find_uploaded_pack(payload.pack_id)
+    if not _is_paid(record):
+        raise HTTPException(status_code=409, detail="voice pack is not a paid product")
+
+    client_id = _client_id_from_token(payload.client_token)
+    existing_order = _paid_order_for_client_pack(client_id, record)
+    if existing_order is not None:
+        return {
+            "already_owned": True,
+            "pack_id": payload.pack_id,
+            "checkout_url": None,
+            "session_id": existing_order["stripe_session_id"],
+        }
+
+    session = await asyncio.to_thread(
+        _create_checkout_session,
+        record,
+        request,
+        client_id=client_id,
+        pair_code=None,
+    )
+    order = _upsert_order_from_session(session)
+    checkout_url = session.get("url")
+    if not isinstance(checkout_url, str) or not checkout_url.startswith("https://"):
+        raise HTTPException(status_code=502, detail="Stripe did not return a checkout URL")
+    return {
+        "already_owned": False,
+        "pack_id": payload.pack_id,
+        "checkout_url": checkout_url,
+        "session_id": order["stripe_session_id"],
+    }
 
 
 @router.post("/api/anthbot/store/client/pair")
