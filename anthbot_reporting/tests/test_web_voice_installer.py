@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 import entrypoint
 import store_api
 import web_voice_installer
+import web_voice_installer_anthbot
 
 
 class WebVoiceInstallerTests(unittest.TestCase):
@@ -146,6 +147,20 @@ class WebVoiceInstallerTests(unittest.TestCase):
         self.assertEqual(html.count("installerPrivacyTitle:"), 23)
         self.assertEqual(html.count("installerPrivacyCredentials:"), 23)
         self.assertEqual(html.count("installerPrivacyStore:"), 23)
+
+    def test_genie_family_model_names_are_detected(self) -> None:
+        for category in (
+            "Genie 1000",
+            "Genie_1000",
+            "Genie-1000",
+            "Genie1000",
+            "ANTHBOT Genie 1000",
+        ):
+            self.assertTrue(
+                web_voice_installer_anthbot.is_genie(category),
+                category,
+            )
+        self.assertFalse(web_voice_installer_anthbot.is_genie("M9 Pro"))
 
     def test_login_keeps_password_out_of_session_and_auto_selects_single_genie(self) -> None:
         self._open_installer()

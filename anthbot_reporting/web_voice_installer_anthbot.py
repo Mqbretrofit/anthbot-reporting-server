@@ -123,7 +123,7 @@ def is_genie(category: str) -> bool:
         return False
     return (
         re.match(
-            r"^(?:anthbot[\\s_-]+)?genie(?=$|[\\s_-]|\\d)",
+            r"^(?:anthbot[\s_-]+)?genie(?=$|[\s_-]|\d)",
             value,
             flags=re.IGNORECASE,
         )
