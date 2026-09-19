@@ -29,7 +29,10 @@ STORE_SCHEMA = "anthbot-community-voice-store-v1"
 _CURRENCY_RE = re.compile(r"^[a-zA-Z]{3}$")
 _SESSION_RE = re.compile(r"^cs_[A-Za-z0-9_]+$")
 _LICENSE_RE = re.compile(r"^abv1\.([A-Za-z0-9_-]+)\.([0-9a-f]{64})$")
+_PAIR_RE = re.compile(r"^abp_[A-Za-z0-9_-]{24,128}$")
+_CLIENT_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{32,512}$")
 _STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300
+_STORE_PAIR_TTL_SECONDS = 7 * 24 * 60 * 60
 # Stripe Managed Payments requires an eligible product tax code. Community
 # voice packs are one-time downloadable digital audio with permanent access.
 _VOICE_PACK_TAX_CODE = "txcd_10401100"
@@ -41,6 +44,21 @@ class CheckoutPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     pack_id: str = Field(min_length=1, max_length=160)
+    pair_code: str | None = Field(default=None, min_length=20, max_length=160)
+
+
+class StoreClientPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    client_token: str = Field(min_length=32, max_length=512)
+
+    @field_validator("client_token")
+    @classmethod
+    def _validate_client_token(cls, value: str) -> str:
+        normalized = value.strip()
+        if not _CLIENT_TOKEN_RE.fullmatch(normalized):
+            raise ValueError("invalid store client token")
+        return normalized
 
 
 class EntitlementPayload(BaseModel):
@@ -139,17 +157,95 @@ def _init_store_tables() -> None:
                 customer_email TEXT,
                 stripe_customer_id TEXT,
                 stripe_payment_intent_id TEXT,
+                client_id TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 paid_at TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS store_client_pairings (
+                pair_code TEXT PRIMARY KEY,
+                client_id TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                expires_at INTEGER NOT NULL
             );
 
             CREATE INDEX IF NOT EXISTS idx_store_orders_pack_id
                 ON store_orders(pack_id);
             CREATE INDEX IF NOT EXISTS idx_store_orders_paid_at
                 ON store_orders(paid_at);
+            CREATE INDEX IF NOT EXISTS idx_store_pairings_client_id
+                ON store_client_pairings(client_id);
             """
         )
+
+        columns = {
+            str(row["name"])
+            for row in conn.execute("PRAGMA table_info(store_orders)").fetchall()
+        }
+        if "client_id" not in columns:
+            conn.execute("ALTER TABLE store_orders ADD COLUMN client_id TEXT")
+        conn.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_store_orders_client_id
+            ON store_orders(client_id)
+            """
+        )
+
+
+def _client_id_from_token(client_token: str) -> str:
+    """Derive a stable opaque client ID without storing the bearer token."""
+    normalized = client_token.strip()
+    if not _CLIENT_TOKEN_RE.fullmatch(normalized):
+        raise HTTPException(status_code=422, detail="invalid store client token")
+    digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+    return f"abvc_{digest[:40]}"
+
+
+def _create_store_pairing(client_token: str) -> tuple[str, int]:
+    """Create a temporary browser pairing code for one ANTHBOT Map install."""
+    _init_store_tables()
+    client_id = _client_id_from_token(client_token)
+    pair_code = f"abp_{secrets.token_urlsafe(32)}"
+    expires_at = int(time.time()) + _STORE_PAIR_TTL_SECONDS
+    now = core._iso()
+    with core._db() as conn:
+        conn.execute(
+            "DELETE FROM store_client_pairings WHERE expires_at < ?",
+            (int(time.time()),),
+        )
+        conn.execute(
+            """
+            INSERT INTO store_client_pairings (
+                pair_code, client_id, created_at, expires_at
+            ) VALUES (?, ?, ?, ?)
+            """,
+            (pair_code, client_id, now, expires_at),
+        )
+    return pair_code, expires_at
+
+
+def _client_id_from_pairing(pair_code: str | None) -> str | None:
+    """Resolve a non-secret browser pairing code to one Map client."""
+    if pair_code is None:
+        return None
+    normalized = pair_code.strip()
+    if not _PAIR_RE.fullmatch(normalized):
+        raise HTTPException(status_code=422, detail="invalid store pairing code")
+
+    _init_store_tables()
+    with core._db() as conn:
+        row = conn.execute(
+            """
+            SELECT client_id, expires_at
+            FROM store_client_pairings
+            WHERE pair_code = ?
+            """,
+            (normalized,),
+        ).fetchone()
+    if row is None or int(row["expires_at"]) < int(time.time()):
+        raise HTTPException(status_code=401, detail="voice store pairing expired")
+    return str(row["client_id"])
 
 
 def _uploaded_records() -> list[dict[str, Any]]:
