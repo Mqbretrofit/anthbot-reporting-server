@@ -61,6 +61,54 @@ _ANALYTICS_PUBLIC_HTML = {
     "store.html",
     "store_success.html",
 }
+_PUBLIC_SITE_BASE_URL = "https://anthbotmap.com"
+_LEGACY_PUBLIC_HOSTS = {"reports.mqbretrofithungary.online"}
+_SEO_PAGES: dict[str, dict[str, Any]] = {
+    "public_site.html": {
+        "path": "/",
+        "title": "ANTHBOT Map for Home Assistant – Maps, Zones & Voice Packs",
+        "description": (
+            "ANTHBOT Map is an independent Home Assistant integration for ANTHBOT "
+            "robotic lawn mowers, with live maps, zones, schedules, mowing history, "
+            "diagnostics and voice packs."
+        ),
+        "index": True,
+    },
+    "store.html": {
+        "path": "/store",
+        "title": "ANTHBOT Voice Packs & Custom Voices | ANTHBOT Map",
+        "description": (
+            "Browse ANTHBOT community voice packs and request custom mower voices "
+            "for supported models, with automatic ANTHBOT Map integration."
+        ),
+        "index": True,
+    },
+    "public_terms.html": {
+        "path": "/terms",
+        "title": "Terms of Service | ANTHBOT Map",
+        "description": "Terms of Service for ANTHBOT Map digital services and voice packs.",
+        "index": True,
+    },
+    "public_refunds.html": {
+        "path": "/refunds",
+        "title": "Refund Policy | ANTHBOT Map",
+        "description": "Refund Policy for ANTHBOT Map digital products and services.",
+        "index": True,
+    },
+    "public_privacy.html": {
+        "path": "/privacy",
+        "title": "Privacy Policy | ANTHBOT Map",
+        "description": "Privacy and data protection information for ANTHBOT Map services.",
+        "index": True,
+    },
+    "store_success.html": {
+        "path": "/store/success",
+        "title": "ANTHBOT Voice Purchase | ANTHBOT Map",
+        "description": "ANTHBOT voice pack purchase confirmation.",
+        "index": False,
+    },
+}
+
 # Stripe Managed Payments requires an eligible product tax code. Community
 # voice packs are one-time downloadable digital audio with permanent access.
 _VOICE_PACK_TAX_CODE = "txcd_10401100"
@@ -1181,6 +1229,126 @@ def _verify_stripe_signature(body: bytes, signature_header: str | None) -> None:
         raise HTTPException(status_code=400, detail="invalid Stripe webhook signature")
 
 
+def _canonical_public_redirect(
+    request: Request,
+    path: str,
+) -> RedirectResponse | None:
+    forwarded_host = (
+        request.headers.get("x-forwarded-host", "").split(",", 1)[0].strip()
+    )
+    host = forwarded_host or request.headers.get("host", "")
+    host = host.split(":", 1)[0].strip().casefold()
+    if host not in _LEGACY_PUBLIC_HOSTS:
+        return None
+
+    target = f"{_PUBLIC_SITE_BASE_URL}{path}"
+    query = request.url.query
+    if query:
+        target = f"{target}?{query}"
+    return RedirectResponse(url=target, status_code=301)
+
+
+def _apply_seo_metadata(name: str, html: str) -> str:
+    page = _SEO_PAGES.get(name)
+    if not page or "</head>" not in html:
+        return html
+
+    title = str(page["title"])
+    description = str(page["description"])
+    canonical = f"{_PUBLIC_SITE_BASE_URL}{page['path']}"
+    indexed = bool(page["index"])
+
+    # Keep the rendered English title/description aligned with the server-side
+    # metadata after the page language helper runs in the browser.
+    if name == "public_site.html":
+        html = html.replace(
+            "MQB Retrofit Hungary | ANTHBOT Map & Digital Tools",
+            title,
+        )
+        html = html.replace(
+            "MQB Retrofit Hungary develops the independent open-source ANTHBOT Map "
+            "Home Assistant integration, map card, diagnostics, scheduling tools and "
+            "optional digital products for supported ANTHBOT robotic lawn mowers.",
+            description,
+        )
+    elif name == "store.html":
+        html = html.replace("ANTHBOT Community Voice Store", title)
+
+    title_tag = f"<title>{escape(title)}</title>"
+    if re.search(r"<title>.*?</title>", html, flags=re.IGNORECASE | re.DOTALL):
+        html = re.sub(
+            r"<title>.*?</title>",
+            lambda _: title_tag,
+            html,
+            count=1,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+    else:
+        html = html.replace("</head>", f"{title_tag}\n</head>", 1)
+
+    description_tag = (
+        f'<meta name="description" content="{escape(description, quote=True)}">'
+    )
+    description_pattern = re.compile(
+        r'<meta\s+name="description"\s+content="[^"]*"\s*/?>',
+        flags=re.IGNORECASE,
+    )
+    if description_pattern.search(html):
+        html = description_pattern.sub(description_tag, html, count=1)
+        extra_description = ""
+    else:
+        extra_description = description_tag + "\n"
+
+    robots = (
+        "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"
+        if indexed
+        else "noindex,nofollow"
+    )
+    social = [
+        extra_description.rstrip("\n"),
+        f'<link rel="canonical" href="{escape(canonical, quote=True)}">',
+        f'<meta name="robots" content="{robots}">',
+        '<meta property="og:type" content="website">',
+        '<meta property="og:site_name" content="ANTHBOT Map">',
+        f'<meta property="og:title" content="{escape(title, quote=True)}">',
+        f'<meta property="og:description" content="{escape(description, quote=True)}">',
+        f'<meta property="og:url" content="{escape(canonical, quote=True)}">',
+        '<meta name="twitter:card" content="summary">',
+        f'<meta name="twitter:title" content="{escape(title, quote=True)}">',
+        f'<meta name="twitter:description" content="{escape(description, quote=True)}">',
+    ]
+    social = [item for item in social if item]
+
+    if name == "public_site.html":
+        structured = json.dumps(
+            {
+                "@context": "https://schema.org",
+                "@type": "SoftwareApplication",
+                "name": "ANTHBOT Map",
+                "applicationCategory": "HomeAutomationApplication",
+                "operatingSystem": "Home Assistant",
+                "url": f"{_PUBLIC_SITE_BASE_URL}/",
+                "downloadUrl": "https://github.com/Mqbretrofit/ha-anthbot-map-v2",
+                "sameAs": ["https://github.com/Mqbretrofit/ha-anthbot-map-v2"],
+                "license": "https://opensource.org/licenses/MIT",
+                "isAccessibleForFree": True,
+                "description": description,
+                "publisher": {
+                    "@type": "Organization",
+                    "name": "MQB Retrofit Hungary",
+                    "url": f"{_PUBLIC_SITE_BASE_URL}/",
+                },
+            },
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+        social.append(
+            f'<script type="application/ld+json">{structured}</script>'
+        )
+
+    return html.replace("</head>", "\n".join(social) + "\n</head>", 1)
+
+
 def _html_file(name: str) -> str:
     try:
         html = Path(__file__).with_name(name).read_text(encoding="utf-8")
@@ -1192,7 +1360,7 @@ def _html_file(name: str) -> str:
             '<script src="/site-analytics.js?v=1"></script></body>',
             1,
         )
-    return html
+    return _apply_seo_metadata(name, html)
 
 
 @router.get("/site-analytics.js")
@@ -1822,23 +1990,67 @@ def admin_store_stats() -> dict[str, Any]:
     }
 
 
+@router.get("/robots.txt")
+def robots_txt() -> Response:
+    return Response(
+        content=(
+            "User-agent: *\n"
+            "Allow: /\n"
+            "Disallow: /dashboard\n"
+            "Disallow: /api/\n"
+            "Disallow: /store/success\n"
+            f"Sitemap: {_PUBLIC_SITE_BASE_URL}/sitemap.xml\n"
+        ),
+        media_type="text/plain; charset=utf-8",
+    )
+
+
+@router.get("/sitemap.xml")
+def sitemap_xml() -> Response:
+    urls = ("/", "/store", "/privacy", "/terms", "/refunds")
+    entries = "".join(
+        f"<url><loc>{_PUBLIC_SITE_BASE_URL}{path}</loc></url>"
+        for path in urls
+    )
+    return Response(
+        content=(
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+            f"{entries}</urlset>"
+        ),
+        media_type="application/xml",
+    )
+
+
 @router.get("/", response_class=HTMLResponse)
-def public_business_page() -> HTMLResponse:
+def public_business_page(request: Request) -> Response:
+    redirect = _canonical_public_redirect(request, "/")
+    if redirect is not None:
+        return redirect
     return HTMLResponse(_html_file("public_site.html"))
 
 
 @router.get("/terms", response_class=HTMLResponse)
-def public_terms_page() -> HTMLResponse:
+def public_terms_page(request: Request) -> Response:
+    redirect = _canonical_public_redirect(request, "/terms")
+    if redirect is not None:
+        return redirect
     return HTMLResponse(_html_file("public_terms.html"))
 
 
 @router.get("/refunds", response_class=HTMLResponse)
-def public_refunds_page() -> HTMLResponse:
+def public_refunds_page(request: Request) -> Response:
+    redirect = _canonical_public_redirect(request, "/refunds")
+    if redirect is not None:
+        return redirect
     return HTMLResponse(_html_file("public_refunds.html"))
 
 
 @router.get("/privacy", response_class=HTMLResponse)
-def public_privacy_page() -> HTMLResponse:
+def public_privacy_page(request: Request) -> Response:
+    redirect = _canonical_public_redirect(request, "/privacy")
+    if redirect is not None:
+        return redirect
     html = _html_file("public_privacy.html")
     address = _privacy_controller_address()
     email = _privacy_contact_email()
@@ -1858,13 +2070,22 @@ def public_privacy_page() -> HTMLResponse:
 
 
 @router.get("/store", response_class=HTMLResponse)
-def store_page() -> HTMLResponse:
+def store_page(request: Request) -> Response:
+    redirect = _canonical_public_redirect(request, "/store")
+    if redirect is not None:
+        return redirect
     return HTMLResponse(_html_file("store.html"))
 
 
 @router.get("/store/success", response_class=HTMLResponse)
-def store_success_page() -> HTMLResponse:
-    return HTMLResponse(_html_file("store_success.html"))
+def store_success_page(request: Request) -> Response:
+    redirect = _canonical_public_redirect(request, "/store/success")
+    if redirect is not None:
+        return redirect
+    return HTMLResponse(
+        _html_file("store_success.html"),
+        headers={"X-Robots-Tag": "noindex, nofollow"},
+    )
 
 
 @router.get("/dashboard/store", response_class=HTMLResponse)
