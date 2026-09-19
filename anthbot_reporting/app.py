@@ -366,22 +366,28 @@ def _public_voice_pack(record: dict[str, Any], request: Request) -> dict[str, An
     return public
 
 
+def _voice_pack_identity(record: dict[str, Any]) -> tuple[str, str]:
+    """Return the stable language + variant identity for one Community pack."""
+    language_code = str(record.get("language_code", "")).strip().casefold()
+    variant_id = str(record.get("variant_id", "")).strip().casefold() or "default"
+    return language_code, variant_id
+
+
 def _voice_pack_registry(request: Request) -> dict[str, Any]:
-    """Return bundled packs plus persistent uploads, with uploads overriding language."""
+    """Return bundled packs plus persistent uploads, overriding exact variants only."""
     bundled = _bundled_voice_pack_registry().get("packs", [])
     uploaded = _uploaded_voice_pack_registry().get("packs", [])
 
     merged: list[dict[str, Any]] = []
-    uploaded_languages = {
-        str(item.get("language_code", "")).strip().casefold()
+    uploaded_identities = {
+        _voice_pack_identity(item)
         for item in uploaded
         if isinstance(item, dict) and str(item.get("language_code", "")).strip()
     }
     for item in bundled:
         if not isinstance(item, dict):
             continue
-        language_code = str(item.get("language_code", "")).strip().casefold()
-        if language_code and language_code in uploaded_languages:
+        if _voice_pack_identity(item) in uploaded_identities:
             continue
         merged.append(_public_voice_pack(item, request))
     for item in uploaded:
@@ -479,6 +485,8 @@ async def upload_voice_pack(
     language: str = Form(..., min_length=1, max_length=64),
     language_code: str = Form(..., min_length=2, max_length=16),
     version: str = Form(..., min_length=1, max_length=64),
+    variant_id: str = Form(default="default", min_length=1, max_length=64),
+    variant_name: str = Form(default="", max_length=128),
     english_name: str = Form(default="German", min_length=1, max_length=64),
     sex: str = Form(default="girl", min_length=1, max_length=32),
     music_package: int = Form(default=3, ge=0, le=9999),
@@ -492,13 +500,17 @@ async def upload_voice_pack(
         language_code.strip().lower(), field="language_code"
     )
     version = _voice_pack_safe_part(version, field="version")
+    variant_id = _voice_pack_safe_part(variant_id.lower(), field="variant_id")
+    variant_name = variant_name.strip()
     sex = _voice_pack_safe_part(sex.lower(), field="sex")
     english_name = english_name.strip()
     if not english_name:
         raise HTTPException(status_code=422, detail="english_name is required")
     model_list = _voice_pack_models(models)
 
-    package_id = f"{language_code}-{sex}-slot-{music_package}-v{version}"
+    package_id = (
+        f"{language_code}-{variant_id}-{sex}-slot-{music_package}-v{version}"
+    )
     filename = package_id
     original_suffix = Path(file.filename or "").suffix
     if (
@@ -544,11 +556,26 @@ async def upload_voice_pack(
     existing = [
         item for item in registry.get("packs", []) if isinstance(item, dict)
     ]
-    replaced = [
+    exact_identity = (language_code.casefold(), variant_id.casefold())
+    same_language = [
         item
         for item in existing
         if str(item.get("language_code", "")).strip().casefold()
         == language_code.casefold()
+    ]
+    has_named_variant = any(
+        str(item.get("variant_id", "")).strip()
+        for item in same_language
+    )
+    replaced = [
+        item
+        for item in existing
+        if _voice_pack_identity(item) == exact_identity
+        or (
+            not has_named_variant
+            and item in same_language
+            and not str(item.get("variant_id", "")).strip()
+        )
     ]
     kept = [item for item in existing if item not in replaced]
 
@@ -556,6 +583,8 @@ async def upload_voice_pack(
         "id": package_id,
         "language": language,
         "language_code": language_code,
+        "variant_id": variant_id,
+        "variant_name": variant_name,
         "english_name": english_name,
         "sex": sex,
         "music_package": music_package,
