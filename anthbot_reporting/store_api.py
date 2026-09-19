@@ -610,10 +610,12 @@ async def store_order(session_id: str, request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=422, detail="invalid checkout session id")
 
     order = _order_by_session(session_id)
-    if (
-        order is None
-        or str(order.get("payment_status", "")).casefold() != "paid"
-    ):
+    payment_state = (
+        str(order.get("payment_status", "")).casefold()
+        if order is not None
+        else ""
+    )
+    if order is None or payment_state not in {"paid", "refunded"}:
         _require_checkout_ready()
         session = await asyncio.to_thread(_retrieve_checkout_session, session_id)
         order = _upsert_order_from_session(session)
