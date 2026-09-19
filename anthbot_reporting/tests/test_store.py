@@ -209,6 +209,119 @@ class VoiceStoreTests(unittest.TestCase):
             pack_id,
         )
 
+    def test_map_client_pairing_unlocks_paid_pack_without_manual_license(self) -> None:
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        priced = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 299, "currency": "eur"},
+        )
+        self.assertEqual(priced.status_code, 200)
+
+        client_token = "A" * 48
+        pairing = self.client.post(
+            "/api/anthbot/store/client/pair",
+            json={"client_token": client_token},
+        )
+        self.assertEqual(pairing.status_code, 200)
+        store_url = pairing.json()["store_url"]
+        self.assertIn("/store?pair=abp_", store_url)
+        pair_code = store_url.split("pair=", 1)[1]
+
+        client_id = store_api._client_id_from_token(client_token)
+        checkout_session = {
+            "id": "cs_test_linked_123",
+            "object": "checkout.session",
+            "url": "https://checkout.stripe.com/c/pay/linked-test",
+            "created": int(time.time()),
+            "client_reference_id": pack_id,
+            "metadata": {
+                "pack_id": pack_id,
+                "community_id": "cs_vlasta_standard",
+                "store_client_id": client_id,
+            },
+            "payment_status": "unpaid",
+            "status": "open",
+            "amount_total": 299,
+            "currency": "eur",
+            "customer_details": None,
+            "customer": None,
+            "payment_intent": None,
+        }
+
+        with patch.object(
+            store_api,
+            "_create_checkout_session",
+            return_value=checkout_session,
+        ) as create:
+            checkout = self.client.post(
+                "/api/anthbot/store/checkout",
+                json={"pack_id": pack_id, "pair_code": pair_code},
+            )
+        self.assertEqual(checkout.status_code, 200)
+        self.assertEqual(create.call_args.kwargs["client_id"], client_id)
+        self.assertEqual(create.call_args.kwargs["pair_code"], pair_code)
+
+        paid_session = {
+            **checkout_session,
+            "payment_status": "paid",
+            "status": "complete",
+            "customer_details": {"email": "buyer@example.com"},
+            "customer": "cus_linked",
+            "payment_intent": "pi_linked",
+        }
+        stored = store_api._upsert_order_from_session(paid_session)
+        self.assertEqual(stored["client_id"], client_id)
+
+        entitlements = self.client.post(
+            "/api/anthbot/store/client/entitlements",
+            json={"client_token": client_token},
+        )
+        self.assertEqual(entitlements.status_code, 200)
+        body = entitlements.json()
+        self.assertTrue(body["licensed"])
+        self.assertEqual(len(body["packs"]), 1)
+        entitled_pack = body["packs"][0]
+        self.assertEqual(entitled_pack["id"], pack_id)
+        self.assertEqual(entitled_pack["entitlement"], "purchased")
+        self.assertIn("license=", entitled_pack["music_url"])
+
+        downloaded = self.client.get(
+            entitled_pack["music_url"].removeprefix("https://testserver")
+        )
+        self.assertEqual(downloaded.status_code, 200)
+        self.assertEqual(downloaded.content, b"paid-community-pack")
+
+    def test_unlinked_purchase_is_not_returned_to_map_client(self) -> None:
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 299, "currency": "eur"},
+        )
+        store_api._upsert_order_from_session(
+            {
+                "id": "cs_test_unlinked_123",
+                "object": "checkout.session",
+                "created": int(time.time()),
+                "client_reference_id": pack_id,
+                "metadata": {"pack_id": pack_id},
+                "payment_status": "paid",
+                "status": "complete",
+                "amount_total": 299,
+                "currency": "eur",
+            }
+        )
+        entitlements = self.client.post(
+            "/api/anthbot/store/client/entitlements",
+            json={"client_token": "B" * 48},
+        )
+        self.assertEqual(entitlements.status_code, 200)
+        self.assertFalse(entitlements.json()["licensed"])
+        self.assertEqual(entitlements.json()["packs"], [])
+
     def test_paid_pricing_survives_reupload(self) -> None:
         pack = self._upload_pack()
         pack_id = pack["id"]
