@@ -78,6 +78,17 @@ _ANALYTICS_PUBLIC_HTML = {
 }
 _PUBLIC_SITE_BASE_URL = "https://anthbotmap.com"
 _LEGACY_PUBLIC_HOSTS = {"reports.mqbretrofithungary.online"}
+_FAVICON_HEAD = (
+    '<link rel="icon" href="/favicon.svg" type="image/svg+xml">\n'
+    '<link rel="shortcut icon" href="/favicon.ico">\n'
+    '<meta name="theme-color" content="#081017">'
+)
+_FAVICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ANTHBOT Map">
+<defs><linearGradient id="g" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#31bf62"/><stop offset="1" stop-color="#248a46"/></linearGradient></defs>
+<rect width="64" height="64" rx="16" fill="#081017"/>
+<rect x="5" y="5" width="54" height="54" rx="14" fill="url(#g)"/>
+<path fill="#fff" d="M17 47 28.7 17h6.6L47 47h-8.1l-2.1-6.3H27.1L25 47h-8Zm12.3-13.1h5.4L32 25.8l-2.7 8.1Z"/>
+</svg>"""
 _SEO_PAGES: dict[str, dict[str, Any]] = {
     "public_site.html": {
         "path": "/",
@@ -2151,6 +2162,7 @@ def _apply_seo_metadata(name: str, html: str) -> str:
     )
     social = [
         extra_description.rstrip("\n"),
+        _FAVICON_HEAD,
         f'<link rel="canonical" href="{escape(canonical, quote=True)}">',
         f'<meta name="robots" content="{robots}">',
         '<meta property="og:type" content="website">',
@@ -2321,6 +2333,7 @@ def _seo_landing_html(path: str) -> str:
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{escape(title)}</title>
 <meta name="description" content="{escape(description, quote=True)}">
+{_FAVICON_HEAD}
 <link rel="canonical" href="{escape(canonical, quote=True)}">
 <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
 <meta property="og:type" content="website">
@@ -2521,6 +2534,27 @@ def _html_file(name: str) -> str:
             1,
         )
     return _apply_seo_metadata(name, html)
+
+
+@router.get("/favicon.svg", include_in_schema=False)
+def public_favicon_svg() -> Response:
+    return Response(
+        content=_FAVICON_SVG,
+        media_type="image/svg+xml",
+        headers={
+            "Cache-Control": "public, max-age=604800",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.get("/favicon.ico", include_in_schema=False)
+def public_favicon_ico() -> Response:
+    return RedirectResponse(
+        url="/favicon.svg",
+        status_code=307,
+        headers={"Cache-Control": "public, max-age=604800"},
+    )
 
 
 @router.get("/site-analytics.js")
