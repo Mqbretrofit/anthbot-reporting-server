@@ -1385,7 +1385,7 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIn("method:'DELETE'", admin_html)
         self.assertIn("/api/anthbot/admin/store/owner-access", admin_html)
 
-    def test_admin_can_delete_only_sandbox_test_orders(self) -> None:
+    def test_admin_can_delete_sandbox_and_explicitly_confirmed_live_test_orders(self) -> None:
         pack = self._upload_pack()
         pack_id = pack["id"]
         priced = self.client.patch(
@@ -1449,6 +1449,13 @@ class VoiceStoreTests(unittest.TestCase):
         )
         self.assertEqual(protected.status_code, 409)
 
+        live_deleted = self.client.delete(
+            "/api/anthbot/admin/store/orders/cs_live_admin_delete_123?confirm_live=true",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(live_deleted.status_code, 200)
+        self.assertTrue(live_deleted.json()["deleted"])
+
         deleted = self.client.delete(
             "/api/anthbot/admin/store/orders/cs_test_admin_delete_123",
             headers=self._admin_headers(),
@@ -1485,8 +1492,18 @@ class VoiceStoreTests(unittest.TestCase):
                     "SELECT stripe_session_id FROM store_orders"
                 ).fetchall()
             }
-        self.assertIn("cs_live_admin_delete_123", remaining)
+        self.assertNotIn("cs_live_admin_delete_123", remaining)
         self.assertNotIn("cs_test_admin_delete_456", remaining)
+
+        store_api._upsert_order_from_session(test_session)
+        store_api._upsert_order_from_session(live_session)
+        bulk_all = self.client.delete(
+            "/api/anthbot/admin/store/orders?include_live=true",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(bulk_all.status_code, 200)
+        self.assertEqual(bulk_all.json()["deleted"], 2)
+        self.assertEqual(bulk_all.json()["scope"], "all_local_stripe_orders")
 
         admin_html = Path(store_api.__file__).with_name("store_admin.html").read_text(
             encoding="utf-8"
@@ -1494,7 +1511,10 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIn("Összes tesztrendelés törlése", admin_html)
         self.assertIn("deleteOrder(", admin_html)
         self.assertIn("/api/anthbot/admin/store/orders/", admin_html)
-        self.assertIn("Éles rendelés · védett", admin_html)
+        self.assertIn("Live törlés", admin_html)
+        self.assertIn("Összes helyi rendelés törlése", admin_html)
+        self.assertIn("confirm_live=true", admin_html)
+        self.assertIn("include_live=true", admin_html)
 
     def test_admin_lists_active_map_pairings_and_owner_state(self) -> None:
         first_token = "R" * 48
