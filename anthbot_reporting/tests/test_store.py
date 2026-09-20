@@ -1087,6 +1087,7 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(owner_download.status_code, 200)
         self.assertEqual(owner_download.content, b"paid-community-pack")
 
+        store_api._init_store_tables()
         with store_api.core._db() as conn:
             order_count = conn.execute(
                 "SELECT COUNT(*) FROM store_orders"
