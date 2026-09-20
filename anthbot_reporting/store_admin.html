@@ -26,6 +26,11 @@
       <button class="btn primary" id="owner-pair-grant">Minden hang feloldása ezen a HA-n</button>
     </div>
     <section class="card section">
+      <div class="head">ANTHBOT Map tulajdonosi hozzáférés</div>
+      <div style="padding:12px 16px" class="small">Itt látszanak az aktív ANTHBOT Map → Community Hangbolt párosítások. A legfrissebb van felül. A saját Home Assistant sorában a <strong>Minden hang feloldása</strong> gomb egyszeri megnyomása után az összes fizetős Community hang lakat nélkül elérhető lesz, Stripe-vásárlás nélkül.</div>
+      <div class="table-wrap"><table><thead><tr><th>Létrehozva</th><th>HA azonosító</th><th>Lejár</th><th>Állapot</th><th>Művelet</th></tr></thead><tbody id="owner-pairings"></tbody></table></div>
+    </section>
+    <section class="card section">
       <div class="head">Weboldal látogatottság · privacy-barát statisztika</div>
       <div class="grid analytics-kpis" id="analytics-kpis"></div>
       <div class="analytics-panels">
@@ -73,6 +78,38 @@
       if(card)card.style.display='flex';
       const button=document.getElementById('owner-pair-grant');
       if(button)button.onclick=grantOwnerPair;
+    }
+    async function grantOwnerPairCode(pairCode,button){
+      if(!pairCode)return;
+      if(button)button.disabled=true;
+      try{
+        await api('/api/anthbot/admin/store/owner-access',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({pair_code:pairCode})
+        });
+        await load();
+      }catch(e){
+        if(button)button.disabled=false;
+        alert('Tulajdonosi feloldási hiba: '+e.message);
+      }
+    }
+    function ownerPairingRows(items){
+      const body=document.getElementById('owner-pairings');
+      if(!items.length){
+        body.innerHTML='<tr><td colspan="5" class="empty">Nincs aktív ANTHBOT Map párosítás. Nyisd meg egyszer az ANTHBOT Map hangcsomag-kezelőjében a Community Hangboltot, majd nyomj Frissítést ezen az oldalon.</td></tr>';
+        return;
+      }
+      body.innerHTML=items.map((p,index)=>{
+        const state=p.owner_access
+          ? '<span class="pill good">Feloldva ✓</span>'
+          : '<span class="pill warn">Nincs feloldva</span>';
+        const action=p.owner_access
+          ? '<button class="btn" disabled>Minden hang feloldva</button>'
+          : '<button class="btn primary" onclick="grantOwnerPairCode(\''+esc(p.pair_code)+'\',this)">Minden hang feloldása</button>';
+        const newest=index===0?'<span class="pill good">Legfrissebb</span> ':'';
+        return '<tr><td>'+newest+esc(fmt(p.created_at))+'</td><td class="mono">…'+esc(p.client_suffix||'')+'</td><td>'+esc(fmt(p.expires_at))+'</td><td>'+state+'</td><td>'+action+'</td></tr>';
+      }).join('');
     }
     async function save(id,select){
       const row=select.closest('tr'),access=select.value;
@@ -203,11 +240,11 @@
     }
     async function load(){
       try{
-        const [catalog,stats,orders,customRequests,privacyRequests,siteAnalytics]=await Promise.all([api('/api/anthbot/admin/store/voice-packs'),api('/api/anthbot/admin/store/stats'),api('/api/anthbot/admin/store/orders?limit=100'),api('/api/anthbot/admin/store/custom-voice-requests?limit=100'),api('/api/anthbot/admin/privacy-requests?limit=100'),api('/api/anthbot/admin/site-analytics?days=30')]);
+        const [catalog,stats,orders,customRequests,privacyRequests,siteAnalytics,ownerPairings]=await Promise.all([api('/api/anthbot/admin/store/voice-packs'),api('/api/anthbot/admin/store/stats'),api('/api/anthbot/admin/store/orders?limit=100'),api('/api/anthbot/admin/store/custom-voice-requests?limit=100'),api('/api/anthbot/admin/privacy-requests?limit=100'),api('/api/anthbot/admin/site-analytics?days=30'),api('/api/anthbot/admin/store/pairings?limit=20')]);
         const revenue=(stats.revenue||[]).map(x=>money(x.amount,x.currency)).join(' + ')||money(0,'eur');
         document.getElementById('kpis').innerHTML=kpi('Feltöltött csomag',catalog.items.length)+kpi('Rendelés',stats.orders||0)+kpi('Fizetett rendelés',stats.paid_orders||0)+kpi('Bevétel',revenue);
         document.getElementById('status').innerHTML='<span class="pill good">Tulajdonosi hozzáférés: minden csomag letölthető</span><span class="pill '+(stats.store_enabled?'good':'warn')+'">Store: '+(stats.store_enabled?'bekapcsolva':'kikapcsolva')+'</span><span class="pill '+(stats.checkout_ready?'good':'warn')+'">Stripe: '+(stats.checkout_ready?'kész':'nincs teljesen konfigurálva')+'</span><span class="pill '+(stats.automatic_tax?'good':'warn')+'">Stripe automatic tax: '+(stats.automatic_tax?'be':'ki')+'</span><span class="small">A tulajdonosi letöltés admin jogosultsághoz kötött, nem hoz létre rendelést vagy licencet. A fizetős csomagok publikus letöltése továbbra is vásárláshoz kötött.</span>';
-        analyticsRows(siteAnalytics);packRows(catalog.items||[]);customRequestRows(customRequests.items||[]);privacyRequestRows(privacyRequests.items||[]);orderRows(orders.items||[]);
+        ownerPairingRows(ownerPairings.items||[]);analyticsRows(siteAnalytics);packRows(catalog.items||[]);customRequestRows(customRequests.items||[]);privacyRequestRows(privacyRequests.items||[]);orderRows(orders.items||[]);
       }catch(e){document.getElementById('status').innerHTML='<span style="color:#ffc4cc">Hiba: '+esc(e.message)+'</span>'}
     }
     document.getElementById('refresh').onclick=load;setupOwnerPair();load();
