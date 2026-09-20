@@ -1092,6 +1092,7 @@ async def upload_voice_pack(
     preserved_access = "free"
     preserved_price_amount = 0
     preserved_currency = "eur"
+    preserved_store_hidden = False
     if isinstance(effective_match, dict):
         if str(effective_match.get("access", "free")).strip().casefold() == "paid":
             preserved_access = "paid"
@@ -1106,6 +1107,7 @@ async def upload_voice_pack(
         ).strip().lower()
         if re.fullmatch(r"[a-z]{3}", candidate_currency):
             preserved_currency = candidate_currency
+        preserved_store_hidden = bool(effective_match.get("store_hidden", False))
 
     record = {
         "id": package_id,
@@ -1130,6 +1132,7 @@ async def upload_voice_pack(
         "access": preserved_access,
         "price_amount": preserved_price_amount if preserved_access == "paid" else 0,
         "currency": preserved_currency,
+        "store_hidden": preserved_store_hidden,
         "uploaded_at": _iso(),
     }
 
