@@ -46,6 +46,21 @@ _VOICE_PACK_SAFE_PART = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 _DASHBOARD_COOKIE = "anthbot_admin_session"
 _DASHBOARD_SESSION_SECONDS = 12 * 60 * 60
 
+_PUBLIC_HTML_CSP = (
+    "default-src 'self'; "
+    "base-uri 'self'; "
+    "object-src 'none'; "
+    "form-action 'self' https://checkout.stripe.com; "
+    "script-src 'self' 'unsafe-inline'; "
+    "style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' data:; "
+    "media-src 'self' blob:; "
+    "connect-src 'self'; "
+    "font-src 'self' data:"
+)
+_PERMISSIONS_POLICY = "geolocation=(), camera=(), microphone=()"
+_HSTS_VALUE = "max-age=31536000"
+
 _SENSITIVE_KEY_PARTS = (
     "password",
     "passwd",
@@ -257,6 +272,33 @@ async def _limit_body_size(request: Request, call_next):
             except ValueError:
                 pass
     response = await call_next(request)
+
+    # Conservative baseline for every public/API response. Keep route-specific
+    # policies when they are stricter (for example the web installer uses
+    # no-referrer and dashboard framing is handled below).
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    if "Referrer-Policy" not in response.headers:
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = _PERMISSIONS_POLICY
+    response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
+    response.headers["X-DNS-Prefetch-Control"] = "off"
+
+    forwarded_proto = (
+        request.headers.get("x-forwarded-proto", "")
+        .split(",", 1)[0]
+        .strip()
+        .casefold()
+    )
+    if request.url.scheme == "https" or forwarded_proto == "https":
+        response.headers["Strict-Transport-Security"] = _HSTS_VALUE
+
+    content_type = response.headers.get("content-type", "").casefold()
+    if (
+        content_type.startswith("text/html")
+        and not request.url.path.startswith("/dashboard")
+    ):
+        response.headers["Content-Security-Policy"] = _PUBLIC_HTML_CSP
+
     if request.url.path.startswith("/dashboard"):
         # The admin dashboard is intentionally embeddable only from the known
         # Home Assistant frontends used by this deployment.  Do this in the
