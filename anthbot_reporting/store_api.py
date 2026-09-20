@@ -2748,6 +2748,44 @@ async def create_store_checkout(
     }
 
 
+@router.get("/api/anthbot/store/direct-checkout")
+async def direct_map_store_checkout(
+    request: Request,
+    pair: str,
+    pack_id: str,
+) -> Response:
+    """Open Stripe Checkout directly for one paid voice selected in ANTHBOT Map.
+
+    The temporary Map pairing keeps the purchase attached to the originating
+    Home Assistant install, while avoiding an unnecessary intermediate Store page.
+    """
+    pair_code = pair.strip()
+    normalized_pack_id = pack_id.strip()
+    if not _PAIR_RE.fullmatch(pair_code):
+        raise HTTPException(status_code=422, detail="invalid store pairing code")
+    if not normalized_pack_id or len(normalized_pack_id) > 160:
+        raise HTTPException(status_code=422, detail="invalid voice pack id")
+
+    result = await create_store_checkout(
+        CheckoutPayload(pack_id=normalized_pack_id, pair_code=pair_code),
+        request,
+    )
+    session_id = str(result.get("session_id") or "").strip()
+    if result.get("already_owned"):
+        if not session_id:
+            raise HTTPException(status_code=409, detail="voice pack is already owned")
+        base = core._public_base_url(request)
+        return RedirectResponse(
+            url=f"{base}/store/success?session_id={quote(session_id)}",
+            status_code=303,
+        )
+
+    checkout_url = result.get("checkout_url")
+    if not isinstance(checkout_url, str) or not checkout_url.startswith("https://"):
+        raise HTTPException(status_code=502, detail="Stripe did not return a checkout URL")
+    return RedirectResponse(url=checkout_url, status_code=303)
+
+
 @router.post("/api/anthbot/store/webhooks/stripe")
 async def stripe_webhook(
     request: Request,
