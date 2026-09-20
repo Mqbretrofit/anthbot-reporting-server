@@ -43,7 +43,7 @@
     <section class="card section"><div class="head">Hangcsomagok</div><div class="table-wrap"><table><thead><tr><th>Csomag</th><th>Nyelv / hang</th><th>Verzió</th><th>Hozzáférés</th><th>Ár</th><th>Pénznem</th><th>Eladás</th><th>Bevétel</th><th>Állapot</th><th>Művelet</th></tr></thead><tbody id="packs"></tbody></table></div></section>
     <section class="card section"><div class="head">Egyedi hang kérések · €24.99-tól</div><div class="table-wrap"><table><thead><tr><th>Idő</th><th>Azonosító</th><th>Nyelv</th><th>Hang</th><th>Robot</th><th>Kapcsolat</th><th>Megjegyzés</th><th>Oldal nyelve</th><th>Állapot</th></tr></thead><tbody id="custom-requests"></tbody></table></div></section>
     <section class="card section"><div class="head">Adatvédelmi / GDPR kérelmek</div><div class="table-wrap"><table><thead><tr><th>Idő</th><th>Azonosító</th><th>Típus</th><th>Kapcsolat</th><th>Részletek</th><th>Nyelv</th><th>Állapot</th></tr></thead><tbody id="privacy-requests"></tbody></table></div></section>
-    <section class="card section"><div class="head">Legutóbbi rendelések</div><div class="table-wrap"><table><thead><tr><th>Idő</th><th>Session</th><th>Csomag</th><th>Állapot</th><th>Email</th><th>Összeg</th></tr></thead><tbody id="orders"></tbody></table></div></section>
+    <section class="card section"><div class="head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><span>Legutóbbi rendelések</span><button class="btn danger" id="delete-test-orders" type="button">Összes tesztrendelés törlése</button></div><div class="table-wrap"><table><thead><tr><th>Idő</th><th>Session</th><th>Csomag</th><th>Állapot</th><th>Email</th><th>Összeg</th><th>Művelet</th></tr></thead><tbody id="orders"></tbody></table></div></section>
   </main>
   <script>
     const esc=(v)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
@@ -249,10 +249,44 @@
         'Az „egyedi látogatói nap” nem többnapos személyazonosítás: ugyanaz a látogató más napon új anonim azonosítót kap.';
     }
 
+    async function deleteOrder(sessionId,button){
+      if(!String(sessionId||'').startsWith('cs_test_'))return;
+      if(!confirm('Biztosan törlöd ezt a Stripe Sandbox tesztrendelést?\n\n'+sessionId+'\n\nA hozzá tartozó helyi licenc / Map entitlement is megszűnik.'))return;
+      if(button)button.disabled=true;
+      try{
+        await api('/api/anthbot/admin/store/orders/'+encodeURIComponent(sessionId),{method:'DELETE'});
+        await load();
+      }catch(e){
+        if(button)button.disabled=false;
+        alert('Rendelés törlési hiba: '+e.message);
+      }
+    }
+    async function deleteAllTestOrders(){
+      if(!confirm('Biztosan törlöd az ÖSSZES Stripe Sandbox tesztrendelést?\n\nAz éles cs_live_... rendelések érintetlenek maradnak. A tesztrendelésekhez tartozó helyi licencek / Map entitlementek megszűnnek.'))return;
+      const button=document.getElementById('delete-test-orders');
+      if(button)button.disabled=true;
+      try{
+        const result=await api('/api/anthbot/admin/store/orders',{method:'DELETE'});
+        alert(String(result.deleted||0)+' tesztrendelés törölve.');
+        await load();
+      }catch(e){
+        if(button)button.disabled=false;
+        alert('Tesztrendelések törlési hiba: '+e.message);
+      }
+    }
     function orderRows(items){
       const body=document.getElementById('orders');
-      if(!items.length){body.innerHTML='<tr><td colspan="6" class="empty">Még nincs rendelés.</td></tr>';return}
-      body.innerHTML=items.map(o=>'<tr><td>'+esc(fmt(o.paid_at||o.updated_at||o.created_at))+'</td><td class="mono">'+esc(o.stripe_session_id)+'</td><td class="mono">'+esc(o.pack_id)+'</td><td><span class="pill '+(o.payment_status==='paid'?'good':'warn')+'">'+esc(o.payment_status||o.status)+'</span></td><td>'+esc(o.customer_email||'—')+'</td><td>'+esc(money(o.amount_total||0,o.currency||'eur'))+'</td></tr>').join('');
+      const bulk=document.getElementById('delete-test-orders');
+      const hasTest=items.some(o=>String(o.stripe_session_id||'').startsWith('cs_test_'));
+      if(bulk)bulk.disabled=!hasTest;
+      if(!items.length){body.innerHTML='<tr><td colspan="7" class="empty">Még nincs rendelés.</td></tr>';return}
+      body.innerHTML=items.map(o=>{
+        const session=String(o.stripe_session_id||'');
+        const action=session.startsWith('cs_test_')
+          ? '<button class="btn danger" onclick="deleteOrder(\''+esc(session)+'\',this)">Törlés</button>'
+          : '<span class="small">Éles rendelés · védett</span>';
+        return '<tr><td>'+esc(fmt(o.paid_at||o.updated_at||o.created_at))+'</td><td class="mono">'+esc(session)+'</td><td class="mono">'+esc(o.pack_id)+'</td><td><span class="pill '+(o.payment_status==='paid'?'good':'warn')+'">'+esc(o.payment_status||o.status)+'</span></td><td>'+esc(o.customer_email||'—')+'</td><td>'+esc(money(o.amount_total||0,o.currency||'eur'))+'</td><td>'+action+'</td></tr>';
+      }).join('');
     }
     async function load(){
       try{
@@ -263,7 +297,7 @@
         ownerPairingRows(ownerPairings.items||[]);analyticsRows(siteAnalytics);packRows(catalog.items||[]);customRequestRows(customRequests.items||[]);privacyRequestRows(privacyRequests.items||[]);orderRows(orders.items||[]);
       }catch(e){document.getElementById('status').innerHTML='<span style="color:#ffc4cc">Hiba: '+esc(e.message)+'</span>'}
     }
-    document.getElementById('refresh').onclick=load;setupOwnerPair();load();
+    document.getElementById('refresh').onclick=load;document.getElementById('delete-test-orders').onclick=deleteAllTestOrders;setupOwnerPair();load();
   </script>
 </body>
 </html>
