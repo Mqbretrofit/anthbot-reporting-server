@@ -1847,5 +1847,141 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(invalid.status_code, 400)
 
 
+    def test_store_account_uses_hashed_code_and_persistent_session(self) -> None:
+        captured: dict[str, str] = {}
+
+        def fake_send(target: str, code: str, language: str) -> None:
+            captured["email"] = target
+            captured["code"] = code
+
+        with patch.object(store_accounts, "_send_login_code", side_effect=fake_send):
+            requested = self.client.post(
+                "/api/anthbot/store/account/request-code",
+                json={"email": "Account@Test.Example", "language": "en"},
+            )
+        self.assertEqual(requested.status_code, 200)
+        with store_api.core._db() as conn:
+            row = conn.execute(
+                "SELECT code_hash, salt FROM store_login_codes WHERE email = ?",
+                ("account@test.example",),
+            ).fetchone()
+        self.assertIsNotNone(row)
+        self.assertNotEqual(row["code_hash"], captured["code"])
+        self.assertNotIn(captured["code"], str(row["salt"]))
+
+        verified = self.client.post(
+            "/api/anthbot/store/account/verify-code",
+            json={
+                "email": "account@test.example",
+                "code": captured["code"],
+                "language": "en",
+            },
+        )
+        self.assertEqual(verified.status_code, 200)
+        self.assertTrue(verified.json()["authenticated"])
+        cookie = verified.headers.get("set-cookie", "")
+        self.assertIn("anthbot_store_session=", cookie)
+        self.assertIn("HttpOnly", cookie)
+        self.assertIn("Secure", cookie)
+        self.assertIn("SameSite=lax", cookie)
+
+        status = self.client.get("/api/anthbot/store/account")
+        self.assertEqual(status.status_code, 200)
+        self.assertTrue(status.json()["authenticated"])
+        self.assertEqual(status.json()["email"], "account@test.example")
+
+    def test_paid_checkout_requires_store_account(self) -> None:
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        priced = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        self.assertEqual(priced.status_code, 200)
+        self.client.get("/store")
+        blocked = self.client.post(
+            "/api/anthbot/store/checkout",
+            json={"pack_id": pack_id},
+        )
+        self.assertEqual(blocked.status_code, 401)
+        self.assertIn("account", blocked.json()["detail"].casefold())
+
+    def test_verified_email_claims_legacy_purchase(self) -> None:
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        store_api._upsert_order_from_session(
+            {
+                "id": "cs_test_legacy_account_claim",
+                "object": "checkout.session",
+                "created": int(time.time()),
+                "client_reference_id": pack_id,
+                "metadata": {
+                    "pack_id": pack_id,
+                    "community_id": "cs_vlasta_standard",
+                    "store_client_id": store_api._client_id_from_token("Z" * 48),
+                    "entitlement_scope": "web",
+                },
+                "payment_status": "paid",
+                "status": "complete",
+                "amount_total": 799,
+                "currency": "eur",
+                "customer_details": {"email": "legacy@example.test"},
+                "customer": "cus_legacy_claim",
+                "payment_intent": "pi_legacy_claim",
+            }
+        )
+
+        account = self._login_store_account("legacy@example.test")
+        status = self.client.get("/api/anthbot/store/account")
+        self.assertEqual(status.status_code, 200)
+        self.assertEqual(status.json()["purchased_count"], 1)
+        with store_api.core._db() as conn:
+            row = conn.execute(
+                """
+                SELECT user_id, stripe_customer_id
+                FROM store_orders
+                WHERE stripe_session_id = ?
+                """,
+                ("cs_test_legacy_account_claim",),
+            ).fetchone()
+        self.assertEqual(row["user_id"], account["_user_id"])
+        self.assertEqual(row["stripe_customer_id"], "cus_legacy_claim")
+
+        catalog = self.client.get("/api/anthbot/store/voice-packs")
+        owned = next(
+            item for item in catalog.json()["packs"] if item["id"] == pack_id
+        )
+        self.assertTrue(owned["owned"])
+
+    def test_logged_out_direct_map_checkout_redirects_to_account_store(self) -> None:
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        pairing = self.client.post(
+            "/api/anthbot/store/client/pair",
+            json={"client_token": "P" * 48},
+        )
+        pair_code = pairing.json()["store_url"].split("pair=", 1)[1]
+        response = self.client.get(
+            "/api/anthbot/store/direct-checkout",
+            params={"pair": pair_code, "voice_id": "cs_vlasta_standard"},
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 303)
+        self.assertIn("/store?pair=", response.headers["location"])
+        self.assertIn("checkout=1", response.headers["location"])
+        self.assertIn("voice_id=cs_vlasta_standard", response.headers["location"])
+
+
 if __name__ == "__main__":
     unittest.main()
