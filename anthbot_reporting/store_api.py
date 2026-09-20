@@ -1027,6 +1027,17 @@ def _grant_owner_client(client_id: str) -> None:
         )
 
 
+def _revoke_owner_client(client_id: str) -> bool:
+    """Remove maintainer-owner access from one anonymous Map client."""
+    _init_store_tables()
+    with core._db() as conn:
+        cursor = conn.execute(
+            "DELETE FROM store_owner_clients WHERE client_id = ?",
+            (client_id,),
+        )
+    return bool(cursor.rowcount)
+
+
 def _owner_access_for_pack(client_id: str, pack: dict[str, Any]) -> str:
     """Return a signed non-purchase token for one owner client + stable voice."""
     secret = _license_secret()
@@ -3012,6 +3023,23 @@ def grant_owner_store_access(payload: OwnerPairPayload) -> dict[str, Any]:
     return {
         "granted": True,
         "owner_access": True,
+        "client_suffix": client_id[-10:],
+    }
+
+
+@router.delete(
+    "/api/anthbot/admin/store/owner-access",
+    dependencies=[Depends(core.require_admin)],
+)
+def revoke_owner_store_access(payload: OwnerPairPayload) -> dict[str, Any]:
+    """Revoke maintainer-owner voice access from one Map install."""
+    client_id = _client_id_from_pairing(payload.pair_code)
+    if client_id is None:
+        raise HTTPException(status_code=404, detail="voice store pairing not found")
+    revoked = _revoke_owner_client(client_id)
+    return {
+        "revoked": revoked,
+        "owner_access": False,
         "client_suffix": client_id[-10:],
     }
 
