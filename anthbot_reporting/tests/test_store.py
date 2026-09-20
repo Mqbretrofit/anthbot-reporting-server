@@ -1039,6 +1039,69 @@ class VoiceStoreTests(unittest.TestCase):
             any(item.get("community_id") == "cs_vlasta_standard" for item in legacy)
         )
 
+    def test_admin_owner_can_download_any_pack_without_purchase(self) -> None:
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        admin_url = f"/api/anthbot/admin/store/voice-packs/{pack_id}/download"
+
+        denied = self.client.get(admin_url)
+        self.assertEqual(denied.status_code, 401)
+
+        free_download = self.client.get(
+            admin_url,
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(free_download.status_code, 200)
+        self.assertEqual(free_download.content, b"paid-community-pack")
+        self.assertIn(
+            "attachment",
+            free_download.headers.get("content-disposition", "").casefold(),
+        )
+        self.assertEqual(
+            free_download.headers.get("cache-control"),
+            "private, no-store",
+        )
+
+        priced = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        self.assertEqual(priced.status_code, 200)
+        hidden = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}/visibility",
+            headers=self._admin_headers(),
+            json={"hidden": True},
+        )
+        self.assertEqual(hidden.status_code, 200)
+
+        public_direct = self.client.get(
+            pack["music_url"].removeprefix("https://testserver")
+        )
+        self.assertEqual(public_direct.status_code, 404)
+
+        owner_download = self.client.get(
+            admin_url,
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(owner_download.status_code, 200)
+        self.assertEqual(owner_download.content, b"paid-community-pack")
+
+        with store_api.core._db() as conn:
+            order_count = conn.execute(
+                "SELECT COUNT(*) FROM store_orders"
+            ).fetchone()[0]
+        self.assertEqual(order_count, 0)
+
+        admin_html = Path(store_api.__file__).with_name("store_admin.html").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("Tulajdonosi hozzáférés: minden csomag letölthető", admin_html)
+        self.assertIn(
+            "/api/anthbot/admin/store/voice-packs/'+encodeURIComponent(id)+'/download",
+            admin_html,
+        )
+
     def test_store_admin_can_hide_sold_pack_without_breaking_entitlement(self) -> None:
         pack = self._upload_pack()
         pack_id = pack["id"]
