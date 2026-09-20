@@ -3684,7 +3684,12 @@ def public_privacy_page(request: Request) -> Response:
 @router.get("/store", response_class=HTMLResponse)
 def store_page(request: Request) -> Response:
     pair_code = str(request.query_params.get("pair") or "").strip()
-    if pair_code and core._request_is_admin(request):
+    owner_pairing = str(request.query_params.get("owner") or "").strip() == "1"
+    # A normal ANTHBOT Map pairing must always stay on the public Voice Store,
+    # even when this browser also has an active Reporting Server admin session.
+    # Maintainer-owner pairing remains available only through the explicit
+    # ?owner=1 opt-in so the admin cookie cannot hijack customer checkout.
+    if pair_code and owner_pairing and core._request_is_admin(request):
         try:
             _client_id_from_pairing(pair_code)
         except HTTPException:
