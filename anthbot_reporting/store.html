@@ -28,17 +28,17 @@
 <div class="topbar"><nav class="navlinks" aria-label="Site navigation"><a class="home-link" href="/" data-i18n="homeNav"></a><a href="/refunds" data-i18n="refund"></a><a href="/terms" data-i18n="terms"></a><a href="/privacy" data-i18n="privacy"></a></nav><select id="site-language" class="lang-select" aria-label="Language"><option value="hu">Magyar</option><option value="en">English</option><option value="de">Deutsch</option><option value="fr">Français</option><option value="es">Español</option><option value="it">Italiano</option><option value="pt">Português</option><option value="nl">Nederlands</option><option value="pl">Polski</option><option value="cs">Čeština</option><option value="sk">Slovenčina</option><option value="ro">Română</option><option value="da">Dansk</option><option value="sv">Svenska</option><option value="no">Norsk</option><option value="fi">Suomi</option><option value="zh-CN">简体中文</option><option value="zh-TW">繁體中文</option><option value="tr">Türkçe</option><option value="th">ไทย</option><option value="vi">Tiếng Việt</option><option value="ko">한국어</option><option value="km">ខ្មែរ</option></select></div>
 <section class="hero"><div class="eyebrow" data-i18n="eyebrow">ANTHBOT Community</div><h1 data-i18n="title">Voice Store</h1><div class="lead" data-i18n="lead"></div></section>
 <div class="price-banner"><div><strong data-i18n="readyTitle"></strong><span data-i18n="readyText"></span></div><div class="price-big">€7.99</div></div>
-<div class="notice" id="notice"></div>
+<div class="notice" id="notice" role="status" aria-live="polite"></div>
 <section class="account-panel" id="account-panel">
   <div class="account-head"><div><strong id="account-title"></strong><div class="account-sub" id="account-lead"></div></div><span class="account-chip" id="account-badge"></span></div>
   <div id="account-logged-out">
     <div class="account-grid">
-      <input class="account-input" id="account-email" type="email" autocomplete="email">
+      <input class="account-input" id="account-email" type="email" autocomplete="email" aria-label="Email address">
       <button class="btn" type="button" id="account-send"></button>
       <span></span>
     </div>
     <div class="account-grid hidden" id="account-code-row">
-      <input class="account-input" id="account-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6">
+      <input class="account-input" id="account-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-label="6-digit sign-in code">
       <button class="btn" type="button" id="account-verify"></button>
       <span></span>
     </div>
@@ -51,16 +51,16 @@
       <div class="purchase-history-list" id="purchase-history-list"></div>
     </div>
   </div>
-  <div class="account-message" id="account-message"></div>
+  <div class="account-message" id="account-message" role="status" aria-live="polite"></div>
 </section>
 <section class="organizer" id="voice-organizer">
-  <div class="organizer-head"><strong id="organizer-title"></strong><span class="organizer-summary" id="voice-results-summary"></span></div>
+  <div class="organizer-head"><strong id="organizer-title"></strong><span class="organizer-summary" id="voice-results-summary" aria-live="polite"></span></div>
   <div class="organizer-grid">
-    <input class="filter-control voice-search" id="voice-search" type="search" autocomplete="off">
-    <select class="filter-control" id="filter-language"></select>
-    <select class="filter-control" id="filter-gender"></select>
-    <select class="filter-control" id="filter-model"></select>
-    <select class="filter-control" id="filter-access"></select>
+    <input class="filter-control voice-search" id="voice-search" type="search" autocomplete="off" aria-label="Search voice packs">
+    <select class="filter-control" id="filter-language" aria-label="Filter by language"></select>
+    <select class="filter-control" id="filter-gender" aria-label="Filter by voice"></select>
+    <select class="filter-control" id="filter-model" aria-label="Filter by model"></select>
+    <select class="filter-control" id="filter-access" aria-label="Filter by access"></select>
   </div>
   <div class="organizer-actions"><button class="btn secondary" type="button" id="expand-groups"></button><button class="btn secondary" type="button" id="collapse-groups"></button></div>
 </section>
@@ -74,7 +74,7 @@
     <div class="field"><label for="robot-model" data-i18n="model"></label><input id="robot-model" maxlength="128" value="Genie 1000" required></div>
     <div class="field"><label for="contact" data-i18n="contact"></label><input id="contact" maxlength="254" required></div>
     <div class="field wide"><label for="notes" data-i18n="notes"></label><textarea id="notes" maxlength="2000"></textarea></div>
-    <div class="form-actions"><button type="submit" class="btn" id="custom-submit" data-i18n="send"></button><span class="form-status" id="custom-status"></span></div>
+    <div class="form-actions"><button type="submit" class="btn" id="custom-submit" data-i18n="send"></button><span class="form-status" id="custom-status" role="status" aria-live="polite"></span></div>
   </form>
 </section>
 
@@ -240,8 +240,10 @@ function renderAccount(){
   title.textContent=au('title');
   document.getElementById('account-lead').textContent=au('lead');
   document.getElementById('account-email').placeholder=au('email');
+  document.getElementById('account-email').setAttribute('aria-label',au('email'));
   document.getElementById('account-send').textContent=au('send');
   document.getElementById('account-code').placeholder=au('code');
+  document.getElementById('account-code').setAttribute('aria-label',au('code'));
   document.getElementById('account-verify').textContent=au('verify');
   document.getElementById('account-logout').textContent=au('logout');
   const out=document.getElementById('account-logged-out'),inside=document.getElementById('account-logged-in');
@@ -402,7 +404,13 @@ function rebuildOrganizerOptions(){
 }
 function applyOrganizerLanguage(){
   document.getElementById('organizer-title').textContent=ou('filtersTitle');
-  document.getElementById('voice-search').placeholder=ou('search');
+  const search=document.getElementById('voice-search');
+  search.placeholder=ou('search');
+  search.setAttribute('aria-label',ou('search'));
+  document.getElementById('filter-language').setAttribute('aria-label',ou('allLanguages'));
+  document.getElementById('filter-gender').setAttribute('aria-label',ou('allGenders'));
+  document.getElementById('filter-model').setAttribute('aria-label',ou('allModels'));
+  document.getElementById('filter-access').setAttribute('aria-label',ou('allAccess'));
   document.getElementById('expand-groups').textContent=ou('expandAll');
   document.getElementById('collapse-groups').textContent=ou('collapseAll');
   rebuildOrganizerOptions();

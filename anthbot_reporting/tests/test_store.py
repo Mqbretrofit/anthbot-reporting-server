@@ -774,6 +774,76 @@ class VoiceStoreTests(unittest.TestCase):
             self.assertEqual(legacy.status_code, 307)
             self.assertEqual(legacy.headers["location"], "/favicon.png?v=3")
 
+    def test_public_pages_have_keyboard_and_mobile_accessibility_basics(self) -> None:
+        for path in (
+            "/",
+            "/store",
+            "/privacy",
+            "/terms",
+            "/refunds",
+            "/store/success",
+            "/home-assistant",
+            "/models/genie-1000",
+            "/models/m9-pro",
+            "/models/mgc1000",
+            "/voice-packs",
+        ):
+            response = self.client.get(path)
+            self.assertEqual(response.status_code, 200)
+            html = response.text
+            self.assertIn(
+                '<meta name="viewport" content="width=device-width',
+                html,
+            )
+            self.assertIn(
+                '<a class="skip-link" href="#main-content">',
+                html,
+            )
+            self.assertIn('id="main-content"', html)
+            self.assertEqual(html.count('id="main-content"'), 1)
+            self.assertIn('id="anthbot-public-a11y"', html)
+            self.assertIn(":focus-visible", html)
+            self.assertIn("prefers-reduced-motion:reduce", html)
+            self.assertIn("min-height:44px", html)
+
+    def test_voice_store_has_accessible_dynamic_controls(self) -> None:
+        response = self.client.get("/store")
+        self.assertEqual(response.status_code, 200)
+        html = response.text
+        self.assertIn(
+            'id="notice" role="status" aria-live="polite"',
+            html,
+        )
+        self.assertIn(
+            'id="account-message" role="status" aria-live="polite"',
+            html,
+        )
+        self.assertIn(
+            'id="custom-status" role="status" aria-live="polite"',
+            html,
+        )
+        self.assertIn(
+            'id="voice-results-summary" aria-live="polite"',
+            html,
+        )
+        self.assertIn(
+            'id="account-email" type="email" autocomplete="email" '
+            'aria-label="Email address"',
+            html,
+        )
+        self.assertIn(
+            "setAttribute('aria-label',au('email'))",
+            html,
+        )
+        self.assertIn(
+            "search.setAttribute('aria-label',ou('search'))",
+            html,
+        )
+        self.assertIn(
+            "filter-language').setAttribute('aria-label',ou('allLanguages'))",
+            html,
+        )
+
     def test_public_pages_have_web_app_manifest(self) -> None:
         for path in (
             "/",
