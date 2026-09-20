@@ -628,6 +628,57 @@ class VoiceStoreTests(unittest.TestCase):
             self.assertEqual(legacy.status_code, 307)
             self.assertEqual(legacy.headers["location"], "/favicon.png?v=3")
 
+    def test_public_pages_have_web_app_manifest(self) -> None:
+        for path in (
+            "/",
+            "/store",
+            "/privacy",
+            "/terms",
+            "/refunds",
+            "/store/success",
+            "/home-assistant",
+            "/models/genie-1000",
+            "/models/m9-pro",
+            "/models/mgc1000",
+            "/voice-packs",
+        ):
+            response = self.client.get(path)
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(
+                '<link rel="manifest" href="/site.webmanifest?v=1">',
+                response.text,
+            )
+            self.assertIn(
+                '<meta name="application-name" content="ANTHBOT Map">',
+                response.text,
+            )
+
+        manifest = self.client.get("/site.webmanifest")
+        self.assertEqual(manifest.status_code, 200)
+        self.assertTrue(
+            manifest.headers["content-type"].startswith(
+                "application/manifest+json"
+            )
+        )
+        body = manifest.json()
+        self.assertEqual(body["name"], "ANTHBOT Map")
+        self.assertEqual(body["start_url"], "/")
+        self.assertEqual(body["scope"], "/")
+        self.assertEqual(body["display"], "standalone")
+        self.assertEqual(body["theme_color"], "#081017")
+        self.assertEqual(body["background_color"], "#081017")
+        self.assertEqual(body["icons"][0]["sizes"], "192x192")
+        self.assertEqual(body["icons"][1]["sizes"], "512x512")
+        self.assertEqual(body["icons"][1]["src"], "/app-icon-512.svg?v=1")
+        self.assertEqual(body["shortcuts"][0]["url"], "/store")
+
+        icon = self.client.get("/app-icon-512.svg")
+        self.assertEqual(icon.status_code, 200)
+        self.assertTrue(icon.headers["content-type"].startswith("image/svg+xml"))
+        self.assertIn('width="512" height="512"', icon.text)
+        self.assertIn("data:image/png;base64,", icon.text)
+        self.assertIn("immutable", icon.headers.get("cache-control", ""))
+
     def test_public_pages_share_compact_typography(self) -> None:
         for path in (
             "/",
