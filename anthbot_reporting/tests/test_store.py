@@ -660,6 +660,36 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIn('"探索 ANTHBOT Map 主题"', html)
         self.assertIn('"ស្វែងយល់ប្រធានបទ ANTHBOT Map"', html)
 
+    def test_main_site_translation_tables_have_full_key_parity(self) -> None:
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        html = response.text
+        start = html.index("const translations=") + len("const translations=")
+        end = html.index(";\n  Object.assign(translations,", start)
+        base = json.loads(html[start:end])
+        extra_start = (
+            html.index("Object.assign(translations,", end)
+            + len("Object.assign(translations,")
+        )
+        extra_end = html.index(");\n  const supported=", extra_start)
+        extra = json.loads(html[extra_start:extra_end])
+
+        translations = {**base, **extra}
+        reference_keys = set(base["hu"])
+        expected_languages = {
+            "hu", "de", "fr", "es", "it", "pt", "nl", "pl", "cs", "sk",
+            "ro", "da", "sv", "no", "fi", "zh-CN", "zh-TW", "tr", "th",
+            "vi", "ko", "km",
+        }
+        self.assertEqual(set(translations), expected_languages)
+        self.assertEqual(len(reference_keys), 167)
+        for language, table in translations.items():
+            self.assertEqual(
+                set(table),
+                reference_keys,
+                f"incomplete main-site translation table: {language}",
+            )
+
     def test_privacy_page_has_gdpr_information_and_23_languages(self) -> None:
         response = self.client.get("/privacy")
         self.assertEqual(response.status_code, 200)
