@@ -114,7 +114,7 @@ a{color:inherit}.wrap{max-width:var(--max);margin:auto;padding:0 22px}
   <p>ANTHBOT Map develops the independent <strong>Anthbot Map</strong> integration and its bundled Lovelace map card. It connects Home Assistant to the ANTHBOT cloud and adds model-aware mower control, live map/path/zone rendering, native schedules, mowing history, diagnostics and Battery Saver tools.</p>
   <div class="tags"><span class="tag">Live WebSocket map</span><span class="tag">Native schedule write-back</span><span class="tag">Zones & No-Go areas</span><span class="tag">Mowing history</span><span class="tag">Battery Saver</span><span class="tag">23 UI languages</span></div>
   <div class="cta"><a class="btn primary" href="https://github.com/Mqbretrofit/ha-anthbot-map-v2" target="_blank" rel="noopener">View ANTHBOT Map on GitHub</a><a class="btn" href="/store">Community Voice Pack Store</a></div>
-  <div class="repo-meta"><span>Stable release <strong>v2.4.8.2</strong></span><span>Install via <strong>HACS</strong></span><span>License <strong>MIT</strong></span></div>
+  <div class="repo-meta"><span>Stable release <strong data-anthbot-map-version="prefixed">v2.4.8.2</strong></span><span>Install via <strong>HACS</strong></span><span>License <strong>MIT</strong></span></div>
 </div>
 
 <div class="product-stage">
@@ -164,12 +164,12 @@ a{color:inherit}.wrap{max-width:var(--max);margin:auto;padding:0 22px}
       <div class="demo-pane" data-demo-pane="maintenance"><div class="tile-grid"><div class="tile"><strong>Maintenance data</strong><span>Available model-specific maintenance counters</span></div><div class="tile"><strong>Shutdown Guard</strong><span>Recurring 55+1 minute supported charger guard</span></div><div class="tile"><strong>Battery profiles</strong><span>Threshold and charger-power handling</span></div></div></div>
       <div class="demo-pane" data-demo-pane="diagnostics"><div class="history"><div class="tile"><strong>Previous mowing task</strong><span>Today · 1h 42m · 612 m² · Zone 1 + 2</span></div><div class="tile"><strong>Historical map & path</strong><span>Session map/path detail where available</span></div><div class="tile"><strong>Automatic diagnostics</strong><span>Optional, privacy-conscious support reports</span></div><div class="tile"><strong>Developer access</strong><span>Optional read-only diagnostics tools</span></div></div></div>
     </div>
-    <div class="demo-note">Interactive visual based on the actual Anthbot Map card structure and current v2.4.8.2 feature set. Demo data only.</div>
+    <div class="demo-note" data-anthbot-map-version-note>Interactive visual based on the actual Anthbot Map card structure and current v2.4.8.2 feature set. Demo data only.</div>
   </div>
 </div>
 </div></header>
 
-<section class="section stats"><div class="wrap statgrid"><div class="stat glass"><small>Current stable release</small><strong>2.4.8.2</strong></div><div class="stat glass"><small>Live map transport</small><strong>WebSocket snapshot + deltas</strong></div><div class="stat glass"><small>Interface languages</small><strong>23 selectable languages</strong></div><div class="stat glass"><small>Distribution</small><strong>HACS custom integration</strong></div></div></section>
+<section class="section stats"><div class="wrap statgrid"><div class="stat glass"><small>Current stable release</small><strong data-anthbot-map-version="plain">2.4.8.2</strong></div><div class="stat glass"><small>Live map transport</small><strong>WebSocket snapshot + deltas</strong></div><div class="stat glass"><small>Interface languages</small><strong>23 selectable languages</strong></div><div class="stat glass"><small>Distribution</small><strong>HACS custom integration</strong></div></div></section>
 
 <main>
 <section id="anthbot-map" class="section"><div class="wrap deep-grid"><div><span class="eyebrow">What ANTHBOT Map actually does</span><h2>Built around the real mower workflow, not a generic dashboard.</h2><p class="lead">The site now mirrors the integration itself: the same dark Home Assistant card language, the same green active accent, the same map overlays and the same major panels found in the bundled <code>anthbot-map-card</code>.</p><div class="bullet-list"><div class="bullet glass"><strong>Live map without Recorder overload</strong><span>High-frequency path and pose updates use a dedicated WebSocket transport with full snapshots, incremental deltas, sequence handling and automatic resync.</span></div><div class="bullet glass"><strong>Native ANTHBOT schedule as source of truth</strong><span>The Schedule panel mirrors app rules and can create, edit and delete supported native weekly schedules, including zones, cutting height and optional weather logic.</span></div><div class="bullet glass"><strong>Map, zones, No-Go and history</strong><span>Displays lawn boundary, mapped zones, No-Go geometry, mower position, live path, mowing coverage and previous task detail where the model exposes it.</span></div></div></div>
@@ -206,6 +206,34 @@ a{color:inherit}.wrap{max-width:var(--max);margin:auto;padding:0 22px}
 <footer class="footer"><div class="wrap">© 2026 ANTHBOT Map. All rights reserved.<div class="foot"><a href="/">Home</a><a href="https://github.com/Mqbretrofit/ha-anthbot-map-v2" target="_blank" rel="noopener">ANTHBOT Map GitHub</a><a href="/store">Voice Pack Store</a><a href="/refunds">Refunds</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a></div></div></footer>
 
 <script src="/public-site-i18n.js?v=1"></script>
+<script>
+(function(){
+  var currentVersion=null;
+  var versionRe=/^\\d+(?:\\.\\d+){2,3}$/;
+  var inlineVersionRe=/v\\d+(?:\\.\\d+){2,3}/g;
+
+  function applyVersion(version){
+    if(!versionRe.test(version))return;
+    currentVersion=version;
+    document.querySelectorAll("[data-anthbot-map-version]").forEach(function(el){
+      el.textContent=el.getAttribute("data-anthbot-map-version")==="prefixed"?"v"+version:version;
+    });
+    document.querySelectorAll("[data-anthbot-map-version-note]").forEach(function(el){
+      el.textContent=el.textContent.replace(inlineVersionRe,"v"+version);
+    });
+  }
+
+  fetch("/api/anthbot/map/latest-release",{headers:{"Accept":"application/json"},credentials:"same-origin"})
+    .then(function(res){if(!res.ok)throw new Error("HTTP "+res.status);return res.json();})
+    .then(function(data){if(data&&typeof data.version==="string")applyVersion(data.version);})
+    .catch(function(){});
+
+  var select=document.getElementById("site-language");
+  if(select)select.addEventListener("change",function(){
+    if(currentVersion)queueMicrotask(function(){applyVersion(currentVersion);});
+  });
+})();
+</script>
 <script>
 (function(){
   var root=document.getElementById("anthbot-demo");
