@@ -26,6 +26,7 @@ options:
   privacy_contact_email: "support@anthbotmap.com"
   privacy_contact_phone: "+36 30 620 9015"
   site_analytics_enabled: true
+  google_site_verification: ""
   web_voice_installer_enabled: false
   smtp_host: ""
   smtp_port: 587
@@ -47,6 +48,7 @@ schema:
   privacy_contact_email: str?
   privacy_contact_phone: str
   site_analytics_enabled: bool
+  google_site_verification: str?
   web_voice_installer_enabled: bool
   smtp_host: str?
   smtp_port: int(1,65535)
