@@ -578,10 +578,10 @@ def _privacy_controller_address() -> str:
 
 
 def _privacy_contact_email() -> str:
-    return (
-        os.environ.get("ANTHBOT_PRIVACY_CONTACT_EMAIL", "").strip()
-        or "support@anthbotmap.com"
-    )
+    email = os.environ.get("ANTHBOT_PRIVACY_CONTACT_EMAIL", "").strip()
+    if not email or email.casefold() == "support@mqbretrofithungary.online":
+        return "support@anthbotmap.com"
+    return email
 
 
 def _privacy_contact_phone() -> str:
