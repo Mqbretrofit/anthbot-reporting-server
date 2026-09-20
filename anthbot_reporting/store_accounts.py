@@ -409,6 +409,16 @@ def require_user(request: Request) -> dict[str, Any]:
     return user
 
 
+def get_user(user_id: str) -> dict[str, Any] | None:
+    _init_account_tables()
+    with core._db() as conn:
+        row = conn.execute(
+            "SELECT * FROM store_users WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+    return dict(row) if row is not None else None
+
+
 def user_id_for_client(client_id: str) -> str | None:
     _init_account_tables()
     with core._db() as conn:
