@@ -541,6 +541,10 @@ class VoiceStoreTests(unittest.TestCase):
         dockerfile = Path(__file__).parents[1] / "Dockerfile"
         content = dockerfile.read_text(encoding="utf-8")
         self.assertIn("COPY assets ./assets", content)
+        self.assertIn(
+            "COPY public_site_i18n.js ./public_site_i18n.js",
+            content,
+        )
 
     def test_public_pages_expose_custom_anthbot_map_branding(self) -> None:
         for path in (
@@ -650,29 +654,37 @@ class VoiceStoreTests(unittest.TestCase):
                 html,
             )
         self.assertIn(
-            'const supported=["hu","en","de","fr","es","it","pt","nl","pl","cs","sk","ro","da","sv","no","fi","zh-CN","zh-TW","tr","th","vi","ko","km"]',
+            '<script src="/public-site-i18n.js?v=1"></script>',
             html,
         )
-        self.assertIn('"pt":{"__title":"ANTHBOT Map', html)
-        self.assertIn('"zh-CN":{"__title":"ANTHBOT Map', html)
-        self.assertIn('"km":{"__title":"ANTHBOT Map', html)
+
+        i18n = self.client.get("/public-site-i18n.js")
+        self.assertEqual(i18n.status_code, 200)
+        script = i18n.text
+        self.assertIn(
+            'const supported=["hu","en","de","fr","es","it","pt","nl","pl","cs","sk","ro","da","sv","no","fi","zh-CN","zh-TW","tr","th","vi","ko","km"]',
+            script,
+        )
+        self.assertIn('"pt":{"__title":"ANTHBOT Map', script)
+        self.assertIn('"zh-CN":{"__title":"ANTHBOT Map', script)
+        self.assertIn('"km":{"__title":"ANTHBOT Map', script)
         self.assertIn('"Explorar temas do ANTHBOT Map"', html)
         self.assertIn('"探索 ANTHBOT Map 主题"', html)
         self.assertIn('"ស្វែងយល់ប្រធានបទ ANTHBOT Map"', html)
 
     def test_main_site_translation_tables_have_full_key_parity(self) -> None:
-        response = self.client.get("/")
+        response = self.client.get("/public-site-i18n.js")
         self.assertEqual(response.status_code, 200)
-        html = response.text
-        start = html.index("const translations=") + len("const translations=")
-        end = html.index(";\n  Object.assign(translations,", start)
-        base = json.loads(html[start:end])
+        script = response.text
+        start = script.index("const translations=") + len("const translations=")
+        end = script.index(";\n  Object.assign(translations,", start)
+        base = json.loads(script[start:end])
         extra_start = (
-            html.index("Object.assign(translations,", end)
+            script.index("Object.assign(translations,", end)
             + len("Object.assign(translations,")
         )
-        extra_end = html.index(");\n  const supported=", extra_start)
-        extra = json.loads(html[extra_start:extra_end])
+        extra_end = script.index(");\n  const supported=", extra_start)
+        extra = json.loads(script[extra_start:extra_end])
 
         translations = {**base, **extra}
         reference_keys = set(base["hu"])
@@ -689,6 +701,48 @@ class VoiceStoreTests(unittest.TestCase):
                 reference_keys,
                 f"incomplete main-site translation table: {language}",
             )
+
+    def test_main_site_uses_cacheable_assets_instead_of_inline_payloads(self) -> None:
+        home = self.client.get("/")
+        self.assertEqual(home.status_code, 200)
+        html = home.text
+        self.assertNotIn("data:image/", html)
+        self.assertNotIn("const translations=", html)
+        self.assertIn('/assets/genie-mower.png?v=1', html)
+        self.assertIn('/assets/m-series-mower.png?v=1', html)
+        self.assertIn(
+            '<script src="/public-site-i18n.js?v=1"></script>',
+            html,
+        )
+        self.assertIn('fetchpriority="high"', html)
+        self.assertIn('loading="lazy"', html)
+        self.assertLess(len(home.content), 150_000)
+
+        i18n = self.client.get("/public-site-i18n.js")
+        self.assertEqual(i18n.status_code, 200)
+        self.assertTrue(
+            i18n.headers["content-type"].startswith(
+                "application/javascript"
+            )
+        )
+        self.assertIn("immutable", i18n.headers.get("cache-control", ""))
+        self.assertIn("const translations=", i18n.text)
+
+        genie = self.client.get("/assets/genie-mower.png")
+        self.assertEqual(genie.status_code, 200)
+        self.assertTrue(genie.headers["content-type"].startswith("image/png"))
+        self.assertTrue(genie.content.startswith(b"\x89PNG\r\n\x1a\n"))
+        self.assertGreater(len(genie.content), 100_000)
+        self.assertIn("immutable", genie.headers.get("cache-control", ""))
+
+        m_series = self.client.get("/assets/m-series-mower.png")
+        self.assertEqual(m_series.status_code, 200)
+        self.assertTrue(
+            m_series.headers["content-type"].startswith("image/png")
+        )
+        self.assertTrue(m_series.content.startswith(b"\x89PNG\r\n\x1a\n"))
+        self.assertGreater(len(m_series.content), 10_000)
+        self.assertIn("immutable", m_series.headers.get("cache-control", ""))
 
     def test_privacy_page_has_gdpr_information_and_23_languages(self) -> None:
         response = self.client.get("/privacy")

@@ -2637,6 +2637,48 @@ def public_brand_logo() -> Response:
     )
 
 
+@router.get("/assets/genie-mower.png", include_in_schema=False)
+def public_genie_mower_image() -> Response:
+    return Response(
+        content=_brand_asset_bytes("public_genie_mower.b64"),
+        media_type="image/png",
+        headers={
+            "Cache-Control": "public, max-age=604800, immutable",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.get("/assets/m-series-mower.png", include_in_schema=False)
+def public_m_series_mower_image() -> Response:
+    return Response(
+        content=_brand_asset_bytes("public_m_series_mower.b64"),
+        media_type="image/png",
+        headers={
+            "Cache-Control": "public, max-age=604800, immutable",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.get("/public-site-i18n.js", include_in_schema=False)
+def public_site_i18n_script() -> Response:
+    path = Path(__file__).with_name("public_site_i18n.js")
+    if not path.is_file():
+        raise HTTPException(
+            status_code=503,
+            detail="public site translation asset unavailable",
+        )
+    return FileResponse(
+        path,
+        media_type="application/javascript",
+        headers={
+            "Cache-Control": "public, max-age=604800, immutable",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
 @router.get("/site-analytics.js")
 def site_analytics_script() -> Response:
     script = r"""
