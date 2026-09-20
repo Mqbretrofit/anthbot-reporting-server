@@ -16,6 +16,7 @@ from fastapi.testclient import TestClient
 
 import entrypoint
 import store_api
+import store_accounts
 
 
 class VoiceStoreTests(unittest.TestCase):
@@ -38,6 +39,14 @@ class VoiceStoreTests(unittest.TestCase):
         os.environ["ANTHBOT_PRIVACY_CONTACT_EMAIL"] = "privacy@example.test"
         os.environ["ANTHBOT_PRIVACY_CONTACT_PHONE"] = "+36 1 000 0000"
         os.environ["ANTHBOT_SITE_ANALYTICS_ENABLED"] = "true"
+        os.environ["ANTHBOT_SMTP_HOST"] = "smtp.example.test"
+        os.environ["ANTHBOT_SMTP_PORT"] = "587"
+        os.environ["ANTHBOT_SMTP_USERNAME"] = "store@example.test"
+        os.environ["ANTHBOT_SMTP_PASSWORD"] = "test-password"
+        os.environ["ANTHBOT_SMTP_FROM_EMAIL"] = "store@example.test"
+        os.environ["ANTHBOT_SMTP_FROM_NAME"] = "ANTHBOT Map"
+        os.environ["ANTHBOT_SMTP_STARTTLS"] = "true"
+        os.environ["ANTHBOT_SMTP_SSL"] = "false"
         self.client_ctx = TestClient(entrypoint.app, base_url="https://testserver")
         self.client = self.client_ctx.__enter__()
 
@@ -47,6 +56,52 @@ class VoiceStoreTests(unittest.TestCase):
 
     def _admin_headers(self) -> dict[str, str]:
         return {"Authorization": "Bearer test-admin-token"}
+
+    def _login_store_account(self, email: str = "buyer@example.com") -> dict:
+        captured: dict[str, str] = {}
+
+        def fake_send(target: str, code: str, language: str) -> None:
+            captured["email"] = target
+            captured["code"] = code
+            captured["language"] = language
+
+        with patch.object(store_accounts, "_send_login_code", side_effect=fake_send):
+            requested = self.client.post(
+                "/api/anthbot/store/account/request-code",
+                json={"email": email, "language": "hu"},
+            )
+        self.assertEqual(requested.status_code, 200)
+        self.assertEqual(captured["email"], email.casefold())
+        self.assertRegex(captured["code"], r"^\d{6}$")
+
+        verified = self.client.post(
+            "/api/anthbot/store/account/verify-code",
+            json={
+                "email": email,
+                "code": captured["code"],
+                "language": "hu",
+            },
+        )
+        self.assertEqual(verified.status_code, 200)
+        self.assertTrue(verified.json()["authenticated"])
+        body = verified.json()
+        with store_api.core._db() as conn:
+            row = conn.execute(
+                "SELECT user_id FROM store_users WHERE email = ?",
+                (email.casefold(),),
+            ).fetchone()
+        self.assertIsNotNone(row)
+        body["_user_id"] = str(row["user_id"])
+        return body
+
+    def _link_store_account_to_pair(self, pair_code: str) -> dict:
+        linked = self.client.post(
+            "/api/anthbot/store/account/link-map",
+            json={"pair_code": pair_code},
+        )
+        self.assertEqual(linked.status_code, 200)
+        self.assertTrue(linked.json()["linked"])
+        return linked.json()
 
     def _upload_pack(self) -> dict:
         content = b"paid-community-pack"
@@ -543,6 +598,7 @@ class VoiceStoreTests(unittest.TestCase):
             json={"access": "paid", "price_amount": 799, "currency": "eur"},
         )
         self.assertEqual(priced.status_code, 200)
+        account = self._login_store_account("buyer@example.test")
         fake_session = {
             "id": "cs_test_installer_direct",
             "url": "https://checkout.stripe.com/c/pay/test",
@@ -553,7 +609,11 @@ class VoiceStoreTests(unittest.TestCase):
             "client_reference_id": pack_id,
             "customer": "cus_installer",
             "payment_intent": "pi_installer",
-            "metadata": {"pack_id": pack_id, "community_id": "hu_noemi"},
+            "metadata": {
+                "pack_id": pack_id,
+                "community_id": "hu_noemi",
+                "store_user_id": account["_user_id"],
+            },
             "customer_details": {"email": "buyer@example.test"},
             "created": 1700000000,
         }
@@ -569,6 +629,7 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertTrue(body["checkout_url"].startswith("https://checkout.stripe.com/"))
         kwargs = create_session.call_args.kwargs
         self.assertIsNotNone(kwargs["client_id"])
+        self.assertEqual(kwargs["user_id"], account["_user_id"])
         self.assertIsNone(kwargs["pair_code"])
         self.assertEqual(kwargs["entitlement_scope"], "web")
 
@@ -584,6 +645,7 @@ class VoiceStoreTests(unittest.TestCase):
         )
         self.assertEqual(priced.status_code, 200)
         self.assertEqual(priced.json()["pack"]["access"], "paid")
+        account = self._login_store_account("buyer@example.com")
 
         legacy = self.client.get("/api/anthbot/voice-packs")
         self.assertEqual(legacy.status_code, 200)
@@ -620,6 +682,7 @@ class VoiceStoreTests(unittest.TestCase):
                 "pack_id": pack_id,
                 "community_id": "cs_vlasta_standard",
                 "store_client_id": browser_client_id,
+                "store_user_id": account["_user_id"],
                 "entitlement_scope": "web",
             },
             "payment_status": "unpaid",
@@ -642,6 +705,7 @@ class VoiceStoreTests(unittest.TestCase):
             checkout.json()["checkout_url"].startswith("https://checkout.stripe.com/")
         )
         self.assertEqual(create.call_args.kwargs["client_id"], browser_client_id)
+        self.assertEqual(create.call_args.kwargs["user_id"], account["_user_id"])
         self.assertEqual(create.call_args.kwargs["entitlement_scope"], "web")
 
         paid_session = {
@@ -702,6 +766,7 @@ class VoiceStoreTests(unittest.TestCase):
             json={"access": "paid", "price_amount": 100, "currency": "eur"},
         )
         self.assertEqual(priced.status_code, 200)
+        account = self._login_store_account("sdk@example.com")
 
         store_page = self.client.get("/store")
         self.assertEqual(store_page.status_code, 200)
@@ -753,7 +818,9 @@ class VoiceStoreTests(unittest.TestCase):
         )
         self.assertEqual(kwargs["metadata"]["pack_id"], pack_id)
         self.assertEqual(kwargs["metadata"]["store_client_id"], browser_client_id)
+        self.assertEqual(kwargs["metadata"]["store_user_id"], account["_user_id"])
         self.assertEqual(kwargs["metadata"]["entitlement_scope"], "web")
+        self.assertEqual(kwargs["customer_email"], "sdk@example.com")
         self.assertEqual(
             kwargs["payment_intent_data"]["metadata"]["pack_id"],
             pack_id,
@@ -772,6 +839,7 @@ class VoiceStoreTests(unittest.TestCase):
             json={"access": "paid", "price_amount": 299, "currency": "eur"},
         )
         self.assertEqual(priced.status_code, 200)
+        account = self._login_store_account("mapbuyer@example.com")
 
         client_token = "A" * 48
         pairing = self.client.post(
@@ -782,6 +850,7 @@ class VoiceStoreTests(unittest.TestCase):
         store_url = pairing.json()["store_url"]
         self.assertIn("/store?pair=abp_", store_url)
         pair_code = store_url.split("pair=", 1)[1]
+        self._link_store_account_to_pair(pair_code)
 
         client_id = store_api._client_id_from_token(client_token)
         checkout_session = {
@@ -794,6 +863,7 @@ class VoiceStoreTests(unittest.TestCase):
                 "pack_id": pack_id,
                 "community_id": "cs_vlasta_standard",
                 "store_client_id": client_id,
+                "store_user_id": account["_user_id"],
                 "entitlement_scope": "map",
             },
             "payment_status": "unpaid",
@@ -817,6 +887,7 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(checkout.status_code, 200)
         self.assertEqual(create.call_args.args[0]["id"], pack_id)
         self.assertEqual(create.call_args.kwargs["client_id"], client_id)
+        self.assertEqual(create.call_args.kwargs["user_id"], account["_user_id"])
         self.assertEqual(create.call_args.kwargs["pair_code"], pair_code)
         self.assertEqual(create.call_args.kwargs["entitlement_scope"], "map")
 
@@ -870,6 +941,7 @@ class VoiceStoreTests(unittest.TestCase):
             json={"access": "paid", "price_amount": 799, "currency": "eur"},
         )
         self.assertEqual(priced.status_code, 200)
+        account = self._login_store_account("directmap@example.com")
 
         client_token = "D" * 48
         pairing = self.client.post(
@@ -878,6 +950,7 @@ class VoiceStoreTests(unittest.TestCase):
         )
         self.assertEqual(pairing.status_code, 200)
         pair_code = pairing.json()["store_url"].split("pair=", 1)[1]
+        self._link_store_account_to_pair(pair_code)
         client_id = store_api._client_id_from_token(client_token)
 
         checkout_session = {
@@ -890,6 +963,7 @@ class VoiceStoreTests(unittest.TestCase):
                 "pack_id": pack_id,
                 "community_id": "cs_vlasta_standard",
                 "store_client_id": client_id,
+                "store_user_id": account["_user_id"],
                 "pair_code": pair_code,
                 "entitlement_scope": "map",
             },
@@ -919,6 +993,7 @@ class VoiceStoreTests(unittest.TestCase):
             "https://checkout.stripe.com/c/pay/direct-map-test",
         )
         self.assertEqual(create.call_args.kwargs["client_id"], client_id)
+        self.assertEqual(create.call_args.kwargs["user_id"], account["_user_id"])
         self.assertEqual(create.call_args.kwargs["pair_code"], pair_code)
         self.assertEqual(create.call_args.kwargs["entitlement_scope"], "map")
 
@@ -1063,6 +1138,7 @@ class VoiceStoreTests(unittest.TestCase):
             json={"access": "paid", "price_amount": 299, "currency": "eur"},
         )
         self.assertEqual(priced.status_code, 200)
+        account = self._login_store_account("upgrade@example.com")
 
         client_token = "C" * 48
         pairing = self.client.post(
@@ -1071,6 +1147,7 @@ class VoiceStoreTests(unittest.TestCase):
         )
         self.assertEqual(pairing.status_code, 200)
         pair_code = pairing.json()["store_url"].split("pair=", 1)[1]
+        self._link_store_account_to_pair(pair_code)
         client_id = store_api._client_id_from_token(client_token)
 
         order = store_api._upsert_order_from_session(
@@ -1083,6 +1160,7 @@ class VoiceStoreTests(unittest.TestCase):
                     "pack_id": old_pack_id,
                     "community_id": "cs_vlasta_standard",
                     "store_client_id": client_id,
+                    "store_user_id": account["_user_id"],
                 },
                 "payment_status": "paid",
                 "status": "complete",
@@ -1767,6 +1845,142 @@ class VoiceStoreTests(unittest.TestCase):
             },
         )
         self.assertEqual(invalid.status_code, 400)
+
+
+    def test_store_account_uses_hashed_code_and_persistent_session(self) -> None:
+        captured: dict[str, str] = {}
+
+        def fake_send(target: str, code: str, language: str) -> None:
+            captured["email"] = target
+            captured["code"] = code
+
+        with patch.object(store_accounts, "_send_login_code", side_effect=fake_send):
+            requested = self.client.post(
+                "/api/anthbot/store/account/request-code",
+                json={"email": "Account@Test.Example", "language": "en"},
+            )
+        self.assertEqual(requested.status_code, 200)
+        with store_api.core._db() as conn:
+            row = conn.execute(
+                "SELECT code_hash, salt FROM store_login_codes WHERE email = ?",
+                ("account@test.example",),
+            ).fetchone()
+        self.assertIsNotNone(row)
+        self.assertNotEqual(row["code_hash"], captured["code"])
+        self.assertNotIn(captured["code"], str(row["salt"]))
+
+        verified = self.client.post(
+            "/api/anthbot/store/account/verify-code",
+            json={
+                "email": "account@test.example",
+                "code": captured["code"],
+                "language": "en",
+            },
+        )
+        self.assertEqual(verified.status_code, 200)
+        self.assertTrue(verified.json()["authenticated"])
+        cookie = verified.headers.get("set-cookie", "")
+        self.assertIn("anthbot_store_session=", cookie)
+        self.assertIn("HttpOnly", cookie)
+        self.assertIn("Secure", cookie)
+        self.assertIn("SameSite=lax", cookie)
+
+        status = self.client.get("/api/anthbot/store/account")
+        self.assertEqual(status.status_code, 200)
+        self.assertTrue(status.json()["authenticated"])
+        self.assertEqual(status.json()["email"], "account@test.example")
+
+    def test_paid_checkout_requires_store_account(self) -> None:
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        priced = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        self.assertEqual(priced.status_code, 200)
+        self.client.get("/store")
+        blocked = self.client.post(
+            "/api/anthbot/store/checkout",
+            json={"pack_id": pack_id},
+        )
+        self.assertEqual(blocked.status_code, 401)
+        self.assertIn("account", blocked.json()["detail"].casefold())
+
+    def test_verified_email_claims_legacy_purchase(self) -> None:
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        store_api._upsert_order_from_session(
+            {
+                "id": "cs_test_legacy_account_claim",
+                "object": "checkout.session",
+                "created": int(time.time()),
+                "client_reference_id": pack_id,
+                "metadata": {
+                    "pack_id": pack_id,
+                    "community_id": "cs_vlasta_standard",
+                    "store_client_id": store_api._client_id_from_token("Z" * 48),
+                    "entitlement_scope": "web",
+                },
+                "payment_status": "paid",
+                "status": "complete",
+                "amount_total": 799,
+                "currency": "eur",
+                "customer_details": {"email": "legacy@example.test"},
+                "customer": "cus_legacy_claim",
+                "payment_intent": "pi_legacy_claim",
+            }
+        )
+
+        account = self._login_store_account("legacy@example.test")
+        status = self.client.get("/api/anthbot/store/account")
+        self.assertEqual(status.status_code, 200)
+        self.assertEqual(status.json()["purchased_count"], 1)
+        with store_api.core._db() as conn:
+            row = conn.execute(
+                """
+                SELECT user_id, stripe_customer_id
+                FROM store_orders
+                WHERE stripe_session_id = ?
+                """,
+                ("cs_test_legacy_account_claim",),
+            ).fetchone()
+        self.assertEqual(row["user_id"], account["_user_id"])
+        self.assertEqual(row["stripe_customer_id"], "cus_legacy_claim")
+
+        catalog = self.client.get("/api/anthbot/store/voice-packs")
+        owned = next(
+            item for item in catalog.json()["packs"] if item["id"] == pack_id
+        )
+        self.assertTrue(owned["owned"])
+
+    def test_logged_out_direct_map_checkout_redirects_to_account_store(self) -> None:
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        pairing = self.client.post(
+            "/api/anthbot/store/client/pair",
+            json={"client_token": "P" * 48},
+        )
+        pair_code = pairing.json()["store_url"].split("pair=", 1)[1]
+        response = self.client.get(
+            "/api/anthbot/store/direct-checkout",
+            params={"pair": pair_code, "voice_id": "cs_vlasta_standard"},
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 303)
+        self.assertIn("/store?pair=", response.headers["location"])
+        self.assertIn("checkout=1", response.headers["location"])
+        self.assertIn("voice_id=cs_vlasta_standard", response.headers["location"])
 
 
 if __name__ == "__main__":

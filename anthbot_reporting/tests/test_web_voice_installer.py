@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 
 import entrypoint
 import store_api
+import store_accounts
 import web_voice_installer
 import web_voice_installer_anthbot
 
@@ -33,6 +34,11 @@ class WebVoiceInstallerTests(unittest.TestCase):
         os.environ["ANTHBOT_WEB_VOICE_INSTALLER_ENABLED"] = "true"
         os.environ["ANTHBOT_PRIVACY_CONTROLLER_NAME"] = "Example Controller"
         os.environ["ANTHBOT_PRIVACY_CONTROLLER_ADDRESS"] = "Example Address"
+        os.environ["ANTHBOT_SMTP_HOST"] = "smtp.example.test"
+        os.environ["ANTHBOT_SMTP_PORT"] = "587"
+        os.environ["ANTHBOT_SMTP_USERNAME"] = "store@example.test"
+        os.environ["ANTHBOT_SMTP_PASSWORD"] = "test-password"
+        os.environ["ANTHBOT_SMTP_FROM_EMAIL"] = "store@example.test"
         with web_voice_installer._LOCK:
             web_voice_installer._SESSIONS.clear()
             web_voice_installer._JOBS.clear()
@@ -50,6 +56,32 @@ class WebVoiceInstallerTests(unittest.TestCase):
 
     def _admin_headers(self) -> dict[str, str]:
         return {"Authorization": "Bearer test-admin-token"}
+
+    def _login_store_account(self, email: str = "buyer@example.test") -> dict:
+        captured: dict[str, str] = {}
+
+        def fake_send(target: str, code: str, language: str) -> None:
+            captured["code"] = code
+
+        with patch.object(store_accounts, "_send_login_code", side_effect=fake_send):
+            requested = self.client.post(
+                "/api/anthbot/store/account/request-code",
+                json={"email": email, "language": "en"},
+            )
+        self.assertEqual(requested.status_code, 200)
+        verified = self.client.post(
+            "/api/anthbot/store/account/verify-code",
+            json={"email": email, "code": captured["code"], "language": "en"},
+        )
+        self.assertEqual(verified.status_code, 200)
+        with store_api.core._db() as conn:
+            row = conn.execute(
+                "SELECT user_id FROM store_users WHERE email = ?",
+                (email.casefold(),),
+            ).fetchone()
+        body = verified.json()
+        body["_user_id"] = str(row["user_id"])
+        return body
 
     def _upload_paid_pack(self) -> dict:
         response = self.client.post(
@@ -240,6 +272,7 @@ class WebVoiceInstallerTests(unittest.TestCase):
         pack = self._upload_paid_pack()
         self._open_installer()
         login = self._login_genie()
+        account = self._login_store_account("buyer@example.test")
         device_id = login["auto_device_id"]
         client_token = self.client.cookies.get("anthbot_voice_store_client")
         client_id = store_api._client_id_from_token(client_token)
@@ -254,6 +287,7 @@ class WebVoiceInstallerTests(unittest.TestCase):
                 "pack_id": pack["id"],
                 "community_id": pack["community_id"],
                 "store_client_id": client_id,
+                "store_user_id": account["_user_id"],
             },
             "payment_status": "unpaid",
             "status": "open",
@@ -275,6 +309,7 @@ class WebVoiceInstallerTests(unittest.TestCase):
         self.assertEqual(checkout.status_code, 200)
         kwargs = create_checkout.call_args.kwargs
         self.assertEqual(kwargs["client_id"], client_id)
+        self.assertEqual(kwargs["user_id"], account["_user_id"])
         self.assertIn("/voice-installer?paid=1", kwargs["success_url_override"])
         self.assertIn(
             "session_id={CHECKOUT_SESSION_ID}",

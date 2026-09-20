@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 import app as core
 import store_api
+import store_accounts
 import web_voice_installer_anthbot as anthbot
 
 
@@ -222,21 +223,35 @@ def _catalog(request: Request, store_token: str) -> dict[str, Any]:
     catalog = store_api._store_catalog(request)
     client_id = store_api._client_id_from_token(store_token)
     store_api._init_store_tables()
+    account = store_accounts.current_user(request)
     owned: set[str] = set()
     with core._db() as conn:
-        rows = conn.execute(
-            """
-            SELECT pack_id, community_id
-            FROM store_orders
-            WHERE client_id = ?
-              AND payment_status = 'paid'
-              AND (
-                    entitlement_scope = 'web'
-                    OR entitlement_scope IS NULL
-                  )
-            """,
-            (client_id,),
-        ).fetchall()
+        if account is not None:
+            rows = conn.execute(
+                """
+                SELECT pack_id, community_id
+                FROM store_orders
+                WHERE user_id = ?
+                  AND payment_status = 'paid'
+                """,
+                (str(account["user_id"]),),
+            ).fetchall()
+        else:
+            # Legacy browser-linked purchases remain installable while the
+            # owner migrates them by signing into the new store account.
+            rows = conn.execute(
+                """
+                SELECT pack_id, community_id
+                FROM store_orders
+                WHERE client_id = ?
+                  AND payment_status = 'paid'
+                  AND (
+                        entitlement_scope = 'web'
+                        OR entitlement_scope IS NULL
+                      )
+                """,
+                (client_id,),
+            ).fetchall()
     for row in rows:
         owned.add(str(row["pack_id"] or "").strip())
         owned.add(str(row["community_id"] or "").strip())
@@ -313,16 +328,23 @@ def _resolve_pack(
 
     if raw is not None:
         if store_api._is_paid(raw):
-            client_id = store_api._client_id_from_token(store_token)
-            order = store_api._paid_order_for_client_pack(
-                client_id,
-                raw,
-                entitlement_scope="web",
-            )
+            account = store_accounts.current_user(request)
+            if account is not None:
+                order = store_api._paid_order_for_user_pack(
+                    str(account["user_id"]),
+                    raw,
+                )
+            else:
+                client_id = store_api._client_id_from_token(store_token)
+                order = store_api._paid_order_for_client_pack(
+                    client_id,
+                    raw,
+                    entitlement_scope="web",
+                )
             if order is None:
                 raise HTTPException(
                     status_code=402,
-                    detail="This voice pack has not been purchased in this browser.",
+                    detail="This voice pack has not been purchased by this Voice Store account.",
                 )
             license_key = store_api._license_for_order(order)
             base = core._public_base_url(request)
@@ -553,10 +575,22 @@ async def installer_checkout(payload: CheckoutPayload, request: Request) -> Resp
         raise HTTPException(status_code=409, detail="This voice pack does not require payment.")
 
     client_id = store_api._client_id_from_token(token)
-    existing = store_api._paid_order_for_client_pack(
-        client_id,
+    account = store_accounts.current_user(request)
+    if account is None:
+        base = core._public_base_url(request)
+        return _json(
+            {
+                "account_required": True,
+                "account_url": (
+                    f"{base}/store?return=voice-installer"
+                    f"&pack_id={quote(payload.pack_id)}"
+                ),
+            }
+        )
+    user_id = str(account["user_id"])
+    existing = store_api._paid_order_for_user_pack(
+        user_id,
         record,
-        entitlement_scope="web",
     )
     if existing is not None:
         return _json(
@@ -579,6 +613,7 @@ async def installer_checkout(payload: CheckoutPayload, request: Request) -> Resp
         record,
         request,
         client_id=client_id,
+        user_id=user_id,
         pair_code=None,
         entitlement_scope="web",
         success_url_override=success_url,
@@ -606,6 +641,7 @@ async def installer_purchase_sync(session_id: str, request: Request) -> Response
         raise HTTPException(status_code=422, detail="Invalid checkout session.")
 
     client_id = store_api._client_id_from_token(_store_token(request))
+    account = store_accounts.current_user(request)
     order = store_api._order_by_session(session_id)
     payment_state = (
         str(order.get("payment_status") or "").casefold() if order is not None else ""
@@ -618,10 +654,17 @@ async def installer_purchase_sync(session_id: str, request: Request) -> Response
         )
         order = store_api._upsert_order_from_session(stripe_session)
 
-    if str(order.get("client_id") or "") != client_id:
+    order_user_id = str(order.get("user_id") or "").strip()
+    if order_user_id:
+        if account is None or order_user_id != str(account["user_id"]):
+            raise HTTPException(
+                status_code=403,
+                detail="This purchase belongs to a different Voice Store account.",
+            )
+    elif str(order.get("client_id") or "") != client_id:
         raise HTTPException(
             status_code=403,
-            detail="This purchase belongs to a different browser.",
+            detail="This legacy purchase belongs to a different browser.",
         )
     return _json(
         {
