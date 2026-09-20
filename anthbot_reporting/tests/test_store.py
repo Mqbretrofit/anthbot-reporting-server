@@ -1103,6 +1103,108 @@ class VoiceStoreTests(unittest.TestCase):
             admin_html,
         )
 
+    def test_admin_can_grant_owner_map_access_without_fake_purchase(self) -> None:
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        priced = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        self.assertEqual(priced.status_code, 200)
+
+        client_token = "O" * 48
+        pairing = self.client.post(
+            "/api/anthbot/store/client/pair",
+            json={"client_token": client_token},
+        )
+        self.assertEqual(pairing.status_code, 200)
+        pair_code = pairing.json()["store_url"].split("pair=", 1)[1]
+
+        before = self.client.post(
+            "/api/anthbot/store/client/entitlements",
+            json={"client_token": client_token},
+        )
+        self.assertEqual(before.status_code, 200)
+        self.assertFalse(before.json()["owner_access"])
+        self.assertFalse(before.json()["licensed"])
+        self.assertEqual(before.json()["packs"], [])
+
+        owner_route = self.client.get(
+            f"/store?pair={pair_code}",
+            headers=self._admin_headers(),
+            follow_redirects=False,
+        )
+        self.assertEqual(owner_route.status_code, 303)
+        self.assertEqual(
+            owner_route.headers["location"],
+            f"/dashboard/store?owner_pair={pair_code}",
+        )
+
+        granted = self.client.post(
+            "/api/anthbot/admin/store/owner-access",
+            headers=self._admin_headers(),
+            json={"pair_code": pair_code},
+        )
+        self.assertEqual(granted.status_code, 200)
+        self.assertTrue(granted.json()["granted"])
+        self.assertTrue(granted.json()["owner_access"])
+
+        entitlements = self.client.post(
+            "/api/anthbot/store/client/entitlements",
+            json={"client_token": client_token},
+        )
+        self.assertEqual(entitlements.status_code, 200)
+        body = entitlements.json()
+        self.assertTrue(body["licensed"])
+        self.assertTrue(body["owner_access"])
+        self.assertEqual(len(body["packs"]), 1)
+        owner_pack = body["packs"][0]
+        self.assertEqual(owner_pack["id"], pack_id)
+        self.assertEqual(owner_pack["entitlement"], "owner")
+        self.assertTrue(owner_pack["owner_access"])
+        self.assertIn("/owner-download?owner=abo1.", owner_pack["music_url"])
+
+        owner_download = self.client.get(
+            owner_pack["music_url"].removeprefix("https://testserver")
+        )
+        self.assertEqual(owner_download.status_code, 200)
+        self.assertEqual(owner_download.content, b"paid-community-pack")
+
+        public_catalog = self.client.get("/api/anthbot/store/voice-packs")
+        public_pack = next(
+            item for item in public_catalog.json()["packs"]
+            if item["id"] == pack_id
+        )
+        self.assertEqual(public_pack["access"], "paid")
+        self.assertNotIn("music_url", public_pack)
+
+        store_api._init_store_tables()
+        with store_api.core._db() as conn:
+            order_count = conn.execute(
+                "SELECT COUNT(*) FROM store_orders"
+            ).fetchone()[0]
+        self.assertEqual(order_count, 0)
+
+        admin_html = Path(store_api.__file__).with_name("store_admin.html").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("Minden hang feloldása ezen a HA-n", admin_html)
+        self.assertIn("/api/anthbot/admin/store/owner-access", admin_html)
+
+    def test_owner_access_grant_requires_admin(self) -> None:
+        client_token = "Q" * 48
+        pairing = self.client.post(
+            "/api/anthbot/store/client/pair",
+            json={"client_token": client_token},
+        )
+        pair_code = pairing.json()["store_url"].split("pair=", 1)[1]
+        denied = self.client.post(
+            "/api/anthbot/admin/store/owner-access",
+            json={"pair_code": pair_code},
+        )
+        self.assertEqual(denied.status_code, 401)
+
     def test_store_admin_can_hide_sold_pack_without_breaking_entitlement(self) -> None:
         pack = self._upload_pack()
         pack_id = pack["id"]
