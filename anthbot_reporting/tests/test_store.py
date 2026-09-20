@@ -84,7 +84,15 @@ class VoiceStoreTests(unittest.TestCase):
         )
         self.assertEqual(verified.status_code, 200)
         self.assertTrue(verified.json()["authenticated"])
-        return verified.json()
+        body = verified.json()
+        with store_api.core._db() as conn:
+            row = conn.execute(
+                "SELECT user_id FROM store_users WHERE email = ?",
+                (email.casefold(),),
+            ).fetchone()
+        self.assertIsNotNone(row)
+        body["_user_id"] = str(row["user_id"])
+        return body
 
     def _link_store_account_to_pair(self, pair_code: str) -> dict:
         linked = self.client.post(
