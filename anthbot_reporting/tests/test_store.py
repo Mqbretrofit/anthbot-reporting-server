@@ -266,6 +266,108 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertTrue(public.json()["installation_email_sent"])
         self.purchase_email_sender.assert_called_once()
 
+    def test_account_purchase_history_is_private_and_can_resend_email(self) -> None:
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        priced = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        self.assertEqual(priced.status_code, 200)
+        account = self._login_store_account("history@example.com")
+
+        session = {
+            "id": "cs_test_history_123",
+            "object": "checkout.session",
+            "url": "https://checkout.stripe.com/c/pay/history-test",
+            "created": int(time.time()),
+            "client_reference_id": pack_id,
+            "metadata": {
+                "pack_id": pack_id,
+                "community_id": "cs_vlasta_standard",
+                "store_user_id": account["_user_id"],
+                "entitlement_scope": "map",
+            },
+            "payment_status": "paid",
+            "status": "complete",
+            "amount_total": 799,
+            "currency": "eur",
+            "customer_details": {"email": "history@example.com"},
+            "customer": "cus_history",
+            "payment_intent": "pi_history",
+        }
+        store_api._upsert_order_from_session(session)
+        self.purchase_email_sender.reset_mock()
+
+        history = self.client.get("/api/anthbot/store/account/purchases")
+        self.assertEqual(history.status_code, 200)
+        purchases = history.json()["purchases"]
+        self.assertEqual(len(purchases), 1)
+        purchase = purchases[0]
+        self.assertEqual(purchase["stripe_session_id"], "cs_test_history_123")
+        self.assertEqual(purchase["pack"]["community_id"], "cs_vlasta_standard")
+        self.assertTrue(purchase["license_key"].startswith("abv1."))
+        self.assertIn(
+            "/store/success?session_id=cs_test_history_123",
+            purchase["installation_guide_url"],
+        )
+
+        resent = self.client.post(
+            "/api/anthbot/store/account/purchases/"
+            "cs_test_history_123/resend-email",
+            json={},
+        )
+        self.assertEqual(resent.status_code, 200)
+        self.assertTrue(resent.json()["resent"])
+        self.purchase_email_sender.assert_called_once()
+        args, kwargs = self.purchase_email_sender.call_args
+        self.assertEqual(args[0], "history@example.com")
+        self.assertEqual(kwargs["language"], "hu")
+        self.assertTrue(kwargs["license_key"].startswith("abv1."))
+
+        rate_limited = self.client.post(
+            "/api/anthbot/store/account/purchases/"
+            "cs_test_history_123/resend-email",
+            json={},
+        )
+        self.assertEqual(rate_limited.status_code, 429)
+        self.purchase_email_sender.assert_called_once()
+
+        self.client.post(
+            "/api/anthbot/store/account/logout",
+            json={},
+        )
+        other = self._login_store_account("other@example.com")
+        self.assertNotEqual(other["_user_id"], account["_user_id"])
+        other_history = self.client.get(
+            "/api/anthbot/store/account/purchases"
+        )
+        self.assertEqual(other_history.status_code, 200)
+        self.assertEqual(other_history.json()["purchases"], [])
+        forbidden = self.client.post(
+            "/api/anthbot/store/account/purchases/"
+            "cs_test_history_123/resend-email",
+            json={},
+        )
+        self.assertEqual(forbidden.status_code, 404)
+
+    def test_store_account_has_multilingual_purchase_history_ui(self) -> None:
+        response = self.client.get("/store")
+        self.assertEqual(response.status_code, 200)
+        html = response.text
+        self.assertIn('id="account-purchase-history"', html)
+        self.assertIn('id="account-purchase-list"', html)
+        self.assertIn("data-copy-license", html)
+        self.assertIn("data-resend-email", html)
+        self.assertIn("/api/anthbot/store/account/purchases", html)
+        self.assertEqual(html.count('"myPurchases":'), 23)
+        self.assertEqual(html.count('"resendEmail":'), 23)
+        self.assertIn('"myPurchases":"Vásárlásaim"', html)
+        self.assertIn('"myPurchases":"My purchases"', html)
+        self.assertIn('"myPurchases":"我的购买"', html)
+        self.assertIn('"myPurchases":"ការទិញរបស់ខ្ញុំ"', html)
+
     def test_store_has_visible_top_navigation_in_all_languages(self) -> None:
         response = self.client.get("/store")
         self.assertEqual(response.status_code, 200)
