@@ -27,6 +27,14 @@ options:
   privacy_contact_phone: "+36 30 620 9015"
   site_analytics_enabled: true
   web_voice_installer_enabled: false
+  smtp_host: ""
+  smtp_port: 587
+  smtp_username: ""
+  smtp_password: ""
+  smtp_from_email: ""
+  smtp_from_name: "ANTHBOT Map"
+  smtp_starttls: true
+  smtp_ssl: false
 schema:
   admin_token: password?
   store_enabled: bool
@@ -40,3 +48,11 @@ schema:
   privacy_contact_phone: str
   site_analytics_enabled: bool
   web_voice_installer_enabled: bool
+  smtp_host: str?
+  smtp_port: int(1,65535)
+  smtp_username: str?
+  smtp_password: password?
+  smtp_from_email: str?
+  smtp_from_name: str
+  smtp_starttls: bool
+  smtp_ssl: bool
