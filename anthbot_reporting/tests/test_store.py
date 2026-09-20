@@ -239,6 +239,7 @@ class VoiceStoreTests(unittest.TestCase):
             "<title>ANTHBOT Map for Home Assistant – Maps, Zones &amp; Voice Packs</title>",
             home.text,
         )
+        self.assertIn("support@anthbotmap.com", home.text)
         self.assertIn('"@type":"SoftwareApplication"', home.text)
         self.assertIn('"name":"ANTHBOT Map"', home.text)
         self.assertIn(
@@ -382,8 +383,8 @@ class VoiceStoreTests(unittest.TestCase):
             html = response.text
             self.assertIn('<div class="bg-grid"></div>', html)
             self.assertIn('<nav class="nav">', html)
-            self.assertIn('<span class="logo">M</span>', html)
-            self.assertIn("<span>MQB Retrofit Hungary</span>", html)
+            self.assertIn('<span class="logo">A</span>', html)
+            self.assertIn("<span>ANTHBOT Map</span>", html)
             self.assertIn('class="hero"', html)
             self.assertIn('class="topic-stage glass"', html)
             self.assertIn('class="feature-grid"', html)
