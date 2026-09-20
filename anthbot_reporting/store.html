@@ -227,6 +227,11 @@ async function reloadStoreAfterAccountChange(){
 async function resumePendingPurchase(){
   if(!accountState.authenticated)return;
   if(pairCode&&!accountState.linked)return;
+  if(qs.get('return')==='voice-installer'&&qs.get('checkout')!=='1'){
+    const packId=qs.get('pack_id')||'';
+    location.href='/voice-installer'+(packId?'?pack='+encodeURIComponent(packId):'');
+    return;
+  }
   let target=pendingPurchaseId;
   if(!target&&qs.get('checkout')==='1'){
     const voiceId=qs.get('voice_id')||'',packId=qs.get('pack_id')||'';
