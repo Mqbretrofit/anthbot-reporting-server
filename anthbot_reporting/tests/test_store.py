@@ -526,8 +526,8 @@ class VoiceStoreTests(unittest.TestCase):
             html = response.text
             self.assertIn('<div class="bg-grid"></div>', html)
             self.assertIn('<nav class="nav">', html)
-            self.assertIn('<span class="logo">A</span>', html)
-            self.assertIn("<span>ANTHBOT Map</span>", html)
+            self.assertIn('class="brand anthbot-brand"', html)
+            self.assertIn('/brand/anthbot-map-logo.webp?v=1', html)
             self.assertIn('class="hero"', html)
             self.assertIn('class="topic-stage glass"', html)
             self.assertIn('class="feature-grid"', html)
@@ -537,7 +537,7 @@ class VoiceStoreTests(unittest.TestCase):
             self.assertIn('href="/#models"', html)
             self.assertIn('href="/#support"', html)
 
-    def test_public_pages_expose_anthbot_map_favicon(self) -> None:
+    def test_public_pages_expose_custom_anthbot_map_branding(self) -> None:
         for path in (
             "/",
             "/store",
@@ -554,25 +554,34 @@ class VoiceStoreTests(unittest.TestCase):
             response = self.client.get(path)
             self.assertEqual(response.status_code, 200)
             self.assertIn(
-                '<link rel="icon" href="/favicon.svg" type="image/svg+xml">',
+                '<link rel="icon" href="/favicon.png?v=2" type="image/png">',
                 response.text,
             )
             self.assertIn(
-                '<link rel="shortcut icon" href="/favicon.ico">',
+                '<link rel="apple-touch-icon" href="/favicon.png?v=2">',
                 response.text,
             )
+            self.assertIn('/brand/anthbot-map-logo.webp?v=1', response.text)
+            self.assertIn('alt="ANTHBOT Map"', response.text)
 
-        svg = self.client.get("/favicon.svg")
-        self.assertEqual(svg.status_code, 200)
-        self.assertTrue(svg.headers["content-type"].startswith("image/svg+xml"))
-        self.assertIn('viewBox="0 0 64 64"', svg.text)
-        self.assertIn("#31bf62", svg.text)
-        self.assertIn('aria-label="ANTHBOT Map"', svg.text)
-        self.assertIn("max-age=604800", svg.headers.get("cache-control", ""))
+        png = self.client.get("/favicon.png")
+        self.assertEqual(png.status_code, 200)
+        self.assertTrue(png.headers["content-type"].startswith("image/png"))
+        self.assertGreater(len(png.content), 5000)
+        self.assertTrue(png.content.startswith(b"\x89PNG\r\n\x1a\n"))
+        self.assertIn("immutable", png.headers.get("cache-control", ""))
 
-        ico = self.client.get("/favicon.ico", follow_redirects=False)
-        self.assertEqual(ico.status_code, 307)
-        self.assertEqual(ico.headers["location"], "/favicon.svg")
+        logo = self.client.get("/brand/anthbot-map-logo.webp")
+        self.assertEqual(logo.status_code, 200)
+        self.assertTrue(logo.headers["content-type"].startswith("image/webp"))
+        self.assertGreater(len(logo.content), 5000)
+        self.assertTrue(logo.content.startswith(b"RIFF"))
+        self.assertEqual(logo.content[8:12], b"WEBP")
+
+        for legacy_path in ("/favicon.ico", "/favicon.svg"):
+            legacy = self.client.get(legacy_path, follow_redirects=False)
+            self.assertEqual(legacy.status_code, 307)
+            self.assertEqual(legacy.headers["location"], "/favicon.png?v=2")
 
     def test_public_pages_share_compact_typography(self) -> None:
         for path in (
