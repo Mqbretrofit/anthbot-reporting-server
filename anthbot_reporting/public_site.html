@@ -209,8 +209,8 @@ a{color:inherit}.wrap{max-width:var(--max);margin:auto;padding:0 22px}
 <script>
 (function(){
   var currentVersion=null;
-  var versionRe=/^\\d+(?:\\.\\d+){2,3}$/;
-  var inlineVersionRe=/v\\d+(?:\\.\\d+){2,3}/g;
+  var versionRe=/^\d+(?:\.\d+){2,3}$/;
+  var inlineVersionRe=/v\d+(?:\.\d+){2,3}/g;
 
   function applyVersion(version){
     if(!versionRe.test(version))return;
