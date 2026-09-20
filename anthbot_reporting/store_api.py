@@ -14,6 +14,7 @@ from pathlib import Path
 import re
 import secrets
 import time
+import tarfile
 from typing import Any, Literal
 from urllib.parse import quote
 
@@ -42,6 +43,8 @@ _STRIPE_REFUND_RECONCILE_SECONDS = 5 * 60
 _STANDARD_VOICE_PACK_PRICE_AMOUNT = 799
 _STANDARD_VOICE_PACK_CURRENCY = "eur"
 _CUSTOM_VOICE_STARTING_PRICE_AMOUNT = 2499
+_VOICE_PREVIEW_FILES = ("A004.mp3", "A005.mp3")
+_VOICE_PREVIEW_MAX_BYTES = 2 * 1024 * 1024
 _ANALYTICS_UNIQUE_RETENTION_DAYS = 35
 _ANALYTICS_AGGREGATE_RETENTION_DAYS = 400
 _ANALYTICS_ALLOWED_PATHS = {
@@ -1349,6 +1352,28 @@ def _store_catalog(request: Request) -> dict[str, Any]:
             str(item.get("id", "")).casefold(),
         )
     )
+
+    uploaded_ids = {
+        str(item.get("id", "")).strip()
+        for item in _uploaded_records()
+        if str(item.get("id", "")).strip()
+    }
+    base = core._public_base_url(request)
+    for item in packs:
+        pack_id = str(item.get("id", "")).strip()
+        if pack_id not in uploaded_ids:
+            continue
+        item["preview_samples"] = [
+            {
+                "sample": index,
+                "url": (
+                    f"{base}/api/anthbot/store/voice-packs/{quote(pack_id)}"
+                    f"/preview/{index}"
+                ),
+            }
+            for index in range(1, len(_VOICE_PREVIEW_FILES) + 1)
+        ]
+
     return {
         "schema": STORE_SCHEMA,
         "checkout_available": _checkout_ready(),
@@ -2799,6 +2824,76 @@ def store_entitlements(
         "license_version": 1,
         "packs": [public],
     }
+
+
+def _voice_preview_bytes(pack: dict[str, Any], sample: int) -> bytes:
+    if sample < 1 or sample > len(_VOICE_PREVIEW_FILES):
+        raise HTTPException(status_code=404, detail="voice preview not found")
+
+    filename = str(pack.get("filename", "")).strip()
+    if (
+        not filename
+        or Path(filename).name != filename
+        or not core._VOICE_PACK_SAFE_PART.fullmatch(filename)
+    ):
+        raise HTTPException(status_code=404, detail="voice preview not found")
+
+    path = core._voice_pack_dir() / filename
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="voice preview not found")
+
+    wanted = _VOICE_PREVIEW_FILES[sample - 1].casefold()
+    try:
+        with tarfile.open(path, mode="r:*") as archive:
+            member = next(
+                (
+                    entry
+                    for entry in archive.getmembers()
+                    if entry.isfile()
+                    and Path(entry.name).name.casefold() == wanted
+                ),
+                None,
+            )
+            if (
+                member is None
+                or member.size <= 0
+                or member.size > _VOICE_PREVIEW_MAX_BYTES
+            ):
+                raise HTTPException(
+                    status_code=404,
+                    detail="voice preview not found",
+                )
+            source = archive.extractfile(member)
+            if source is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="voice preview not found",
+                )
+            data = source.read(_VOICE_PREVIEW_MAX_BYTES + 1)
+    except HTTPException:
+        raise
+    except (tarfile.TarError, OSError):
+        raise HTTPException(status_code=404, detail="voice preview not found")
+
+    if not data or len(data) > _VOICE_PREVIEW_MAX_BYTES:
+        raise HTTPException(status_code=404, detail="voice preview not found")
+    return data
+
+
+@router.get("/api/anthbot/store/voice-packs/{pack_id}/preview/{sample}")
+def voice_pack_preview(pack_id: str, sample: int) -> Response:
+    """Expose two fixed, short audio samples without exposing the paid pack."""
+    pack = _find_uploaded_pack(pack_id)
+    if _is_store_hidden(pack):
+        raise HTTPException(status_code=404, detail="voice preview not found")
+    return Response(
+        content=_voice_preview_bytes(pack, sample),
+        media_type="audio/mpeg",
+        headers={
+            "Cache-Control": "public, max-age=86400",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.get("/api/anthbot/store/voice-packs/{pack_id}/download")
