@@ -1061,7 +1061,7 @@ class VoiceStoreTests(unittest.TestCase):
                     "pack_id": pack_id,
                     "community_id": "cs_vlasta_standard",
                     "store_client_id": client_id,
-                    "entitlement_scope": "web",
+                    "entitlement_scope": "map",
                 },
                 "payment_status": "paid",
                 "status": "complete",
