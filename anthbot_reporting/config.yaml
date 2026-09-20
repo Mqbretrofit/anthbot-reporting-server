@@ -1,5 +1,5 @@
 name: ANTHBOT Reporting Server
-version: "1.0.0-test.83"
+version: "1.0.0-test.84"
 slug: anthbot_reporting
 description: Opt-in telemetry, diagnostics, and admin dashboard backend for the ANTHBOT Map integration
 url: https://github.com/Mqbretrofit/anthbot-reporting-server/tree/main/anthbot_reporting
@@ -21,9 +21,9 @@ options:
   stripe_webhook_secret: ""
   store_license_secret: ""
   stripe_automatic_tax: false
-  privacy_controller_name: "MQB Retrofit Hungary"
+  privacy_controller_name: "ANTHBOT Map"
   privacy_controller_address: ""
-  privacy_contact_email: ""
+  privacy_contact_email: "support@anthbotmap.com"
   privacy_contact_phone: "+36 30 620 9015"
   site_analytics_enabled: true
   web_voice_installer_enabled: false
@@ -31,7 +31,7 @@ options:
   smtp_port: 587
   smtp_username: ""
   smtp_password: ""
-  smtp_from_email: ""
+  smtp_from_email: "support@anthbotmap.com"
   smtp_from_name: "ANTHBOT Map"
   smtp_starttls: true
   smtp_ssl: false
