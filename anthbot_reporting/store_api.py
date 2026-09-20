@@ -431,6 +431,12 @@ class StorePricingPayload(BaseModel):
         return self
 
 
+class StoreVisibilityPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    hidden: bool
+
+
 class CustomVoiceRequestPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -1127,6 +1133,10 @@ def _is_paid(record: dict[str, Any]) -> bool:
     return str(record.get("access", "free")).strip().casefold() == "paid"
 
 
+def _is_store_hidden(record: dict[str, Any]) -> bool:
+    return bool(record.get("store_hidden", False))
+
+
 def _price_amount(record: dict[str, Any]) -> int:
     if _is_paid(record):
         return _STANDARD_VOICE_PACK_PRICE_AMOUNT
@@ -1219,12 +1229,12 @@ def _store_catalog(request: Request) -> dict[str, Any]:
     free_packs = [
         _public_free_pack(item)
         for item in free_registry.get("packs", [])
-        if isinstance(item, dict)
+        if isinstance(item, dict) and not _is_store_hidden(item)
     ]
     paid_packs = [
         _public_paid_pack(item, request)
         for item in _uploaded_records()
-        if _is_paid(item)
+        if _is_paid(item) and not _is_store_hidden(item)
     ]
     packs = free_packs + paid_packs
     packs.sort(
@@ -2330,6 +2340,8 @@ async def create_store_client_checkout(
     """
     _require_checkout_ready()
     record = _find_uploaded_pack(payload.pack_id)
+    if _is_store_hidden(record):
+        raise HTTPException(status_code=404, detail="voice pack is hidden from store")
     if not _is_paid(record):
         raise HTTPException(status_code=409, detail="voice pack is not a paid product")
 
@@ -2520,6 +2532,8 @@ async def create_store_checkout(
 ) -> dict[str, Any]:
     _require_checkout_ready()
     record = _find_uploaded_pack(payload.pack_id)
+    if _is_store_hidden(record):
+        raise HTTPException(status_code=404, detail="voice pack is hidden from store")
     if not _is_paid(record):
         raise HTTPException(status_code=409, detail="voice pack is not a paid product")
 
@@ -2708,6 +2722,7 @@ def admin_store_voice_packs(request: Request) -> dict[str, Any]:
         public["access"] = "paid" if _is_paid(record) else "free"
         public["price_amount"] = _price_amount(record)
         public["currency"] = _currency(record)
+        public["store_hidden"] = _is_store_hidden(record)
         voice_id = (
             str(record.get("community_id", "")).strip()
             or str(record.get("id", ""))
@@ -2750,6 +2765,38 @@ def update_store_voice_pack(
     public["access"] = payload.access
     public["price_amount"] = target["price_amount"]
     public["currency"] = target["currency"]
+    return {"updated": True, "pack": public}
+
+
+@router.patch(
+    "/api/anthbot/admin/store/voice-packs/{pack_id}/visibility",
+    dependencies=[Depends(core.require_admin)],
+)
+def update_store_voice_pack_visibility(
+    pack_id: str,
+    payload: StoreVisibilityPayload,
+    request: Request,
+) -> dict[str, Any]:
+    registry = core._uploaded_voice_pack_registry()
+    packs = [item for item in registry.get("packs", []) if isinstance(item, dict)]
+    target = next((item for item in packs if str(item.get("id", "")) == pack_id), None)
+    if target is None:
+        raise HTTPException(status_code=404, detail="uploaded voice pack not found")
+
+    if payload.hidden:
+        target["store_hidden"] = True
+    else:
+        target.pop("store_hidden", None)
+
+    core._write_uploaded_voice_registry(
+        {"schema": core.VOICE_PACKS_SCHEMA, "packs": packs}
+    )
+
+    public = core._public_voice_pack(target, request)
+    public["access"] = "paid" if _is_paid(target) else "free"
+    public["price_amount"] = _price_amount(target)
+    public["currency"] = _currency(target)
+    public["store_hidden"] = _is_store_hidden(target)
     return {"updated": True, "pack": public}
 
 
