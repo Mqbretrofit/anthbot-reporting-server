@@ -2854,6 +2854,56 @@ def download_owner_voice_pack(
     )
 
 
+@router.get(
+    "/api/anthbot/admin/store/pairings",
+    dependencies=[Depends(core.require_admin)],
+)
+def admin_store_pairings(limit: int = 50) -> dict[str, Any]:
+    """List active ANTHBOT Map store pairings, newest client first."""
+    _init_store_tables()
+    limit = max(1, min(int(limit), 200))
+    now_epoch = int(time.time())
+    with core._db() as conn:
+        conn.execute(
+            "DELETE FROM store_client_pairings WHERE expires_at < ?",
+            (now_epoch,),
+        )
+        rows = conn.execute(
+            """
+            SELECT pair_code, client_id, created_at, expires_at
+            FROM store_client_pairings
+            WHERE expires_at >= ?
+            ORDER BY created_at DESC
+            LIMIT ?
+            """,
+            (now_epoch, max(limit * 4, limit)),
+        ).fetchall()
+        owner_rows = conn.execute(
+            "SELECT client_id FROM store_owner_clients"
+        ).fetchall()
+
+    owners = {str(row["client_id"]) for row in owner_rows}
+    items: list[dict[str, Any]] = []
+    seen_clients: set[str] = set()
+    for row in rows:
+        client_id = str(row["client_id"])
+        if client_id in seen_clients:
+            continue
+        seen_clients.add(client_id)
+        items.append(
+            {
+                "pair_code": str(row["pair_code"]),
+                "client_suffix": client_id[-10:],
+                "created_at": row["created_at"],
+                "expires_at": _iso_from_epoch(int(row["expires_at"])),
+                "owner_access": client_id in owners,
+            }
+        )
+        if len(items) >= limit:
+            break
+    return {"count": len(items), "items": items}
+
+
 @router.post(
     "/api/anthbot/admin/store/owner-access",
     dependencies=[Depends(core.require_admin)],
