@@ -1385,6 +1385,117 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIn("method:'DELETE'", admin_html)
         self.assertIn("/api/anthbot/admin/store/owner-access", admin_html)
 
+    def test_admin_can_delete_only_sandbox_test_orders(self) -> None:
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        priced = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        self.assertEqual(priced.status_code, 200)
+
+        test_client_token = "T" * 48
+        test_client_id = store_api._client_id_from_token(test_client_token)
+        test_session = {
+            "id": "cs_test_admin_delete_123",
+            "object": "checkout.session",
+            "created": int(time.time()),
+            "client_reference_id": pack_id,
+            "metadata": {
+                "pack_id": pack_id,
+                "community_id": "cs_vlasta_standard",
+                "store_client_id": test_client_id,
+                "entitlement_scope": "map",
+            },
+            "payment_status": "paid",
+            "status": "complete",
+            "amount_total": 799,
+            "currency": "eur",
+            "customer_details": {"email": "sandbox@example.com"},
+            "customer": "cus_test_admin_delete",
+            "payment_intent": "pi_test_admin_delete",
+        }
+        store_api._upsert_order_from_session(test_session)
+
+        live_session = {
+            **test_session,
+            "id": "cs_live_admin_delete_123",
+            "metadata": {
+                **test_session["metadata"],
+                "store_client_id": store_api._client_id_from_token("L" * 48),
+            },
+            "customer_details": {"email": "live@example.com"},
+            "customer": "cus_live_admin_delete",
+            "payment_intent": "pi_live_admin_delete",
+        }
+        store_api._upsert_order_from_session(live_session)
+
+        before = self.client.post(
+            "/api/anthbot/store/client/entitlements",
+            json={"client_token": test_client_token},
+        )
+        self.assertEqual(before.status_code, 200)
+        self.assertTrue(before.json()["licensed"])
+
+        denied = self.client.delete(
+            "/api/anthbot/admin/store/orders/cs_test_admin_delete_123"
+        )
+        self.assertEqual(denied.status_code, 401)
+
+        protected = self.client.delete(
+            "/api/anthbot/admin/store/orders/cs_live_admin_delete_123",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(protected.status_code, 409)
+
+        deleted = self.client.delete(
+            "/api/anthbot/admin/store/orders/cs_test_admin_delete_123",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(deleted.status_code, 200)
+        self.assertTrue(deleted.json()["deleted"])
+        self.assertTrue(deleted.json()["entitlement_revoked"])
+
+        after = self.client.post(
+            "/api/anthbot/store/client/entitlements",
+            json={"client_token": test_client_token},
+        )
+        self.assertEqual(after.status_code, 200)
+        self.assertFalse(after.json()["licensed"])
+        self.assertEqual(after.json()["packs"], [])
+
+        second_test = {
+            **test_session,
+            "id": "cs_test_admin_delete_456",
+            "payment_intent": "pi_test_admin_delete_456",
+        }
+        store_api._upsert_order_from_session(second_test)
+        bulk = self.client.delete(
+            "/api/anthbot/admin/store/orders",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(bulk.status_code, 200)
+        self.assertEqual(bulk.json()["deleted"], 1)
+
+        with store_api.core._db() as conn:
+            remaining = {
+                row["stripe_session_id"]
+                for row in conn.execute(
+                    "SELECT stripe_session_id FROM store_orders"
+                ).fetchall()
+            }
+        self.assertIn("cs_live_admin_delete_123", remaining)
+        self.assertNotIn("cs_test_admin_delete_456", remaining)
+
+        admin_html = Path(store_api.__file__).with_name("store_admin.html").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("Összes tesztrendelés törlése", admin_html)
+        self.assertIn("deleteOrder(", admin_html)
+        self.assertIn("/api/anthbot/admin/store/orders/", admin_html)
+        self.assertIn("Éles rendelés · védett", admin_html)
+
     def test_admin_lists_active_map_pairings_and_owner_state(self) -> None:
         first_token = "R" * 48
         second_token = "S" * 48
