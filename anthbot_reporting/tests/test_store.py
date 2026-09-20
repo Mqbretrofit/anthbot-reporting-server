@@ -266,6 +266,152 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertTrue(public.json()["installation_email_sent"])
         self.purchase_email_sender.assert_called_once()
 
+    def test_purchase_history_is_private_and_exposes_recovery_tools(self) -> None:
+        anonymous = self.client.get("/api/anthbot/store/account/purchases")
+        self.assertEqual(anonymous.status_code, 401)
+
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        priced = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        self.assertEqual(priced.status_code, 200)
+        owner = self._login_store_account("owner@example.com")
+        paid_session = {
+            "id": "cs_test_account_history_123",
+            "object": "checkout.session",
+            "url": "https://checkout.stripe.com/c/pay/history-test",
+            "created": int(time.time()),
+            "client_reference_id": pack_id,
+            "metadata": {
+                "pack_id": pack_id,
+                "community_id": "cs_vlasta_standard",
+                "store_user_id": owner["_user_id"],
+                "entitlement_scope": "map",
+            },
+            "payment_status": "paid",
+            "status": "complete",
+            "amount_total": 799,
+            "currency": "eur",
+            "customer_details": {"email": "owner@example.com"},
+            "customer": "cus_history",
+            "payment_intent": "pi_history",
+        }
+        store_api._upsert_order_from_session(paid_session)
+
+        purchases = self.client.get("/api/anthbot/store/account/purchases")
+        self.assertEqual(purchases.status_code, 200)
+        items = purchases.json()["purchases"]
+        self.assertEqual(len(items), 1)
+        item = items[0]
+        self.assertEqual(item["stripe_session_id"], "cs_test_account_history_123")
+        self.assertEqual(item["payment_status"], "paid")
+        self.assertEqual(item["amount_total"], 799)
+        self.assertEqual(item["currency"], "eur")
+        self.assertTrue(item["license_key"].startswith("abv1."))
+        self.assertTrue(item["map_linked"])
+        self.assertIn("Vlasta", item["pack_name"])
+        self.assertEqual(
+            item["installation_url"],
+            "https://anthbotmap.com/store/success"
+            "?session_id=cs_test_account_history_123",
+        )
+        self.assertNotIn("stripe_payment_intent_id", item)
+        self.assertNotIn("stripe_customer_id", item)
+
+        logout = self.client.post("/api/anthbot/store/account/logout", json={})
+        self.assertEqual(logout.status_code, 200)
+        self._login_store_account("other@example.com")
+        other = self.client.get("/api/anthbot/store/account/purchases")
+        self.assertEqual(other.status_code, 200)
+        self.assertEqual(other.json()["purchases"], [])
+        denied = self.client.post(
+            "/api/anthbot/store/account/purchases/"
+            "cs_test_account_history_123/resend-email",
+            json={},
+        )
+        self.assertEqual(denied.status_code, 404)
+
+    def test_purchase_history_resends_email_with_rate_limit(self) -> None:
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        priced = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        self.assertEqual(priced.status_code, 200)
+        account = self._login_store_account("resend@example.com")
+        paid_session = {
+            "id": "cs_test_account_resend_123",
+            "object": "checkout.session",
+            "url": "https://checkout.stripe.com/c/pay/resend-test",
+            "created": int(time.time()),
+            "client_reference_id": pack_id,
+            "metadata": {
+                "pack_id": pack_id,
+                "community_id": "cs_vlasta_standard",
+                "store_user_id": account["_user_id"],
+                "entitlement_scope": "map",
+            },
+            "payment_status": "paid",
+            "status": "complete",
+            "amount_total": 799,
+            "currency": "eur",
+            "customer_details": {"email": "resend@example.com"},
+            "customer": "cus_resend",
+            "payment_intent": "pi_resend",
+        }
+        store_api._upsert_order_from_session(paid_session)
+        with store_api.core._db() as conn:
+            conn.execute(
+                """
+                UPDATE store_orders
+                SET installation_email_attempted_at = 0,
+                    installation_email_status = 'sent',
+                    installation_email_sent_at = ?
+                WHERE stripe_session_id = ?
+                """,
+                (store_api.core._iso(), "cs_test_account_resend_123"),
+            )
+        self.purchase_email_sender.reset_mock()
+
+        resent = self.client.post(
+            "/api/anthbot/store/account/purchases/"
+            "cs_test_account_resend_123/resend-email",
+            json={},
+        )
+        self.assertEqual(resent.status_code, 200)
+        self.assertTrue(resent.json()["sent"])
+        self.purchase_email_sender.assert_called_once()
+        _, kwargs = self.purchase_email_sender.call_args
+        self.assertTrue(kwargs["license_key"].startswith("abv1."))
+        self.assertEqual(kwargs["language"], "hu")
+
+        throttled = self.client.post(
+            "/api/anthbot/store/account/purchases/"
+            "cs_test_account_resend_123/resend-email",
+            json={},
+        )
+        self.assertEqual(throttled.status_code, 429)
+        self.purchase_email_sender.assert_called_once()
+
+    def test_store_renders_multilingual_purchase_history_controls(self) -> None:
+        response = self.client.get("/store")
+        self.assertEqual(response.status_code, 200)
+        html = response.text
+        self.assertIn('id="purchase-history"', html)
+        self.assertIn('id="purchase-history-list"', html)
+        self.assertIn("const PURCHASE_UI=", html)
+        self.assertIn('title:"Vásárlásaim"', html)
+        self.assertIn('title:"My purchases"', html)
+        self.assertIn('title:"ការទិញរបស់ខ្ញុំ"', html)
+        self.assertIn("/api/anthbot/store/account/purchases/", html)
+        self.assertIn("purchase-copy", html)
+        self.assertIn("purchase-resend", html)
+
     def test_store_has_visible_top_navigation_in_all_languages(self) -> None:
         response = self.client.get("/store")
         self.assertEqual(response.status_code, 200)
