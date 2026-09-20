@@ -408,6 +408,42 @@ class VoiceStoreTests(unittest.TestCase):
             "noindex, nofollow",
         )
 
+    def test_public_pages_have_branded_social_preview_metadata(self) -> None:
+        expected_image = (
+            "https://anthbotmap.com/brand/anthbot-map-logo.webp?v=2"
+        )
+        for path in (
+            "/",
+            "/store",
+            "/privacy",
+            "/terms",
+            "/refunds",
+            "/home-assistant",
+            "/models/genie-1000",
+            "/models/m9-pro",
+            "/models/mgc1000",
+            "/voice-packs",
+        ):
+            response = self.client.get(path)
+            self.assertEqual(response.status_code, 200)
+            html = response.text
+            self.assertIn(
+                f'<meta property="og:image" content="{expected_image}">',
+                html,
+            )
+            self.assertIn(
+                '<meta property="og:image:alt" content="ANTHBOT Map">',
+                html,
+            )
+            self.assertIn(
+                '<meta name="twitter:card" content="summary_large_image">',
+                html,
+            )
+            self.assertIn(
+                f'<meta name="twitter:image" content="{expected_image}">',
+                html,
+            )
+
     def test_robots_sitemap_and_legacy_public_redirects(self) -> None:
         robots = self.client.get("/robots.txt")
         self.assertEqual(robots.status_code, 200)
