@@ -16,6 +16,7 @@ from fastapi.testclient import TestClient
 
 import entrypoint
 import store_api
+import store_accounts
 
 
 class VoiceStoreTests(unittest.TestCase):
@@ -38,6 +39,14 @@ class VoiceStoreTests(unittest.TestCase):
         os.environ["ANTHBOT_PRIVACY_CONTACT_EMAIL"] = "privacy@example.test"
         os.environ["ANTHBOT_PRIVACY_CONTACT_PHONE"] = "+36 1 000 0000"
         os.environ["ANTHBOT_SITE_ANALYTICS_ENABLED"] = "true"
+        os.environ["ANTHBOT_SMTP_HOST"] = "smtp.example.test"
+        os.environ["ANTHBOT_SMTP_PORT"] = "587"
+        os.environ["ANTHBOT_SMTP_USERNAME"] = "store@example.test"
+        os.environ["ANTHBOT_SMTP_PASSWORD"] = "test-password"
+        os.environ["ANTHBOT_SMTP_FROM_EMAIL"] = "store@example.test"
+        os.environ["ANTHBOT_SMTP_FROM_NAME"] = "ANTHBOT Map"
+        os.environ["ANTHBOT_SMTP_STARTTLS"] = "true"
+        os.environ["ANTHBOT_SMTP_SSL"] = "false"
         self.client_ctx = TestClient(entrypoint.app, base_url="https://testserver")
         self.client = self.client_ctx.__enter__()
 
@@ -47,6 +56,44 @@ class VoiceStoreTests(unittest.TestCase):
 
     def _admin_headers(self) -> dict[str, str]:
         return {"Authorization": "Bearer test-admin-token"}
+
+    def _login_store_account(self, email: str = "buyer@example.com") -> dict:
+        captured: dict[str, str] = {}
+
+        def fake_send(target: str, code: str, language: str) -> None:
+            captured["email"] = target
+            captured["code"] = code
+            captured["language"] = language
+
+        with patch.object(store_accounts, "_send_login_code", side_effect=fake_send):
+            requested = self.client.post(
+                "/api/anthbot/store/account/request-code",
+                json={"email": email, "language": "hu"},
+            )
+        self.assertEqual(requested.status_code, 200)
+        self.assertEqual(captured["email"], email.casefold())
+        self.assertRegex(captured["code"], r"^\d{6}$")
+
+        verified = self.client.post(
+            "/api/anthbot/store/account/verify-code",
+            json={
+                "email": email,
+                "code": captured["code"],
+                "language": "hu",
+            },
+        )
+        self.assertEqual(verified.status_code, 200)
+        self.assertTrue(verified.json()["authenticated"])
+        return verified.json()
+
+    def _link_store_account_to_pair(self, pair_code: str) -> dict:
+        linked = self.client.post(
+            "/api/anthbot/store/account/link-map",
+            json={"pair_code": pair_code},
+        )
+        self.assertEqual(linked.status_code, 200)
+        self.assertTrue(linked.json()["linked"])
+        return linked.json()
 
     def _upload_pack(self) -> dict:
         content = b"paid-community-pack"
