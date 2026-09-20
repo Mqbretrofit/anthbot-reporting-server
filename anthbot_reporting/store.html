@@ -89,6 +89,7 @@ const LOCALE={hu:'hu-HU',en:'en-GB',de:'de-DE',fr:'fr-FR',es:'es-ES',it:'it-IT',
 let currentLang='en';
 const esc=(v)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const t=(k)=>I18N[currentLang]?.[k]||I18N.en[k]||k;
+const ou=(k)=>STORE_UI[currentLang]?.[k]||STORE_UI.en[k]||k;
 const money=(amount,currency)=>{try{return new Intl.NumberFormat(LOCALE[currentLang]||'en-GB',{style:'currency',currency:String(currency||'EUR').toUpperCase()}).format(Number(amount||0)/100)}catch(_){return (Number(amount||0)/100).toFixed(2)+' '+String(currency||'EUR').toUpperCase()}};
 function applyLanguage(lang){
   currentLang=SUPPORTED.includes(lang)?lang:'en';
@@ -101,6 +102,7 @@ function applyLanguage(lang){
   document.getElementById('robot-model').placeholder=t('placeholderModel');
   document.getElementById('contact').placeholder=t('placeholderContact');
   document.getElementById('notes').placeholder=t('placeholderNotes');
+  applyOrganizerLanguage();
   try{localStorage.setItem('mqb-site-language',currentLang)}catch(_){}
   renderCurrent();
   showQueryNotice();
@@ -125,6 +127,143 @@ function showQueryNotice(){
 const INSTALLER_LABEL={hu:'Telepítés Home Assistant nélkül',en:'Install without Home Assistant',de:'Ohne Home Assistant installieren',fr:'Installer sans Home Assistant',es:'Instalar sin Home Assistant',it:'Installa senza Home Assistant',pt:'Instalar sem Home Assistant',nl:'Installeren zonder Home Assistant',pl:'Zainstaluj bez Home Assistant',cs:'Nainstalovat bez Home Assistant',sk:'Nainštalovať bez Home Assistant',ro:'Instalează fără Home Assistant',da:'Installer uden Home Assistant',sv:'Installera utan Home Assistant',no:'Installer uten Home Assistant',fi:'Asenna ilman Home Assistantia','zh-CN':'无需 Home Assistant 安装','zh-TW':'無需 Home Assistant 安裝',tr:'Home Assistant olmadan yükle',th:'ติดตั้งโดยไม่ใช้ Home Assistant',vi:'Cài đặt không cần Home Assistant',ko:'Home Assistant 없이 설치',km:'ដំឡើងដោយមិនប្រើ Home Assistant'};
 function installerLabel(){return INSTALLER_LABEL[currentLang]||INSTALLER_LABEL.en}
 let packsCache=null,errorCache=null,installerAvailable=false;
+let previewAudio=null,previewButton=null,renderedGroups=[];
+
+function packLanguage(p){return String(p.language||p.language_code||'Voice pack')}
+function packModels(p){return Array.isArray(p.models)&&p.models.length?p.models.map(String):['Anthbot Genie 1000']}
+function genderBucket(p){
+  const raw=String(p.voice_gender||'').trim().toLowerCase();
+  if(raw==='female'||raw==='f'||raw.includes('female'))return 'female';
+  if(raw==='male'||raw==='m'||raw.includes('male'))return 'male';
+  return 'other';
+}
+function genderLabel(p){
+  const bucket=genderBucket(p);
+  return bucket==='female'?ou('female'):(bucket==='male'?ou('male'):ou('other'));
+}
+function setSelectOptions(select,items,previous){
+  select.innerHTML=items.map(item=>'<option value="'+esc(item.value)+'">'+esc(item.label)+'</option>').join('');
+  if(items.some(item=>item.value===previous))select.value=previous;
+}
+function rebuildOrganizerOptions(){
+  if(!packsCache)return;
+  const languageSelect=document.getElementById('filter-language');
+  const genderSelect=document.getElementById('filter-gender');
+  const modelSelect=document.getElementById('filter-model');
+  const accessSelect=document.getElementById('filter-access');
+  const oldLanguage=languageSelect.value,oldGender=genderSelect.value,oldModel=modelSelect.value,oldAccess=accessSelect.value;
+  const languages=[...new Set(packsCache.map(packLanguage))].sort((a,b)=>a.localeCompare(b,LOCALE[currentLang]||undefined,{sensitivity:'base'}));
+  const models=[...new Set(packsCache.flatMap(packModels))].sort((a,b)=>a.localeCompare(b,LOCALE[currentLang]||undefined,{sensitivity:'base'}));
+  setSelectOptions(languageSelect,[{value:'',label:ou('allLanguages')},...languages.map(v=>({value:v,label:v}))],oldLanguage);
+  setSelectOptions(genderSelect,[{value:'',label:ou('allGenders')},{value:'female',label:ou('female')},{value:'male',label:ou('male')},{value:'other',label:ou('other')}],oldGender);
+  setSelectOptions(modelSelect,[{value:'',label:ou('allModels')},...models.map(v=>({value:v,label:v}))],oldModel);
+  setSelectOptions(accessSelect,[{value:'',label:ou('allAccess')},{value:'free',label:t('free')},{value:'paid',label:t('paid')},{value:'purchased',label:ou('purchased')}],oldAccess);
+}
+function applyOrganizerLanguage(){
+  document.getElementById('organizer-title').textContent=ou('filtersTitle');
+  document.getElementById('voice-search').placeholder=ou('search');
+  document.getElementById('expand-groups').textContent=ou('expandAll');
+  document.getElementById('collapse-groups').textContent=ou('collapseAll');
+  rebuildOrganizerOptions();
+}
+function organizerFilteredPacks(){
+  if(!packsCache)return [];
+  const query=document.getElementById('voice-search').value.trim().toLowerCase();
+  const language=document.getElementById('filter-language').value;
+  const gender=document.getElementById('filter-gender').value;
+  const model=document.getElementById('filter-model').value;
+  const access=document.getElementById('filter-access').value;
+  return packsCache.filter(p=>{
+    if(language&&packLanguage(p)!==language)return false;
+    if(gender&&genderBucket(p)!==gender)return false;
+    if(model&&!packModels(p).includes(model))return false;
+    if(access==='free'&&p.access!=='free')return false;
+    if(access==='paid'&&p.access!=='paid')return false;
+    if(access==='purchased'&&!p.owned)return false;
+    if(query){
+      const haystack=[
+        p.language,p.language_code,p.variant_name,p.variant_id,p.community_id,
+        p.voice_gender,p.version,...packModels(p)
+      ].filter(Boolean).join(' ').toLowerCase();
+      if(!haystack.includes(query))return false;
+    }
+    return true;
+  });
+}
+function organizerFiltersActive(){
+  return Boolean(
+    document.getElementById('voice-search').value.trim()||
+    document.getElementById('filter-language').value||
+    document.getElementById('filter-gender').value||
+    document.getElementById('filter-model').value||
+    document.getElementById('filter-access').value
+  );
+}
+function resetPreviewButton(){
+  if(previewButton){
+    previewButton.classList.remove('playing');
+    previewButton.textContent='▶ '+String(previewButton.dataset.previewLabel||ou('sample1'));
+  }
+}
+function stopPreview(){
+  if(previewAudio){
+    previewAudio.pause();
+    try{previewAudio.currentTime=0}catch(_){}
+  }
+  previewAudio=null;
+  resetPreviewButton();
+  previewButton=null;
+}
+function playPreview(url,button){
+  if(previewButton===button&&previewAudio&&!previewAudio.paused){stopPreview();return}
+  stopPreview();
+  const audio=new Audio(url);
+  let failed=false;
+  previewAudio=audio;previewButton=button;
+  button.classList.add('playing');
+  button.textContent='■ '+ou('stop');
+  const fail=()=>{
+    if(failed)return;
+    failed=true;
+    if(previewAudio===audio)stopPreview();
+    alert(ou('previewError'));
+  };
+  audio.onended=()=>{if(previewAudio===audio)stopPreview()};
+  audio.onerror=fail;
+  const pending=audio.play();
+  if(pending&&typeof pending.catch==='function')pending.catch(fail);
+}
+function bindPreviewButtons(root){
+  root.querySelectorAll('[data-preview-url]').forEach(button=>{
+    button.addEventListener('click',()=>playPreview(button.dataset.previewUrl||'',button));
+  });
+}
+function hydrateGroup(details){
+  if(details.dataset.hydrated==='1')return;
+  const index=Number(details.dataset.groupIndex||'-1');
+  const group=renderedGroups[index];
+  const body=details.querySelector('.language-body');
+  if(!group||!body)return;
+  body.innerHTML='<div class="grid">'+group.items.map(card).join('')+'</div>';
+  body.dataset.hydrated='1';
+  bindPreviewButtons(body);
+}
+function setupOrganizerEvents(){
+  let timer=null;
+  document.getElementById('voice-search').addEventListener('input',()=>{
+    clearTimeout(timer);timer=setTimeout(renderCurrent,100);
+  });
+  ['filter-language','filter-gender','filter-model','filter-access'].forEach(id=>{
+    document.getElementById(id).addEventListener('change',renderCurrent);
+  });
+  document.getElementById('expand-groups').addEventListener('click',()=>{
+    document.querySelectorAll('.language-group').forEach(details=>{details.open=true;hydrateGroup(details)});
+  });
+  document.getElementById('collapse-groups').addEventListener('click',()=>{
+    stopPreview();
+    document.querySelectorAll('.language-group').forEach(details=>{details.open=false});
+  });
+}
 async function buy(packId,button){
   const original=button.textContent;button.disabled=true;button.textContent=t('opening');
   try{
@@ -138,23 +277,67 @@ async function buy(packId,button){
 }
 function card(p){
   const paid=p.access==='paid';
-  const gender=p.voice_gender&&p.voice_gender!=='unknown'?p.voice_gender:'community';
-  const models=Array.isArray(p.models)?p.models.join(', '):'Anthbot Genie 1000';
+  const models=packModels(p).join(', ');
   const price=paid?money(p.price_amount,p.currency):t('free');
   const ownedWeb=paid&&p.owned&&p.ownership==='web';
-  const action=ownedWeb?'<button class="btn secondary" disabled>'+t('alreadyOwned')+'</button>':(paid?'<button class="btn" '+(p.checkout_available?'':'disabled')+' onclick="buy(\''+esc(p.id)+'\',this)">'+(p.checkout_available?t('buy'):t('checkoutDisabled'))+'</button>':'<button class="btn secondary" disabled>'+t('availableMap')+'</button>');
+  const action=ownedWeb
+    ? '<button class="btn secondary" disabled>'+t('alreadyOwned')+'</button>'
+    : (paid
+      ? '<button class="btn" '+(p.checkout_available?'':'disabled')+' onclick="buy(\''+esc(p.id)+'\',this)">'+(p.checkout_available?t('buy'):t('checkoutDisabled'))+'</button>'
+      : '<button class="btn secondary" disabled>'+t('availableMap')+'</button>');
   const webInstall=installerAvailable?'<a class="btn '+(ownedWeb?'':'secondary')+'" href="/voice-installer?pack='+encodeURIComponent(p.id)+'">'+esc(installerLabel())+'</a>':'';
-  return '<article class="card"><div class="row"><div><div class="lang">'+esc(p.language||p.language_code||'Voice pack')+'</div><div class="variant">'+esc(p.variant_name||p.community_id||'Community')+'</div></div><span class="pill">'+(paid?t('paid'):t('free'))+'</span></div><div class="meta"><span class="pill">'+esc(gender)+'</span><span class="pill">'+esc(models)+'</span><span class="pill">v'+esc(p.version||'—')+'</span></div><div class="desc">'+esc(t('desc'))+'</div><div class="price '+(paid?'':'free')+'">'+esc(price)+'</div><div class="card-actions">'+action+webInstall+'</div></article>';
+  const samples=Array.isArray(p.preview_samples)?p.preview_samples.slice(0,2):[];
+  const previews=samples.length
+    ? '<div class="preview-row">'+samples.map((sample,index)=>{
+        const label=index===0?ou('sample1'):ou('sample2');
+        return '<button type="button" class="preview-btn" data-preview-url="'+esc(sample.url||'')+'" data-preview-label="'+esc(label)+'">▶ '+esc(label)+'</button>';
+      }).join('')+'</div>'
+    : '';
+  return '<article class="card"><div class="row"><div><div class="lang">'+esc(packLanguage(p))+'</div><div class="variant">'+esc(p.variant_name||p.community_id||'Community')+'</div></div><span class="pill">'+(paid?t('paid'):t('free'))+'</span></div><div class="meta"><span class="pill">'+esc(genderLabel(p))+'</span><span class="pill">'+esc(models)+'</span><span class="pill">v'+esc(p.version||'—')+'</span></div><div class="desc">'+esc(t('desc'))+'</div>'+previews+'<div class="price '+(paid?'':'free')+'">'+esc(price)+'</div><div class="card-actions">'+action+webInstall+'</div></article>';
 }
 function renderCurrent(){
+  stopPreview();
   const root=document.getElementById('content');
-  if(errorCache){root.innerHTML='<div class="error">'+esc(t('loadError'))+': '+esc(errorCache)+'</div>';return}
-  if(!packsCache){root.innerHTML='<div class="empty">'+esc(t('loading'))+'</div>';return}
-  root.innerHTML=packsCache.length?'<div class="grid">'+packsCache.map(card).join('')+'</div>':'<div class="empty">'+esc(t('empty'))+'</div>';
+  const summary=document.getElementById('voice-results-summary');
+  if(errorCache){summary.textContent='';root.innerHTML='<div class="error">'+esc(t('loadError'))+': '+esc(errorCache)+'</div>';return}
+  if(!packsCache){summary.textContent='';root.innerHTML='<div class="empty">'+esc(t('loading'))+'</div>';return}
+
+  const filtered=organizerFilteredPacks();
+  const grouped=new Map();
+  filtered.forEach(pack=>{
+    const name=packLanguage(pack);
+    if(!grouped.has(name))grouped.set(name,{name,codes:new Set(),items:[]});
+    const group=grouped.get(name);
+    if(pack.language_code)group.codes.add(String(pack.language_code));
+    group.items.push(pack);
+  });
+  renderedGroups=[...grouped.values()].sort((a,b)=>a.name.localeCompare(b.name,LOCALE[currentLang]||undefined,{sensitivity:'base'}));
+  renderedGroups.forEach(group=>group.items.sort((a,b)=>String(a.variant_name||a.community_id||'').localeCompare(String(b.variant_name||b.community_id||''),LOCALE[currentLang]||undefined,{sensitivity:'base'})));
+  summary.textContent=ou('showing')+' '+filtered.length+' '+ou('voices')+' · '+renderedGroups.length+' '+ou('languages');
+
+  if(!filtered.length){root.innerHTML='<div class="empty">'+esc(ou('noMatches'))+'</div>';return}
+
+  const autoOpen=organizerFiltersActive()&&filtered.length<=24;
+  root.innerHTML='<div class="language-groups">'+renderedGroups.map((group,index)=>{
+    const codes=[...group.codes].sort().join(' · ');
+    return '<details class="language-group" data-group-index="'+index+'" '+(autoOpen?'open':'')+'><summary><div class="language-summary-main"><span class="language-chevron">›</span><div><div class="language-title">'+esc(group.name)+'</div>'+(codes?'<div class="language-code">'+esc(codes)+'</div>':'')+'</div></div><span class="language-count">'+group.items.length+' '+esc(ou('voices'))+'</span></summary><div class="language-body"></div></details>';
+  }).join('')+'</div>';
+
+  root.querySelectorAll('.language-group').forEach(details=>{
+    details.addEventListener('toggle',()=>{if(details.open)hydrateGroup(details)});
+    if(details.open)hydrateGroup(details);
+  });
 }
 async function boot(){
-  try{const res=await fetch('/api/anthbot/store/voice-packs',{cache:'no-store'});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.detail||('HTTP '+res.status));packsCache=Array.isArray(data.packs)?data.packs:[];installerAvailable=Boolean(data.web_installer_available);errorCache=null}
-  catch(err){errorCache=err.message}
+  try{
+    const res=await fetch('/api/anthbot/store/voice-packs',{cache:'no-store'});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok)throw new Error(data.detail||('HTTP '+res.status));
+    packsCache=Array.isArray(data.packs)?data.packs:[];
+    installerAvailable=Boolean(data.web_installer_available);
+    errorCache=null;
+    rebuildOrganizerOptions();
+  }catch(err){errorCache=err.message}
   renderCurrent();
 }
 document.getElementById('site-language').addEventListener('change',e=>applyLanguage(e.target.value));
@@ -168,6 +351,6 @@ document.getElementById('custom-form').addEventListener('submit',async e=>{
   catch(err){status.className='form-status bad';status.textContent=t('requestError')+': '+err.message}
   finally{btn.disabled=false;btn.textContent=t('send')}
 });
-applyLanguage(initialLanguage());boot();
+setupOrganizerEvents();applyLanguage(initialLanguage());boot();
 </script>
 </body></html>
