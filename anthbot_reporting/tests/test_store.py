@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import io
 import json
 import os
 from pathlib import Path
+import tarfile
 import tempfile
 import time
 import unittest
@@ -81,6 +83,81 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIn('"zh-CN":"← 首页"', html)
         self.assertIn('"km":"← ទំព័រដើម"', html)
         self.assertEqual(html.count('homeNav=label'), 1)
+
+    def test_store_groups_filters_and_two_audio_previews(self) -> None:
+        payload = io.BytesIO()
+        with tarfile.open(fileobj=payload, mode="w:gz") as archive:
+            for filename, content in (
+                ("voice/A004.mp3", b"sample-one-mp3"),
+                ("voice/A005.mp3", b"sample-two-mp3"),
+                ("voice/A006.mp3", b"not-public-preview"),
+            ):
+                info = tarfile.TarInfo(filename)
+                info.size = len(content)
+                archive.addfile(info, io.BytesIO(content))
+
+        uploaded = self.client.post(
+            "/api/anthbot/admin/voice-packs",
+            headers=self._admin_headers(),
+            files={
+                "file": (
+                    "preview.pack",
+                    payload.getvalue(),
+                    "application/octet-stream",
+                )
+            },
+            data={
+                "language": "Magyar",
+                "language_code": "hu-HU",
+                "version": "1.0.0",
+                "community_id": "hu_preview_standard",
+                "variant_id": "preview_standard",
+                "variant_name": "Noémi · Standard",
+                "voice_gender": "female",
+                "technical_slot": "German_girl",
+            },
+        )
+        self.assertEqual(uploaded.status_code, 201)
+        pack_id = uploaded.json()["pack"]["id"]
+
+        catalog = self.client.get("/api/anthbot/store/voice-packs")
+        self.assertEqual(catalog.status_code, 200)
+        pack = next(item for item in catalog.json()["packs"] if item["id"] == pack_id)
+        self.assertEqual(len(pack["preview_samples"]), 2)
+        self.assertTrue(pack["preview_samples"][0]["url"].endswith("/preview/1"))
+        self.assertTrue(pack["preview_samples"][1]["url"].endswith("/preview/2"))
+
+        first = self.client.get(
+            pack["preview_samples"][0]["url"].removeprefix("https://testserver")
+        )
+        second = self.client.get(
+            pack["preview_samples"][1]["url"].removeprefix("https://testserver")
+        )
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(first.headers["content-type"], "audio/mpeg")
+        self.assertEqual(first.content, b"sample-one-mp3")
+        self.assertEqual(second.content, b"sample-two-mp3")
+        self.assertEqual(
+            self.client.get(
+                f"/api/anthbot/store/voice-packs/{pack_id}/preview/3"
+            ).status_code,
+            404,
+        )
+
+        store = self.client.get("/store")
+        self.assertEqual(store.status_code, 200)
+        html = store.text
+        self.assertIn('id="voice-search"', html)
+        self.assertIn('id="filter-language"', html)
+        self.assertIn('id="filter-gender"', html)
+        self.assertIn('id="filter-model"', html)
+        self.assertIn('id="filter-access"', html)
+        self.assertIn("language-groups", html)
+        self.assertIn("data-preview-url", html)
+        self.assertIn('"Minta 1"', html)
+        self.assertIn('"Minta 2"', html)
+        self.assertEqual(html.count("filtersTitle:"), 23)
 
     def test_public_seo_targets_anthbotmap_domain(self) -> None:
         canonical_paths = {
