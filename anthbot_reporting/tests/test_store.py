@@ -537,6 +537,43 @@ class VoiceStoreTests(unittest.TestCase):
             self.assertIn('href="/#models"', html)
             self.assertIn('href="/#support"', html)
 
+    def test_public_pages_expose_anthbot_map_favicon(self) -> None:
+        for path in (
+            "/",
+            "/store",
+            "/privacy",
+            "/terms",
+            "/refunds",
+            "/store/success",
+            "/home-assistant",
+            "/models/genie-1000",
+            "/models/m9-pro",
+            "/models/mgc1000",
+            "/voice-packs",
+        ):
+            response = self.client.get(path)
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(
+                '<link rel="icon" href="/favicon.svg" type="image/svg+xml">',
+                response.text,
+            )
+            self.assertIn(
+                '<link rel="shortcut icon" href="/favicon.ico">',
+                response.text,
+            )
+
+        svg = self.client.get("/favicon.svg")
+        self.assertEqual(svg.status_code, 200)
+        self.assertTrue(svg.headers["content-type"].startswith("image/svg+xml"))
+        self.assertIn('viewBox="0 0 64 64"', svg.text)
+        self.assertIn("#31bf62", svg.text)
+        self.assertIn('aria-label="ANTHBOT Map"', svg.text)
+        self.assertIn("max-age=604800", svg.headers.get("cache-control", ""))
+
+        ico = self.client.get("/favicon.ico", follow_redirects=False)
+        self.assertEqual(ico.status_code, 307)
+        self.assertEqual(ico.headers["location"], "/favicon.svg")
+
     def test_public_pages_share_compact_typography(self) -> None:
         for path in (
             "/",
