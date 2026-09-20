@@ -921,6 +921,15 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(create.call_args.kwargs["pair_code"], pair_code)
         self.assertEqual(create.call_args.kwargs["entitlement_scope"], "map")
 
+        store_api._upsert_order_from_session(
+            {
+                **checkout_session,
+                "payment_status": "paid",
+                "status": "complete",
+                "payment_intent": "pi_direct_map",
+            }
+        )
+
         with patch.object(store_api, "_create_checkout_session") as duplicate_create:
             duplicate = self.client.get(
                 "/api/anthbot/store/direct-checkout",
