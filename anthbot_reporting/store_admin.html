@@ -20,6 +20,11 @@
     <div class="top"><div class="title"><h1>ANTHBOT Hangbolt admin</h1><div class="sub">Community hangcsomagok (€7.99), fizetések, licencek és egyedi hangkérések</div></div><div class="actions"><a class="btn" href="/store" target="_blank">Publikus Hangbolt</a><a class="btn" href="/dashboard">Vissza a dashboardra</a><button class="btn primary" id="refresh">Frissítés</button></div></div>
     <div class="grid kpis" id="kpis"></div>
     <div class="card status" id="status">Betöltés…</div>
+    <div class="card status" id="owner-pair-card" style="display:none">
+      <span class="pill good">ANTHBOT Map tulajdonosi párosítás</span>
+      <span id="owner-pair-text" class="small">Ez a Home Assistant megkaphatja az összes fizetős Community hangot vásárlás nélkül.</span>
+      <button class="btn primary" id="owner-pair-grant">Minden hang feloldása ezen a HA-n</button>
+    </div>
     <section class="card section">
       <div class="head">Weboldal látogatottság · privacy-barát statisztika</div>
       <div class="grid analytics-kpis" id="analytics-kpis"></div>
@@ -41,6 +46,34 @@
     const fmt=(v)=>v?new Intl.DateTimeFormat('hu-HU',{dateStyle:'short',timeStyle:'short'}).format(new Date(v)):'—';
     async function api(path,options={}){const r=await fetch(path,{credentials:'same-origin',...options});if(r.status===401){location.href='/dashboard';throw new Error('Nincs jogosultság')}const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(typeof d.detail==='string'?d.detail:JSON.stringify(d.detail||('HTTP '+r.status)));return d}
     function kpi(label,value){return '<div class="card kpi"><div class="label">'+esc(label)+'</div><div class="value">'+esc(value)+'</div></div>'}
+    const ownerPairCode=new URLSearchParams(location.search).get('owner_pair')||'';
+    async function grantOwnerPair(){
+      if(!ownerPairCode)return;
+      const button=document.getElementById('owner-pair-grant');
+      const text=document.getElementById('owner-pair-text');
+      if(button)button.disabled=true;
+      if(text)text.textContent='Tulajdonosi hozzáférés engedélyezése…';
+      try{
+        const result=await api('/api/anthbot/admin/store/owner-access',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({pair_code:ownerPairCode})
+        });
+        if(text)text.textContent='Kész: ezen a Home Assistanton minden fizetős Community hang tulajdonosi hozzáféréssel elérhető. Az ANTHBOT Map legfeljebb kb. 60 másodpercen belül frissíti a listát.';
+        if(button){button.textContent='Feloldva ✓';button.disabled=true}
+        history.replaceState(null,'',location.pathname);
+      }catch(e){
+        if(text)text.textContent='Feloldási hiba: '+e.message;
+        if(button)button.disabled=false;
+      }
+    }
+    function setupOwnerPair(){
+      if(!ownerPairCode)return;
+      const card=document.getElementById('owner-pair-card');
+      if(card)card.style.display='flex';
+      const button=document.getElementById('owner-pair-grant');
+      if(button)button.onclick=grantOwnerPair;
+    }
     async function save(id,select){
       const row=select.closest('tr'),access=select.value;
       const priceAmount=access==='paid'?799:0,currency='eur';
@@ -177,7 +210,7 @@
         analyticsRows(siteAnalytics);packRows(catalog.items||[]);customRequestRows(customRequests.items||[]);privacyRequestRows(privacyRequests.items||[]);orderRows(orders.items||[]);
       }catch(e){document.getElementById('status').innerHTML='<span style="color:#ffc4cc">Hiba: '+esc(e.message)+'</span>'}
     }
-    document.getElementById('refresh').onclick=load;load();
+    document.getElementById('refresh').onclick=load;setupOwnerPair();load();
   </script>
 </body>
 </html>
