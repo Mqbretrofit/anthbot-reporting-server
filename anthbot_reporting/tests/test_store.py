@@ -1130,9 +1130,16 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertFalse(before.json()["licensed"])
         self.assertEqual(before.json()["packs"], [])
 
+        login = self.client.post(
+            "/dashboard/login",
+            content="token=test-admin-token",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            follow_redirects=False,
+        )
+        self.assertEqual(login.status_code, 303)
+
         owner_route = self.client.get(
             f"/store?pair={pair_code}",
-            headers=self._admin_headers(),
             follow_redirects=False,
         )
         self.assertEqual(owner_route.status_code, 303)
