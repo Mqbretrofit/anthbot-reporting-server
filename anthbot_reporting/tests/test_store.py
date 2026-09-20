@@ -1199,6 +1199,62 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIn("Minden hang feloldása ezen a HA-n", admin_html)
         self.assertIn("/api/anthbot/admin/store/owner-access", admin_html)
 
+    def test_admin_lists_active_map_pairings_and_owner_state(self) -> None:
+        first_token = "R" * 48
+        second_token = "S" * 48
+        first_pair = self.client.post(
+            "/api/anthbot/store/client/pair",
+            json={"client_token": first_token},
+        )
+        second_pair = self.client.post(
+            "/api/anthbot/store/client/pair",
+            json={"client_token": second_token},
+        )
+        self.assertEqual(first_pair.status_code, 200)
+        self.assertEqual(second_pair.status_code, 200)
+
+        denied = self.client.get("/api/anthbot/admin/store/pairings")
+        self.assertEqual(denied.status_code, 401)
+
+        listed = self.client.get(
+            "/api/anthbot/admin/store/pairings",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(listed.status_code, 200)
+        items = listed.json()["items"]
+        self.assertEqual(len(items), 2)
+        self.assertTrue(all("pair_code" in item for item in items))
+        self.assertTrue(all("client_suffix" in item for item in items))
+        self.assertTrue(all(item["owner_access"] is False for item in items))
+
+        first_pair_code = first_pair.json()["store_url"].split("pair=", 1)[1]
+        granted = self.client.post(
+            "/api/anthbot/admin/store/owner-access",
+            headers=self._admin_headers(),
+            json={"pair_code": first_pair_code},
+        )
+        self.assertEqual(granted.status_code, 200)
+
+        listed_after = self.client.get(
+            "/api/anthbot/admin/store/pairings",
+            headers=self._admin_headers(),
+        )
+        states = {
+            item["client_suffix"]: item["owner_access"]
+            for item in listed_after.json()["items"]
+        }
+        first_client = store_api._client_id_from_token(first_token)
+        second_client = store_api._client_id_from_token(second_token)
+        self.assertTrue(states[first_client[-10:]])
+        self.assertFalse(states[second_client[-10:]])
+
+        admin_html = Path(store_api.__file__).with_name("store_admin.html").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("ANTHBOT Map tulajdonosi hozzáférés", admin_html)
+        self.assertIn("/api/anthbot/admin/store/pairings?limit=20", admin_html)
+        self.assertIn("Minden hang feloldása", admin_html)
+
     def test_owner_access_grant_requires_admin(self) -> None:
         client_token = "Q" * 48
         pairing = self.client.post(
