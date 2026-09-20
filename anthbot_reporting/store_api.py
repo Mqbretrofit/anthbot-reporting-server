@@ -78,15 +78,15 @@ _ANALYTICS_PUBLIC_HTML = {
 }
 _PUBLIC_SITE_BASE_URL = "https://anthbotmap.com"
 _LEGACY_PUBLIC_HOSTS = {"reports.mqbretrofithungary.online"}
-_BRAND_LOGO_URL = "/brand/anthbot-map-logo.webp?v=1"
+_BRAND_LOGO_URL = "/brand/anthbot-map-logo.webp?v=2"
 _BRAND_LOGO_IMG = (
     f'<img class="anthbot-brand-logo" src="{_BRAND_LOGO_URL}" '
     'alt="ANTHBOT Map" width="480" height="160">'
 )
 _FAVICON_HEAD = (
-    '<link rel="icon" href="/favicon.png?v=2" type="image/png">\n'
+    '<link rel="icon" href="/favicon.png?v=3" type="image/png">\n'
     '<link rel="shortcut icon" href="/favicon.ico?v=2">\n'
-    '<link rel="apple-touch-icon" href="/favicon.png?v=2">\n'
+    '<link rel="apple-touch-icon" href="/favicon.png?v=3">\n'
     '<meta name="theme-color" content="#081017">'
 )
 _BRAND_STYLE = """
@@ -2610,7 +2610,7 @@ def public_favicon_png() -> Response:
 @router.get("/favicon.svg", include_in_schema=False)
 def public_favicon_svg() -> Response:
     return RedirectResponse(
-        url="/favicon.png?v=2",
+        url="/favicon.png?v=3",
         status_code=307,
         headers={"Cache-Control": "public, max-age=3600"},
     )
@@ -2619,7 +2619,7 @@ def public_favicon_svg() -> Response:
 @router.get("/favicon.ico", include_in_schema=False)
 def public_favicon_ico() -> Response:
     return RedirectResponse(
-        url="/favicon.png?v=2",
+        url="/favicon.png?v=3",
         status_code=307,
         headers={"Cache-Control": "public, max-age=3600"},
     )
