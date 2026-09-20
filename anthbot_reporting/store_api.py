@@ -13,6 +13,8 @@ import os
 from pathlib import Path
 import re
 import secrets
+import smtplib
+import ssl
 import time
 import tarfile
 from typing import Any, Literal
