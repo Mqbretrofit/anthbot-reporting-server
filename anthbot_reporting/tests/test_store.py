@@ -1039,6 +1039,132 @@ class VoiceStoreTests(unittest.TestCase):
             any(item.get("community_id") == "cs_vlasta_standard" for item in legacy)
         )
 
+    def test_store_admin_can_hide_sold_pack_without_breaking_entitlement(self) -> None:
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        priced = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        self.assertEqual(priced.status_code, 200)
+
+        client_token = "H" * 48
+        client_id = store_api._client_id_from_token(client_token)
+        order = store_api._upsert_order_from_session(
+            {
+                "id": "cs_test_hidden_pack_123",
+                "object": "checkout.session",
+                "created": int(time.time()),
+                "client_reference_id": pack_id,
+                "metadata": {
+                    "pack_id": pack_id,
+                    "community_id": "cs_vlasta_standard",
+                    "store_client_id": client_id,
+                    "entitlement_scope": "web",
+                },
+                "payment_status": "paid",
+                "status": "complete",
+                "amount_total": 799,
+                "currency": "eur",
+                "payment_intent": "pi_hidden_pack",
+            }
+        )
+        self.assertEqual(order["payment_status"], "paid")
+
+        hidden = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}/visibility",
+            headers=self._admin_headers(),
+            json={"hidden": True},
+        )
+        self.assertEqual(hidden.status_code, 200)
+        self.assertTrue(hidden.json()["pack"]["store_hidden"])
+
+        catalog = self.client.get("/api/anthbot/store/voice-packs")
+        self.assertEqual(catalog.status_code, 200)
+        self.assertFalse(
+            any(item.get("id") == pack_id for item in catalog.json()["packs"])
+        )
+
+        with patch.object(store_api, "_create_checkout_session") as create:
+            blocked = self.client.post(
+                "/api/anthbot/store/client/checkout",
+                json={"client_token": "N" * 48, "pack_id": pack_id},
+            )
+        self.assertEqual(blocked.status_code, 404)
+        create.assert_not_called()
+
+        entitlements = self.client.post(
+            "/api/anthbot/store/client/entitlements",
+            json={"client_token": client_token},
+        )
+        self.assertEqual(entitlements.status_code, 200)
+        self.assertTrue(entitlements.json()["licensed"])
+        entitled = entitlements.json()["packs"][0]
+        self.assertEqual(entitled["id"], pack_id)
+        download = self.client.get(
+            entitled["music_url"].removeprefix("https://testserver")
+        )
+        self.assertEqual(download.status_code, 200)
+        self.assertEqual(download.content, b"paid-community-pack")
+
+        admin = self.client.get(
+            "/api/anthbot/admin/store/voice-packs",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(admin.status_code, 200)
+        admin_pack = next(
+            item for item in admin.json()["items"] if item["id"] == pack_id
+        )
+        self.assertEqual(admin_pack["sales"], 1)
+        self.assertTrue(admin_pack["store_hidden"])
+
+        reupload = self.client.post(
+            "/api/anthbot/admin/voice-packs",
+            headers=self._admin_headers(),
+            files={
+                "file": (
+                    "cs-v2.pack",
+                    b"paid-community-pack-v2",
+                    "application/octet-stream",
+                )
+            },
+            data={
+                "language": "Čeština",
+                "language_code": "cs",
+                "version": "2.0.0",
+                "community_id": "cs_vlasta_standard",
+                "variant_id": "vlasta_standard",
+                "variant_name": "Vlasta (női) · Standard",
+                "voice_gender": "female",
+                "technical_slot": "German_girl",
+            },
+        )
+        self.assertEqual(reupload.status_code, 201)
+        replacement = reupload.json()["pack"]
+        self.assertTrue(replacement["store_hidden"])
+        self.assertEqual(replacement["access"], "paid")
+
+        shown = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{replacement['id']}/visibility",
+            headers=self._admin_headers(),
+            json={"hidden": False},
+        )
+        self.assertEqual(shown.status_code, 200)
+        self.assertFalse(shown.json()["pack"]["store_hidden"])
+        visible_catalog = self.client.get("/api/anthbot/store/voice-packs").json()
+        self.assertTrue(
+            any(item.get("id") == replacement["id"] for item in visible_catalog["packs"])
+        )
+
+        admin_html = Path(store_api.__file__).with_name("store_admin.html").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("async function deletePack", admin_html)
+        self.assertIn("async function setVisibility", admin_html)
+        self.assertIn("/api/anthbot/admin/voice-packs/", admin_html)
+        self.assertIn("A licencek és letöltések megmaradnak.", admin_html)
+
     def test_stripe_webhook_signature_is_verified(self) -> None:
         body = json.dumps(
             {
