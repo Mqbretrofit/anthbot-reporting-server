@@ -1889,6 +1889,54 @@ def _purchase_pack_name(pack: dict[str, Any]) -> str:
     return f"{language} – {variant}" if variant else language
 
 
+def _deliver_purchase_installation_email(order: dict[str, Any]) -> None:
+    """Deliver the installation guide for one paid Voice Store order."""
+    pack = _resolve_order_pack(order)
+    user_id = str(order.get("user_id") or "").strip()
+    user = store_accounts.get_user(user_id) if user_id else None
+    email = (
+        str(user.get("email") or "").strip()
+        if user is not None
+        else ""
+    ) or str(order.get("customer_email") or "").strip()
+    if not email:
+        raise RuntimeError("purchase has no customer email")
+
+    language = (
+        str(user.get("preferred_language") or "en").strip()
+        if user is not None
+        else "en"
+    ) or "en"
+    scope = str(order.get("entitlement_scope") or "").strip().casefold()
+    map_linked = scope == "map" or (not scope and bool(order.get("client_id")))
+    session_id = str(order.get("stripe_session_id") or "").strip()
+    store_accounts.send_purchase_installation_email(
+        email,
+        language=language,
+        pack_name=_purchase_pack_name(pack),
+        license_key=_license_for_order(order),
+        success_url=(
+            f"{_PUBLIC_SITE_BASE_URL}/store/success"
+            f"?session_id={quote(session_id)}"
+        ),
+        map_linked=map_linked,
+    )
+
+
+def _purchase_email_error_detail(err: Exception) -> str:
+    if isinstance(
+        err,
+        (
+            smtplib.SMTPException,
+            ssl.SSLError,
+            TimeoutError,
+            OSError,
+        ),
+    ):
+        return store_accounts._smtp_failure_detail(err)
+    return type(err).__name__
+
+
 def _send_purchase_installation_email_once(order: dict[str, Any]) -> bool:
     """Send one installation email per paid Stripe order.
 
@@ -1936,51 +1984,9 @@ def _send_purchase_installation_email_once(order: dict[str, Any]) -> bool:
             return False
 
     try:
-        pack = _resolve_order_pack(order)
-        user_id = str(order.get("user_id") or "").strip()
-        user = store_accounts.get_user(user_id) if user_id else None
-        email = (
-            str(user.get("email") or "").strip()
-            if user is not None
-            else ""
-        ) or str(order.get("customer_email") or "").strip()
-        if not email:
-            raise RuntimeError("purchase has no customer email")
-
-        language = (
-            str(user.get("preferred_language") or "en").strip()
-            if user is not None
-            else "en"
-        ) or "en"
-        scope = str(order.get("entitlement_scope") or "").strip().casefold()
-        map_linked = scope == "map" or (not scope and bool(order.get("client_id")))
-        license_key = _license_for_order(order)
-        success_url = (
-            f"{_PUBLIC_SITE_BASE_URL}/store/success"
-            f"?session_id={quote(session_id)}"
-        )
-        store_accounts.send_purchase_installation_email(
-            email,
-            language=language,
-            pack_name=_purchase_pack_name(pack),
-            license_key=license_key,
-            success_url=success_url,
-            map_linked=map_linked,
-        )
+        _deliver_purchase_installation_email(order)
     except Exception as err:
-        safe_error = (
-            store_accounts._smtp_failure_detail(err)
-            if isinstance(
-                err,
-                (
-                    smtplib.SMTPException,
-                    ssl.SSLError,
-                    TimeoutError,
-                    OSError,
-                ),
-            )
-            else type(err).__name__
-        )
+        safe_error = _purchase_email_error_detail(err)
         with core._db() as conn:
             conn.execute(
                 """
@@ -2064,6 +2070,77 @@ def _order_public(order: dict[str, Any], request: Request) -> dict[str, Any]:
     elif paid:
         body["license_key"] = _license_for_order(order)
     return body
+
+
+def _account_purchase_public(
+    order: dict[str, Any],
+    request: Request,
+) -> dict[str, Any]:
+    try:
+        pack = _resolve_order_pack(order)
+        public_pack: dict[str, Any] = _public_paid_pack(pack, request)
+        pack_name = _purchase_pack_name(pack)
+    except HTTPException:
+        pack_id = str(order.get("pack_id") or "").strip()
+        community_id = str(order.get("community_id") or "").strip()
+        public_pack = {
+            "id": pack_id,
+            "community_id": community_id or None,
+            "language": "Voice pack",
+            "variant_name": community_id or pack_id or "Purchased voice",
+            "access": "paid",
+        }
+        pack_name = community_id or pack_id or "Purchased voice"
+
+    status = str(order.get("payment_status") or "").strip().casefold()
+    session_id = str(order.get("stripe_session_id") or "").strip()
+    scope = str(order.get("entitlement_scope") or "").strip().casefold()
+    legacy_linked = not scope and bool(order.get("client_id"))
+    attempted_at = int(order.get("installation_email_attempted_at") or 0)
+    body: dict[str, Any] = {
+        "stripe_session_id": session_id,
+        "pack_id": order.get("pack_id"),
+        "community_id": order.get("community_id"),
+        "pack_name": pack_name,
+        "pack": public_pack,
+        "payment_status": status,
+        "amount_total": order.get("amount_total"),
+        "currency": order.get("currency"),
+        "paid_at": order.get("paid_at"),
+        "created_at": order.get("created_at"),
+        "map_linked": scope == "map" or legacy_linked,
+        "web_installer_linked": scope == "web",
+        "installation_email_sent": bool(order.get("installation_email_sent_at")),
+        "email_resend_available": (
+            status == "paid"
+            and attempted_at <= int(time.time()) - 60
+        ),
+        "installation_url": (
+            f"{_PUBLIC_SITE_BASE_URL}/store/success"
+            f"?session_id={quote(session_id)}"
+        ),
+    }
+    if status == "paid":
+        body["license_key"] = _license_for_order(order)
+    return body
+
+
+def _account_order_for_user(session_id: str, user_id: str) -> dict[str, Any]:
+    if not _SESSION_RE.fullmatch(session_id):
+        raise HTTPException(status_code=422, detail="invalid checkout session id")
+    _init_store_tables()
+    with core._db() as conn:
+        row = conn.execute(
+            """
+            SELECT *
+            FROM store_orders
+            WHERE stripe_session_id = ? AND user_id = ?
+            """,
+            (session_id, user_id),
+        ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="purchase not found")
+    return dict(row)
 
 
 def _verify_stripe_signature(body: bytes, signature_header: str | None) -> None:
@@ -3415,6 +3492,101 @@ async def stripe_webhook(
                 )
 
     return {"received": True}
+
+
+@router.get("/api/anthbot/store/account/purchases")
+def account_purchases(request: Request) -> dict[str, Any]:
+    user = store_accounts.require_user(request)
+    user_id = str(user["user_id"])
+    _init_store_tables()
+    with core._db() as conn:
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM store_orders
+            WHERE user_id = ?
+              AND payment_status IN ('paid', 'refunded')
+            ORDER BY COALESCE(paid_at, created_at) DESC, created_at DESC
+            LIMIT 100
+            """,
+            (user_id,),
+        ).fetchall()
+    return {
+        "purchases": [
+            _account_purchase_public(dict(row), request)
+            for row in rows
+        ]
+    }
+
+
+@router.post(
+    "/api/anthbot/store/account/purchases/{session_id}/resend-email"
+)
+async def resend_account_purchase_email(
+    session_id: str,
+    request: Request,
+) -> dict[str, Any]:
+    user = store_accounts.require_user(request)
+    order = _account_order_for_user(session_id, str(user["user_id"]))
+    if str(order.get("payment_status") or "").casefold() != "paid":
+        raise HTTPException(
+            status_code=409,
+            detail="installation email is only available for active purchases",
+        )
+
+    now_epoch = int(time.time())
+    attempted_at = int(order.get("installation_email_attempted_at") or 0)
+    if attempted_at > now_epoch - 60:
+        raise HTTPException(
+            status_code=429,
+            detail="Please wait before resending the installation email",
+        )
+
+    with core._db() as conn:
+        conn.execute(
+            """
+            UPDATE store_orders
+            SET installation_email_status = 'sending',
+                installation_email_attempted_at = ?,
+                installation_email_error = NULL
+            WHERE stripe_session_id = ?
+            """,
+            (now_epoch, session_id),
+        )
+
+    try:
+        await asyncio.to_thread(_deliver_purchase_installation_email, order)
+    except Exception as err:
+        safe_error = _purchase_email_error_detail(err)
+        with core._db() as conn:
+            conn.execute(
+                """
+                UPDATE store_orders
+                SET installation_email_status = 'failed',
+                    installation_email_error = ?
+                WHERE stripe_session_id = ?
+                """,
+                (str(safe_error)[:240], session_id),
+            )
+        _LOGGER.warning(
+            "Purchase installation email resend failed for %s: %s",
+            session_id,
+            safe_error,
+        )
+        raise HTTPException(status_code=424, detail=safe_error) from err
+
+    with core._db() as conn:
+        conn.execute(
+            """
+            UPDATE store_orders
+            SET installation_email_status = 'sent',
+                installation_email_sent_at = ?,
+                installation_email_error = NULL
+            WHERE stripe_session_id = ?
+            """,
+            (core._iso(), session_id),
+        )
+    return {"sent": True}
 
 
 @router.get("/api/anthbot/store/orders/{session_id}")
