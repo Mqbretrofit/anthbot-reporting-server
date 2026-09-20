@@ -3273,6 +3273,60 @@ def admin_store_orders(limit: int = 200) -> dict[str, Any]:
     return {"count": len(rows), "items": [dict(row) for row in rows]}
 
 
+@router.delete(
+    "/api/anthbot/admin/store/orders/{session_id}",
+    dependencies=[Depends(core.require_admin)],
+)
+def admin_delete_test_order(session_id: str) -> dict[str, Any]:
+    """Delete one Stripe Sandbox order from the local Store database.
+
+    Live Stripe orders are intentionally protected from destructive admin cleanup.
+    Removing a test order also removes any local license / Map entitlement derived
+    from that order because entitlements are resolved from store_orders.
+    """
+    _init_store_tables()
+    normalized = session_id.strip()
+    if not normalized.startswith("cs_test_"):
+        raise HTTPException(
+            status_code=409,
+            detail="only Stripe Sandbox test orders can be deleted",
+        )
+    with core._db() as conn:
+        row = conn.execute(
+            "SELECT stripe_session_id FROM store_orders WHERE stripe_session_id = ?",
+            (normalized,),
+        ).fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail="store order not found")
+        conn.execute(
+            "DELETE FROM store_orders WHERE stripe_session_id = ?",
+            (normalized,),
+        )
+    return {
+        "deleted": True,
+        "stripe_session_id": normalized,
+        "entitlement_revoked": True,
+    }
+
+
+@router.delete(
+    "/api/anthbot/admin/store/orders",
+    dependencies=[Depends(core.require_admin)],
+)
+def admin_delete_all_test_orders() -> dict[str, Any]:
+    """Delete all Stripe Sandbox orders while preserving every live order."""
+    _init_store_tables()
+    with core._db() as conn:
+        cursor = conn.execute(
+            "DELETE FROM store_orders WHERE stripe_session_id GLOB 'cs_test_*'"
+        )
+        deleted = max(0, int(cursor.rowcount or 0))
+    return {
+        "deleted": deleted,
+        "scope": "stripe_sandbox_test_orders",
+    }
+
+
 @router.get(
     "/api/anthbot/admin/privacy-requests",
     dependencies=[Depends(core.require_admin)],
