@@ -244,8 +244,14 @@ a{color:inherit}.wrap{max-width:var(--max);margin:auto;padding:0 22px}
   let initial="";
   try{initial=localStorage.getItem("mqb-site-language")||"";}catch(_){}
   if(!supported.includes(initial)){
-    const browser=(navigator.language||"en").slice(0,2).toLowerCase();
-    initial=supported.includes(browser)?browser:"en";
+    const raw=(navigator.language||"en");
+    if(supported.includes(raw)) initial=raw;
+    else if(/^zh[-_]TW/i.test(raw)) initial="zh-TW";
+    else if(/^zh/i.test(raw)) initial="zh-CN";
+    else {
+      const browser=raw.slice(0,2).toLowerCase();
+      initial=supported.includes(browser)?browser:"en";
+    }
   }
   if(select) select.addEventListener("change",function(){apply(select.value);});
   window.__applySiteLanguage=apply;
