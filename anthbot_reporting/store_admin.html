@@ -94,16 +94,17 @@
     }
     function packAction(p){
       const id=String(p.id||''),sales=Number(p.sales||0),hidden=!!p.store_hidden;
+      const download='<a class="btn primary" href="/api/anthbot/admin/store/voice-packs/'+encodeURIComponent(id)+'/download">Letöltés</a>';
       if(hidden){
-        let html='<button class="btn" onclick="setVisibility(\''+esc(id)+'\',false,this)">Megjelenítés</button>';
+        let html=download+' <button class="btn" onclick="setVisibility(\''+esc(id)+'\',false,this)">Megjelenítés</button>';
         if(sales===0)html+=' <button class="btn danger" onclick="deletePack(\''+esc(id)+'\',this)">Törlés</button>';
         else html+='<div class="small">Vásárlások miatt a végleges törlés védett.</div>';
         return html;
       }
       if(p.access==='paid'&&sales>0){
-        return '<button class="btn warning" onclick="setVisibility(\''+esc(id)+'\',true,this)">Elrejtés</button><div class="small">A licencek és letöltések megmaradnak.</div>';
+        return download+' <button class="btn warning" onclick="setVisibility(\''+esc(id)+'\',true,this)">Elrejtés</button><div class="small">A licencek és letöltések megmaradnak.</div>';
       }
-      return '<button class="btn danger" onclick="deletePack(\''+esc(id)+'\',this)">Törlés</button>';
+      return download+' <button class="btn danger" onclick="deletePack(\''+esc(id)+'\',this)">Törlés</button>';
     }
     function packRows(items){
       const body=document.getElementById('packs');
@@ -172,7 +173,7 @@
         const [catalog,stats,orders,customRequests,privacyRequests,siteAnalytics]=await Promise.all([api('/api/anthbot/admin/store/voice-packs'),api('/api/anthbot/admin/store/stats'),api('/api/anthbot/admin/store/orders?limit=100'),api('/api/anthbot/admin/store/custom-voice-requests?limit=100'),api('/api/anthbot/admin/privacy-requests?limit=100'),api('/api/anthbot/admin/site-analytics?days=30')]);
         const revenue=(stats.revenue||[]).map(x=>money(x.amount,x.currency)).join(' + ')||money(0,'eur');
         document.getElementById('kpis').innerHTML=kpi('Feltöltött csomag',catalog.items.length)+kpi('Rendelés',stats.orders||0)+kpi('Fizetett rendelés',stats.paid_orders||0)+kpi('Bevétel',revenue);
-        document.getElementById('status').innerHTML='<span class="pill '+(stats.store_enabled?'good':'warn')+'">Store: '+(stats.store_enabled?'bekapcsolva':'kikapcsolva')+'</span><span class="pill '+(stats.checkout_ready?'good':'warn')+'">Stripe: '+(stats.checkout_ready?'kész':'nincs teljesen konfigurálva')+'</span><span class="pill '+(stats.automatic_tax?'good':'warn')+'">Stripe automatic tax: '+(stats.automatic_tax?'be':'ki')+'</span><span class="small">Fizetősre állított csomag eltűnik a régi ingyenes voice-packs registryből, így közvetlenül nem tölthető le.</span>';
+        document.getElementById('status').innerHTML='<span class="pill good">Tulajdonosi hozzáférés: minden csomag letölthető</span><span class="pill '+(stats.store_enabled?'good':'warn')+'">Store: '+(stats.store_enabled?'bekapcsolva':'kikapcsolva')+'</span><span class="pill '+(stats.checkout_ready?'good':'warn')+'">Stripe: '+(stats.checkout_ready?'kész':'nincs teljesen konfigurálva')+'</span><span class="pill '+(stats.automatic_tax?'good':'warn')+'">Stripe automatic tax: '+(stats.automatic_tax?'be':'ki')+'</span><span class="small">A tulajdonosi letöltés admin jogosultsághoz kötött, nem hoz létre rendelést vagy licencet. A fizetős csomagok publikus letöltése továbbra is vásárláshoz kötött.</span>';
         analyticsRows(siteAnalytics);packRows(catalog.items||[]);customRequestRows(customRequests.items||[]);privacyRequestRows(privacyRequests.items||[]);orderRows(orders.items||[]);
       }catch(e){document.getElementById('status').innerHTML='<span style="color:#ffc4cc">Hiba: '+esc(e.message)+'</span>'}
     }
