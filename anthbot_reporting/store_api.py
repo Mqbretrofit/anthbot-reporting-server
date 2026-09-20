@@ -18,7 +18,9 @@ import ssl
 import time
 import tarfile
 from typing import Any, Literal
+from urllib.error import HTTPError, URLError
 from urllib.parse import quote
+from urllib.request import Request as UrlRequest, urlopen
 
 import stripe
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
@@ -77,6 +79,19 @@ _ANALYTICS_PUBLIC_HTML = {
     "store_success.html",
 }
 _PUBLIC_SITE_BASE_URL = "https://anthbotmap.com"
+_ANTHBOT_MAP_RELEASE_API = (
+    "https://api.github.com/repos/Mqbretrofit/ha-anthbot-map-v2/releases/latest"
+)
+_ANTHBOT_MAP_RELEASE_FALLBACK = "2.4.8.2"
+_ANTHBOT_MAP_RELEASE_CACHE_SECONDS = 15 * 60
+_ANTHBOT_MAP_VERSION_RE = re.compile(r"^v?(\\d+(?:\\.\\d+){2,3})$")
+_anthbot_map_release_cache: dict[str, Any] = {
+    "version": _ANTHBOT_MAP_RELEASE_FALLBACK,
+    "tag": f"v{_ANTHBOT_MAP_RELEASE_FALLBACK}",
+    "published_at": None,
+    "source": "fallback",
+    "checked_at": 0.0,
+}
 
 def _google_site_verification_meta() -> str:
     token = os.environ.get("ANTHBOT_GOOGLE_SITE_VERIFICATION", "").strip()
@@ -2237,6 +2252,59 @@ def _verify_stripe_signature(body: bytes, signature_header: str | None) -> None:
         raise HTTPException(status_code=400, detail="invalid Stripe webhook signature")
 
 
+def _fetch_latest_anthbot_map_release() -> dict[str, Any]:
+    request = UrlRequest(
+        _ANTHBOT_MAP_RELEASE_API,
+        headers={
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "anthbotmap.com-release-version/1.0",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+    )
+    with urlopen(request, timeout=4.0) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+
+    if not isinstance(payload, dict):
+        raise ValueError("GitHub latest-release response is not an object")
+    if payload.get("draft") or payload.get("prerelease"):
+        raise ValueError("GitHub latest release is not stable")
+
+    tag = str(payload.get("tag_name") or "").strip()
+    match = _ANTHBOT_MAP_VERSION_RE.fullmatch(tag)
+    if match is None:
+        raise ValueError("GitHub latest-release tag has an invalid version")
+
+    return {
+        "version": match.group(1),
+        "tag": f"v{match.group(1)}",
+        "published_at": payload.get("published_at"),
+        "source": "github",
+    }
+
+
+def _cached_anthbot_map_release() -> dict[str, Any]:
+    now = time.monotonic()
+    checked_at = float(_anthbot_map_release_cache.get("checked_at") or 0.0)
+    if checked_at and now - checked_at < _ANTHBOT_MAP_RELEASE_CACHE_SECONDS:
+        return dict(_anthbot_map_release_cache)
+
+    try:
+        latest = _fetch_latest_anthbot_map_release()
+    except (HTTPError, URLError, OSError, ValueError, json.JSONDecodeError) as err:
+        logging.getLogger(__name__).warning(
+            "Could not refresh ANTHBOT Map latest release: %s", err
+        )
+        _anthbot_map_release_cache["checked_at"] = now
+        if _anthbot_map_release_cache.get("source") == "github":
+            _anthbot_map_release_cache["source"] = "github-cache"
+        return dict(_anthbot_map_release_cache)
+
+    _anthbot_map_release_cache.clear()
+    _anthbot_map_release_cache.update(latest)
+    _anthbot_map_release_cache["checked_at"] = now
+    return dict(_anthbot_map_release_cache)
+
+
 def _brand_asset_bytes(filename: str) -> bytes:
     path = Path(__file__).with_name("assets") / filename
     try:
@@ -3073,6 +3141,18 @@ def admin_site_analytics(days: int = 30) -> dict[str, Any]:
             "unique_hash_retention_days": _ANALYTICS_UNIQUE_RETENTION_DAYS,
             "aggregate_retention_days": _ANALYTICS_AGGREGATE_RETENTION_DAYS,
         },
+    }
+
+
+@router.get("/api/anthbot/map/latest-release", include_in_schema=False)
+async def public_anthbot_map_latest_release(response: Response) -> dict[str, Any]:
+    release = await asyncio.to_thread(_cached_anthbot_map_release)
+    response.headers["Cache-Control"] = "public, max-age=300"
+    return {
+        "version": release["version"],
+        "tag": release["tag"],
+        "published_at": release.get("published_at"),
+        "source": release.get("source", "fallback"),
     }
 
 
