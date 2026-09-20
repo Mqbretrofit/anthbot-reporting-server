@@ -1059,7 +1059,7 @@ class VoiceStoreTests(unittest.TestCase):
         )
         self.assertEqual(
             free_download.headers.get("cache-control"),
-            "private, no-store",
+            "no-store",
         )
 
         priced = self.client.patch(
