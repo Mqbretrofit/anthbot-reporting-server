@@ -3277,19 +3277,27 @@ def admin_store_orders(limit: int = 200) -> dict[str, Any]:
     "/api/anthbot/admin/store/orders/{session_id}",
     dependencies=[Depends(core.require_admin)],
 )
-def admin_delete_test_order(session_id: str) -> dict[str, Any]:
-    """Delete one Stripe Sandbox order from the local Store database.
+def admin_delete_test_order(
+    session_id: str,
+    confirm_live: bool = False,
+) -> dict[str, Any]:
+    """Delete one local Store order.
 
-    Live Stripe orders are intentionally protected from destructive admin cleanup.
-    Removing a test order also removes any local license / Map entitlement derived
-    from that order because entitlements are resolved from store_orders.
+    Sandbox orders may be removed directly. Live orders require an explicit
+    confirm_live flag so a future real purchase cannot be deleted accidentally.
+    Removing an order also removes any local license / Map entitlement derived
+    from it because entitlements are resolved from store_orders.
     """
     _init_store_tables()
     normalized = session_id.strip()
-    if not normalized.startswith("cs_test_"):
+    is_test = normalized.startswith("cs_test_")
+    is_live = normalized.startswith("cs_live_")
+    if not is_test and not is_live:
+        raise HTTPException(status_code=422, detail="invalid Stripe checkout session id")
+    if is_live and not confirm_live:
         raise HTTPException(
             status_code=409,
-            detail="only Stripe Sandbox test orders can be deleted",
+            detail="live order deletion requires explicit confirmation",
         )
     with core._db() as conn:
         row = conn.execute(
@@ -3313,17 +3321,28 @@ def admin_delete_test_order(session_id: str) -> dict[str, Any]:
     "/api/anthbot/admin/store/orders",
     dependencies=[Depends(core.require_admin)],
 )
-def admin_delete_all_test_orders() -> dict[str, Any]:
-    """Delete all Stripe Sandbox orders while preserving every live order."""
+def admin_delete_all_test_orders(
+    include_live: bool = False,
+) -> dict[str, Any]:
+    """Delete local test orders, optionally including live-mode test history."""
     _init_store_tables()
     with core._db() as conn:
-        cursor = conn.execute(
-            "DELETE FROM store_orders WHERE stripe_session_id GLOB 'cs_test_*'"
-        )
+        if include_live:
+            cursor = conn.execute(
+                "DELETE FROM store_orders "
+                "WHERE stripe_session_id GLOB 'cs_test_*' "
+                "OR stripe_session_id GLOB 'cs_live_*'"
+            )
+            scope = "all_local_stripe_orders"
+        else:
+            cursor = conn.execute(
+                "DELETE FROM store_orders WHERE stripe_session_id GLOB 'cs_test_*'"
+            )
+            scope = "stripe_sandbox_test_orders"
         deleted = max(0, int(cursor.rowcount or 0))
     return {
         "deleted": deleted,
-        "scope": "stripe_sandbox_test_orders",
+        "scope": scope,
     }
 
 
