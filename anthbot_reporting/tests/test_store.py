@@ -1378,8 +1378,15 @@ class VoiceStoreTests(unittest.TestCase):
         )
         self.assertEqual(login.status_code, 303)
 
-        owner_route = self.client.get(
+        public_route = self.client.get(
             f"/store?pair={pair_code}",
+            follow_redirects=False,
+        )
+        self.assertEqual(public_route.status_code, 200)
+        self.assertIsNone(public_route.headers.get("location"))
+
+        owner_route = self.client.get(
+            f"/store?pair={pair_code}&owner=1",
             follow_redirects=False,
         )
         self.assertEqual(owner_route.status_code, 303)
