@@ -79,6 +79,7 @@ _ANALYTICS_PUBLIC_HTML = {
 _PUBLIC_SITE_BASE_URL = "https://anthbotmap.com"
 _LEGACY_PUBLIC_HOSTS = {"reports.mqbretrofithungary.online"}
 _BRAND_LOGO_URL = "/brand/anthbot-map-logo.webp?v=2"
+_SOCIAL_IMAGE_URL = f"{_PUBLIC_SITE_BASE_URL}{_BRAND_LOGO_URL}"
 _BRAND_LOGO_IMG = (
     f'<img class="anthbot-brand-logo" src="{_BRAND_LOGO_URL}" '
     'alt="ANTHBOT Map" width="480" height="160">'
@@ -2229,9 +2230,16 @@ def _apply_seo_metadata(name: str, html: str) -> str:
         f'<meta property="og:title" content="{escape(title, quote=True)}">',
         f'<meta property="og:description" content="{escape(description, quote=True)}">',
         f'<meta property="og:url" content="{escape(canonical, quote=True)}">',
-        '<meta name="twitter:card" content="summary">',
+        f'<meta property="og:image" content="{escape(_SOCIAL_IMAGE_URL, quote=True)}">',
+        '<meta property="og:image:alt" content="ANTHBOT Map">',
+        '<meta property="og:image:type" content="image/webp">',
+        '<meta property="og:image:width" content="480">',
+        '<meta property="og:image:height" content="160">',
+        '<meta name="twitter:card" content="summary_large_image">',
         f'<meta name="twitter:title" content="{escape(title, quote=True)}">',
         f'<meta name="twitter:description" content="{escape(description, quote=True)}">',
+        f'<meta name="twitter:image" content="{escape(_SOCIAL_IMAGE_URL, quote=True)}">',
+        '<meta name="twitter:image:alt" content="ANTHBOT Map">',
     ]
     social = [item for item in social if item]
 
@@ -2401,9 +2409,16 @@ def _seo_landing_html(path: str) -> str:
 <meta property="og:title" content="{escape(title, quote=True)}">
 <meta property="og:description" content="{escape(description, quote=True)}">
 <meta property="og:url" content="{escape(canonical, quote=True)}">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="{escape(_SOCIAL_IMAGE_URL, quote=True)}">
+<meta property="og:image:alt" content="ANTHBOT Map">
+<meta property="og:image:type" content="image/webp">
+<meta property="og:image:width" content="480">
+<meta property="og:image:height" content="160">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{escape(title, quote=True)}">
 <meta name="twitter:description" content="{escape(description, quote=True)}">
+<meta name="twitter:image" content="{escape(_SOCIAL_IMAGE_URL, quote=True)}">
+<meta name="twitter:image:alt" content="ANTHBOT Map">
 <script type="application/ld+json">{structured}</script>
 {_PUBLIC_TYPOGRAPHY_STYLE}
 <style>
