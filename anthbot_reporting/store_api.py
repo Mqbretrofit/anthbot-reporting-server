@@ -13,6 +13,8 @@ import os
 from pathlib import Path
 import re
 import secrets
+import smtplib
+import ssl
 import time
 import tarfile
 from typing import Any, Literal
@@ -643,6 +645,10 @@ def _init_store_tables() -> None:
                 client_id TEXT,
                 user_id TEXT,
                 entitlement_scope TEXT,
+                installation_email_status TEXT,
+                installation_email_attempted_at INTEGER,
+                installation_email_sent_at TEXT,
+                installation_email_error TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 paid_at TEXT
@@ -750,6 +756,26 @@ def _init_store_tables() -> None:
             conn.execute("ALTER TABLE store_orders ADD COLUMN entitlement_scope TEXT")
         if "user_id" not in columns:
             conn.execute("ALTER TABLE store_orders ADD COLUMN user_id TEXT")
+        if "installation_email_status" not in columns:
+            conn.execute(
+                "ALTER TABLE store_orders "
+                "ADD COLUMN installation_email_status TEXT"
+            )
+        if "installation_email_attempted_at" not in columns:
+            conn.execute(
+                "ALTER TABLE store_orders "
+                "ADD COLUMN installation_email_attempted_at INTEGER"
+            )
+        if "installation_email_sent_at" not in columns:
+            conn.execute(
+                "ALTER TABLE store_orders "
+                "ADD COLUMN installation_email_sent_at TEXT"
+            )
+        if "installation_email_error" not in columns:
+            conn.execute(
+                "ALTER TABLE store_orders "
+                "ADD COLUMN installation_email_error TEXT"
+            )
         conn.executescript(
             """
             CREATE INDEX IF NOT EXISTS idx_store_orders_client_id
@@ -1829,6 +1855,135 @@ def _license_for_order(order: dict[str, Any]) -> str:
     return f"abv1.{encoded}.{signature}"
 
 
+def _purchase_pack_name(pack: dict[str, Any]) -> str:
+    language = str(pack.get("language") or pack.get("english_name") or "ANTHBOT").strip()
+    variant = str(pack.get("variant_name") or "").strip()
+    return f"{language} – {variant}" if variant else language
+
+
+def _send_purchase_installation_email_once(order: dict[str, Any]) -> bool:
+    """Send one installation email per paid Stripe order.
+
+    The database claim makes webhook + success-page polling idempotent. A failed
+    send can retry after 60 seconds; an interrupted in-flight send can be
+    reclaimed after two minutes.
+    """
+    if str(order.get("payment_status") or "").strip().casefold() != "paid":
+        return False
+
+    session_id = str(order.get("stripe_session_id") or "").strip()
+    if not _SESSION_RE.fullmatch(session_id):
+        return False
+
+    now_epoch = int(time.time())
+    _init_store_tables()
+    with core._db() as conn:
+        cursor = conn.execute(
+            """
+            UPDATE store_orders
+            SET installation_email_status = 'sending',
+                installation_email_attempted_at = ?,
+                installation_email_error = NULL
+            WHERE stripe_session_id = ?
+              AND installation_email_sent_at IS NULL
+              AND COALESCE(installation_email_attempted_at, 0) <= ?
+              AND (
+                    installation_email_status IS NULL
+                    OR installation_email_status = ''
+                    OR installation_email_status = 'failed'
+                    OR (
+                        installation_email_status = 'sending'
+                        AND COALESCE(installation_email_attempted_at, 0) <= ?
+                    )
+                  )
+            """,
+            (
+                now_epoch,
+                session_id,
+                now_epoch - 60,
+                now_epoch - 120,
+            ),
+        )
+        if not cursor.rowcount:
+            return False
+
+    try:
+        pack = _resolve_order_pack(order)
+        user_id = str(order.get("user_id") or "").strip()
+        user = store_accounts.get_user(user_id) if user_id else None
+        email = (
+            str(user.get("email") or "").strip()
+            if user is not None
+            else ""
+        ) or str(order.get("customer_email") or "").strip()
+        if not email:
+            raise RuntimeError("purchase has no customer email")
+
+        language = (
+            str(user.get("preferred_language") or "en").strip()
+            if user is not None
+            else "en"
+        ) or "en"
+        scope = str(order.get("entitlement_scope") or "").strip().casefold()
+        map_linked = scope == "map" or (not scope and bool(order.get("client_id")))
+        license_key = _license_for_order(order)
+        success_url = (
+            f"{_PUBLIC_SITE_BASE_URL}/store/success"
+            f"?session_id={quote(session_id)}"
+        )
+        store_accounts.send_purchase_installation_email(
+            email,
+            language=language,
+            pack_name=_purchase_pack_name(pack),
+            license_key=license_key,
+            success_url=success_url,
+            map_linked=map_linked,
+        )
+    except Exception as err:
+        safe_error = (
+            store_accounts._smtp_failure_detail(err)
+            if isinstance(
+                err,
+                (
+                    smtplib.SMTPException,
+                    ssl.SSLError,
+                    TimeoutError,
+                    OSError,
+                ),
+            )
+            else type(err).__name__
+        )
+        with core._db() as conn:
+            conn.execute(
+                """
+                UPDATE store_orders
+                SET installation_email_status = 'failed',
+                    installation_email_error = ?
+                WHERE stripe_session_id = ?
+                """,
+                (str(safe_error)[:240], session_id),
+            )
+        _LOGGER.warning(
+            "Purchase installation email failed for %s: %s",
+            session_id,
+            safe_error,
+        )
+        return False
+
+    with core._db() as conn:
+        conn.execute(
+            """
+            UPDATE store_orders
+            SET installation_email_status = 'sent',
+                installation_email_sent_at = ?,
+                installation_email_error = NULL
+            WHERE stripe_session_id = ?
+            """,
+            (core._iso(), session_id),
+        )
+    return True
+
+
 def _order_from_license(license_key: str) -> dict[str, Any]:
     match = _LICENSE_RE.fullmatch(license_key.strip())
     if not match:
@@ -1870,6 +2025,7 @@ def _order_public(order: dict[str, Any], request: Request) -> dict[str, Any]:
         "entitlement_scope": scope or None,
         "map_linked": scope == "map" or legacy_linked,
         "web_installer_linked": scope == "web",
+        "installation_email_sent": bool(order.get("installation_email_sent_at")),
         "pack": _public_paid_pack(pack, request),
     }
     if scope == "web":
@@ -2982,7 +3138,12 @@ async def stripe_webhook(
         and isinstance(session, dict)
         and session.get("object") == "checkout.session"
     ):
-        _upsert_order_from_session(session)
+        order = _upsert_order_from_session(session)
+        if str(order.get("payment_status") or "").casefold() == "paid":
+            await asyncio.to_thread(
+                _send_purchase_installation_email_once,
+                order,
+            )
     elif event_type == "charge.refunded" and isinstance(session, dict):
         payment_intent = session.get("payment_intent")
         if payment_intent:
@@ -3017,6 +3178,15 @@ async def store_order(session_id: str, request: Request) -> dict[str, Any]:
         _require_checkout_ready()
         session = await asyncio.to_thread(_retrieve_checkout_session, session_id)
         order = _upsert_order_from_session(session)
+
+    if str(order.get("payment_status") or "").casefold() == "paid":
+        await asyncio.to_thread(
+            _send_purchase_installation_email_once,
+            order,
+        )
+        refreshed = _order_by_session(session_id)
+        if refreshed is not None:
+            order = refreshed
 
     return _order_public(order, request)
 

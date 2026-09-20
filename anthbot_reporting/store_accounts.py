@@ -76,6 +76,7 @@ def _init_account_tables() -> None:
                 email TEXT NOT NULL UNIQUE,
                 email_verified INTEGER NOT NULL DEFAULT 0,
                 stripe_customer_id TEXT,
+                preferred_language TEXT NOT NULL DEFAULT 'en',
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
@@ -115,6 +116,15 @@ def _init_account_tables() -> None:
                 ON store_user_clients(user_id);
             """
         )
+        columns = {
+            str(row["name"])
+            for row in conn.execute("PRAGMA table_info(store_users)").fetchall()
+        }
+        if "preferred_language" not in columns:
+            conn.execute(
+                "ALTER TABLE store_users "
+                "ADD COLUMN preferred_language TEXT NOT NULL DEFAULT 'en'"
+            )
 
 
 def _smtp_host() -> str:
@@ -191,6 +201,30 @@ def _smtp_failure_detail(err: Exception) -> str:
     return f"SMTP delivery failed ({type(err).__name__})"
 
 
+def _smtp_send_message(message: EmailMessage) -> None:
+    context = ssl.create_default_context()
+    if _smtp_ssl():
+        with smtplib.SMTP_SSL(
+            _smtp_host(),
+            _smtp_port(),
+            timeout=20,
+            context=context,
+        ) as smtp:
+            if _smtp_username():
+                smtp.login(_smtp_username(), _smtp_password())
+            smtp.send_message(message)
+        return
+
+    with smtplib.SMTP(_smtp_host(), _smtp_port(), timeout=20) as smtp:
+        smtp.ehlo()
+        if _smtp_starttls():
+            smtp.starttls(context=context)
+            smtp.ehlo()
+        if _smtp_username():
+            smtp.login(_smtp_username(), _smtp_password())
+        smtp.send_message(message)
+
+
 def _login_code_hash(email: str, code: str, salt: str) -> str:
     return hashlib.sha256(f"{salt}|{email}|{code}".encode("utf-8")).hexdigest()
 
@@ -225,27 +259,112 @@ def _send_login_code(email: str, code: str, language: str) -> None:
     message["To"] = email
     message.set_content(body)
 
-    context = ssl.create_default_context()
-    if _smtp_ssl():
-        with smtplib.SMTP_SSL(
-            _smtp_host(),
-            _smtp_port(),
-            timeout=20,
-            context=context,
-        ) as smtp:
-            if _smtp_username():
-                smtp.login(_smtp_username(), _smtp_password())
-            smtp.send_message(message)
-        return
+    _smtp_send_message(message)
 
-    with smtplib.SMTP(_smtp_host(), _smtp_port(), timeout=20) as smtp:
-        smtp.ehlo()
-        if _smtp_starttls():
-            smtp.starttls(context=context)
-            smtp.ehlo()
-        if _smtp_username():
-            smtp.login(_smtp_username(), _smtp_password())
-        smtp.send_message(message)
+
+def send_purchase_installation_email(
+    email: str,
+    *,
+    language: str,
+    pack_name: str,
+    license_key: str,
+    success_url: str,
+    map_linked: bool,
+) -> None:
+    """Send the one-time post-purchase installation guide."""
+    if not _smtp_ready():
+        raise RuntimeError("Store account email delivery is not configured")
+
+    normalized_language = str(language or "en").strip().casefold()
+    normalized_pack = str(pack_name or "ANTHBOT Community voice").strip()
+    normalized_license = str(license_key or "").strip()
+    normalized_url = str(success_url or "").strip()
+
+    if normalized_language.startswith("hu"):
+        subject = "ANTHBOT Map – sikeres hangvásárlás és telepítés"
+        if map_linked:
+            steps = (
+                "A hang automatikusan hozzákapcsolódott az ANTHBOT Map telepítésedhez.\n\n"
+                "Telepítés:\n"
+                "1. Térj vissza a Home Assistant lapra.\n"
+                "2. Nyisd meg: ANTHBOT Map → Beállítások → Hangcsomag → Kezelés.\n"
+                "3. Válaszd ki a megvásárolt hangot. A lakat rövid időn belül eltűnik.\n"
+                "4. Indítsd el a telepítést, majd várd meg a sikeres robot-visszaigazolást.\n"
+            )
+        else:
+            steps = (
+                "A hangcsomag megvásárlása sikeres.\n\n"
+                "Telepítés:\n"
+                "1. Nyisd meg az alábbi vásárlási/telepítési oldalt.\n"
+                "2. Válaszd a Home Assistant nélküli telepítést, vagy kapcsold a fiókot ANTHBOT Maphez.\n"
+                "3. Kövesd az oldalon megjelenő telepítési lépéseket.\n"
+            )
+        body = (
+            "Köszönjük a vásárlást!\n\n"
+            f"Megvásárolt hang: {normalized_pack}\n\n"
+            f"{steps}\n"
+            "Licenckód – helyreállítási tartalék:\n"
+            f"{normalized_license}\n\n"
+            "Vásárlási / telepítési oldal:\n"
+            f"{normalized_url}\n\n"
+            "A licenckódot külön szövegfájlban is csatoltuk ehhez az e-mailhez.\n\n"
+            "ANTHBOT Map"
+        )
+        attachment = (
+            "ANTHBOT Map hanglicenc\n"
+            f"Hang: {normalized_pack}\n"
+            f"Licenckód: {normalized_license}\n"
+            f"Telepítési oldal: {normalized_url}\n"
+        )
+    else:
+        subject = "ANTHBOT Map – voice purchase and installation"
+        if map_linked:
+            steps = (
+                "The voice is linked automatically to your ANTHBOT Map installation.\n\n"
+                "Installation:\n"
+                "1. Return to the Home Assistant tab.\n"
+                "2. Open ANTHBOT Map → Settings → Voice pack → Manage.\n"
+                "3. Select the purchased voice. The lock should disappear shortly.\n"
+                "4. Start the installation and wait for the mower confirmation.\n"
+            )
+        else:
+            steps = (
+                "Your voice-pack purchase is complete.\n\n"
+                "Installation:\n"
+                "1. Open the purchase / installation page below.\n"
+                "2. Choose installation without Home Assistant, or link the account to ANTHBOT Map.\n"
+                "3. Follow the installation steps shown on the page.\n"
+            )
+        body = (
+            "Thank you for your purchase!\n\n"
+            f"Purchased voice: {normalized_pack}\n\n"
+            f"{steps}\n"
+            "License key – recovery backup:\n"
+            f"{normalized_license}\n\n"
+            "Purchase / installation page:\n"
+            f"{normalized_url}\n\n"
+            "The license key is also attached as a text file.\n\n"
+            "ANTHBOT Map"
+        )
+        attachment = (
+            "ANTHBOT Map voice license\n"
+            f"Voice: {normalized_pack}\n"
+            f"License key: {normalized_license}\n"
+            f"Installation page: {normalized_url}\n"
+        )
+
+    message = EmailMessage()
+    message["Subject"] = subject
+    message["From"] = f"{_smtp_from_name()} <{_smtp_from_email()}>"
+    message["To"] = email
+    message.set_content(body)
+    message.add_attachment(
+        attachment.encode("utf-8"),
+        maintype="text",
+        subtype="plain",
+        filename="anthbot-map-voice-license.txt",
+    )
+    _smtp_send_message(message)
 
 
 def _store_orders_support_user_id(conn: Any) -> bool:
@@ -327,9 +446,13 @@ def _claim_existing_orders(user_id: str, email: str) -> None:
             )
 
 
-def _create_or_get_user(email: str) -> dict[str, Any]:
+def _create_or_get_user(
+    email: str,
+    preferred_language: str = "en",
+) -> dict[str, Any]:
     _init_account_tables()
     now = core._iso()
+    language = str(preferred_language or "en").strip()[:16] or "en"
     with core._db() as conn:
         row = conn.execute(
             "SELECT * FROM store_users WHERE email = ?",
@@ -340,20 +463,23 @@ def _create_or_get_user(email: str) -> dict[str, Any]:
             conn.execute(
                 """
                 INSERT INTO store_users (
-                    user_id, email, email_verified, created_at, updated_at
-                ) VALUES (?, ?, 1, ?, ?)
+                    user_id, email, email_verified, preferred_language,
+                    created_at, updated_at
+                ) VALUES (?, ?, 1, ?, ?, ?)
                 """,
-                (user_id, email, now, now),
+                (user_id, email, language, now, now),
             )
         else:
             user_id = str(row["user_id"])
             conn.execute(
                 """
                 UPDATE store_users
-                SET email_verified = 1, updated_at = ?
+                SET email_verified = 1,
+                    preferred_language = ?,
+                    updated_at = ?
                 WHERE user_id = ?
                 """,
-                (now, user_id),
+                (language, now, user_id),
             )
         row = conn.execute(
             "SELECT * FROM store_users WHERE user_id = ?",
@@ -657,7 +783,7 @@ def verify_login_code(payload: AccountCodePayload) -> Response:
             (payload.email,),
         )
 
-    user = _create_or_get_user(payload.email)
+    user = _create_or_get_user(payload.email, payload.language)
     token, expires_at = _new_session(str(user["user_id"]))
     response = JSONResponse(
         {

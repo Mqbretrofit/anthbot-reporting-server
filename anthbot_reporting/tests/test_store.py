@@ -50,8 +50,14 @@ class VoiceStoreTests(unittest.TestCase):
         os.environ["ANTHBOT_SMTP_SSL"] = "false"
         self.client_ctx = TestClient(entrypoint.app, base_url="https://testserver")
         self.client = self.client_ctx.__enter__()
+        self.purchase_email_patcher = patch.object(
+            store_accounts,
+            "send_purchase_installation_email",
+        )
+        self.purchase_email_sender = self.purchase_email_patcher.start()
 
     def tearDown(self) -> None:
+        self.purchase_email_patcher.stop()
         self.client_ctx.__exit__(None, None, None)
         self.tempdir.cleanup()
 
@@ -88,10 +94,11 @@ class VoiceStoreTests(unittest.TestCase):
         body = verified.json()
         with store_api.core._db() as conn:
             row = conn.execute(
-                "SELECT user_id FROM store_users WHERE email = ?",
+                "SELECT user_id, preferred_language FROM store_users WHERE email = ?",
                 (email.casefold(),),
             ).fetchone()
         self.assertIsNotNone(row)
+        self.assertEqual(row["preferred_language"], "hu")
         body["_user_id"] = str(row["user_id"])
         return body
 
@@ -163,6 +170,101 @@ class VoiceStoreTests(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 201)
         return response.json()["pack"]
+
+    def test_purchase_success_page_contains_map_installation_guide(self) -> None:
+        response = self.client.get("/store/success?session_id=cs_example_123")
+        self.assertEqual(response.status_code, 200)
+        html = response.text
+        self.assertIn('id="map-guide"', html)
+        self.assertIn('id="return-ha"', html)
+        self.assertIn('id="email-note"', html)
+        self.assertIn('"guideTitle":"Install your purchased voice"', html)
+        self.assertIn('"guideTitle":"A megvásárolt hang telepítése"', html)
+        self.assertIn('"returnHa":"Vissza a Home Assistantba"', html)
+        self.assertIn("data.installation_email_sent", html)
+        self.assertIn("window.close()", html)
+
+    def test_paid_map_order_sends_installation_email_once_with_license(self) -> None:
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        priced = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        self.assertEqual(priced.status_code, 200)
+        account = self._login_store_account("mailbuyer@example.com")
+
+        client_token = "E" * 48
+        pairing = self.client.post(
+            "/api/anthbot/store/client/pair",
+            json={"client_token": client_token},
+        )
+        self.assertEqual(pairing.status_code, 200)
+        pair_code = pairing.json()["store_url"].split("pair=", 1)[1]
+        self._link_store_account_to_pair(pair_code)
+        client_id = store_api._client_id_from_token(client_token)
+
+        paid_session = {
+            "id": "cs_test_install_email_123",
+            "object": "checkout.session",
+            "url": "https://checkout.stripe.com/c/pay/install-email-test",
+            "created": int(time.time()),
+            "client_reference_id": pack_id,
+            "metadata": {
+                "pack_id": pack_id,
+                "community_id": "cs_vlasta_standard",
+                "store_client_id": client_id,
+                "store_user_id": account["_user_id"],
+                "entitlement_scope": "map",
+            },
+            "payment_status": "paid",
+            "status": "complete",
+            "amount_total": 799,
+            "currency": "eur",
+            "customer_details": {"email": "mailbuyer@example.com"},
+            "customer": "cus_install_email",
+            "payment_intent": "pi_install_email",
+        }
+        stored = store_api._upsert_order_from_session(paid_session)
+        self.purchase_email_sender.reset_mock()
+
+        first = store_api._send_purchase_installation_email_once(stored)
+        second = store_api._send_purchase_installation_email_once(stored)
+
+        self.assertTrue(first)
+        self.assertFalse(second)
+        self.purchase_email_sender.assert_called_once()
+        args, kwargs = self.purchase_email_sender.call_args
+        self.assertEqual(args[0], "mailbuyer@example.com")
+        self.assertEqual(kwargs["language"], "hu")
+        self.assertTrue(kwargs["map_linked"])
+        self.assertIn("Vlasta", kwargs["pack_name"])
+        self.assertTrue(kwargs["license_key"].startswith("abv1."))
+        self.assertIn(
+            "/store/success?session_id=cs_test_install_email_123",
+            kwargs["success_url"],
+        )
+
+        with store_api.core._db() as conn:
+            row = conn.execute(
+                """
+                SELECT installation_email_status, installation_email_sent_at
+                FROM store_orders
+                WHERE stripe_session_id = ?
+                """,
+                ("cs_test_install_email_123",),
+            ).fetchone()
+        self.assertIsNotNone(row)
+        self.assertEqual(row["installation_email_status"], "sent")
+        self.assertTrue(row["installation_email_sent_at"])
+
+        public = self.client.get(
+            "/api/anthbot/store/orders/cs_test_install_email_123"
+        )
+        self.assertEqual(public.status_code, 200)
+        self.assertTrue(public.json()["installation_email_sent"])
+        self.purchase_email_sender.assert_called_once()
 
     def test_store_has_visible_top_navigation_in_all_languages(self) -> None:
         response = self.client.get("/store")
