@@ -77,6 +77,18 @@ _ANALYTICS_PUBLIC_HTML = {
     "store_success.html",
 }
 _PUBLIC_SITE_BASE_URL = "https://anthbotmap.com"
+
+def _google_site_verification_meta() -> str:
+    token = os.environ.get("ANTHBOT_GOOGLE_SITE_VERIFICATION", "").strip()
+    if not token:
+        return ""
+    if not re.fullmatch(r"[A-Za-z0-9._=-]{8,512}", token):
+        return ""
+    return (
+        '<meta name="google-site-verification" content="'
+        + escape(token, quote=True)
+        + '">'
+    )
 _LEGACY_PUBLIC_HOSTS = {"reports.mqbretrofithungary.online"}
 _BRAND_LOGO_URL = "/brand/anthbot-map-logo.webp?v=2"
 _SOCIAL_IMAGE_URL = f"{_PUBLIC_SITE_BASE_URL}{_BRAND_LOGO_URL}"
@@ -2350,6 +2362,7 @@ def _apply_seo_metadata(name: str, html: str) -> str:
         extra_description.rstrip("\n"),
         _FAVICON_HEAD,
         _BRAND_STYLE,
+        _google_site_verification_meta(),
         f'<link rel="canonical" href="{escape(canonical, quote=True)}">',
         f'<meta name="robots" content="{robots}">',
         '<meta property="og:type" content="website">',
@@ -2529,6 +2542,7 @@ def _seo_landing_html(path: str) -> str:
 <meta name="description" content="{escape(description, quote=True)}">
 {_FAVICON_HEAD}
 {_BRAND_STYLE}
+{_google_site_verification_meta()}
 <link rel="canonical" href="{escape(canonical, quote=True)}">
 <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
 <meta property="og:type" content="website">
@@ -4206,6 +4220,15 @@ def admin_store_stats() -> dict[str, Any]:
     }
 
 
+def _indexed_public_paths() -> tuple[str, ...]:
+    paths: list[str] = []
+    for page in _SEO_PAGES.values():
+        if page.get("index"):
+            paths.append(str(page["path"]))
+    paths.extend(str(path) for path in _SEO_LANDING_PAGES)
+    return tuple(dict.fromkeys(paths))
+
+
 @router.get("/robots.txt")
 def robots_txt() -> Response:
     return Response(
@@ -4218,26 +4241,15 @@ def robots_txt() -> Response:
             f"Sitemap: {_PUBLIC_SITE_BASE_URL}/sitemap.xml\n"
         ),
         media_type="text/plain; charset=utf-8",
+        headers={"Cache-Control": "public, max-age=3600"},
     )
 
 
 @router.get("/sitemap.xml")
 def sitemap_xml() -> Response:
-    urls = (
-        "/",
-        "/home-assistant",
-        "/models/genie-1000",
-        "/models/m9-pro",
-        "/models/mgc1000",
-        "/voice-packs",
-        "/store",
-        "/privacy",
-        "/terms",
-        "/refunds",
-    )
     entries = "".join(
         f"<url><loc>{_PUBLIC_SITE_BASE_URL}{path}</loc></url>"
-        for path in urls
+        for path in _indexed_public_paths()
     )
     return Response(
         content=(
@@ -4246,6 +4258,7 @@ def sitemap_xml() -> Response:
             f"{entries}</urlset>"
         ),
         media_type="application/xml",
+        headers={"Cache-Control": "public, max-age=3600"},
     )
 
 

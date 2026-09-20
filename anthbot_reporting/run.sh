@@ -13,6 +13,7 @@ export ANTHBOT_PRIVACY_CONTROLLER_ADDRESS="$(bashio::config 'privacy_controller_
 export ANTHBOT_PRIVACY_CONTACT_EMAIL="$(bashio::config 'privacy_contact_email')"
 export ANTHBOT_PRIVACY_CONTACT_PHONE="$(bashio::config 'privacy_contact_phone')"
 export ANTHBOT_SITE_ANALYTICS_ENABLED="$(bashio::config 'site_analytics_enabled')"
+export ANTHBOT_GOOGLE_SITE_VERIFICATION="$(bashio::config 'google_site_verification')"
 export ANTHBOT_WEB_VOICE_INSTALLER_ENABLED="$(bashio::config 'web_voice_installer_enabled')"
 export ANTHBOT_SMTP_HOST="$(bashio::config 'smtp_host')"
 export ANTHBOT_SMTP_PORT="$(bashio::config 'smtp_port')"
