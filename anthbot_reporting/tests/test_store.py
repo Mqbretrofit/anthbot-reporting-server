@@ -598,6 +598,7 @@ class VoiceStoreTests(unittest.TestCase):
             json={"access": "paid", "price_amount": 799, "currency": "eur"},
         )
         self.assertEqual(priced.status_code, 200)
+        account = self._login_store_account("buyer@example.test")
         fake_session = {
             "id": "cs_test_installer_direct",
             "url": "https://checkout.stripe.com/c/pay/test",
@@ -608,7 +609,11 @@ class VoiceStoreTests(unittest.TestCase):
             "client_reference_id": pack_id,
             "customer": "cus_installer",
             "payment_intent": "pi_installer",
-            "metadata": {"pack_id": pack_id, "community_id": "hu_noemi"},
+            "metadata": {
+                "pack_id": pack_id,
+                "community_id": "hu_noemi",
+                "store_user_id": account["_user_id"],
+            },
             "customer_details": {"email": "buyer@example.test"},
             "created": 1700000000,
         }
@@ -624,6 +629,7 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertTrue(body["checkout_url"].startswith("https://checkout.stripe.com/"))
         kwargs = create_session.call_args.kwargs
         self.assertIsNotNone(kwargs["client_id"])
+        self.assertEqual(kwargs["user_id"], account["_user_id"])
         self.assertIsNone(kwargs["pair_code"])
         self.assertEqual(kwargs["entitlement_scope"], "web")
 
@@ -639,6 +645,7 @@ class VoiceStoreTests(unittest.TestCase):
         )
         self.assertEqual(priced.status_code, 200)
         self.assertEqual(priced.json()["pack"]["access"], "paid")
+        account = self._login_store_account("buyer@example.com")
 
         legacy = self.client.get("/api/anthbot/voice-packs")
         self.assertEqual(legacy.status_code, 200)
@@ -675,6 +682,7 @@ class VoiceStoreTests(unittest.TestCase):
                 "pack_id": pack_id,
                 "community_id": "cs_vlasta_standard",
                 "store_client_id": browser_client_id,
+                "store_user_id": account["_user_id"],
                 "entitlement_scope": "web",
             },
             "payment_status": "unpaid",
@@ -697,6 +705,7 @@ class VoiceStoreTests(unittest.TestCase):
             checkout.json()["checkout_url"].startswith("https://checkout.stripe.com/")
         )
         self.assertEqual(create.call_args.kwargs["client_id"], browser_client_id)
+        self.assertEqual(create.call_args.kwargs["user_id"], account["_user_id"])
         self.assertEqual(create.call_args.kwargs["entitlement_scope"], "web")
 
         paid_session = {
@@ -757,6 +766,7 @@ class VoiceStoreTests(unittest.TestCase):
             json={"access": "paid", "price_amount": 100, "currency": "eur"},
         )
         self.assertEqual(priced.status_code, 200)
+        account = self._login_store_account("sdk@example.com")
 
         store_page = self.client.get("/store")
         self.assertEqual(store_page.status_code, 200)
@@ -808,7 +818,9 @@ class VoiceStoreTests(unittest.TestCase):
         )
         self.assertEqual(kwargs["metadata"]["pack_id"], pack_id)
         self.assertEqual(kwargs["metadata"]["store_client_id"], browser_client_id)
+        self.assertEqual(kwargs["metadata"]["store_user_id"], account["_user_id"])
         self.assertEqual(kwargs["metadata"]["entitlement_scope"], "web")
+        self.assertEqual(kwargs["customer_email"], "sdk@example.com")
         self.assertEqual(
             kwargs["payment_intent_data"]["metadata"]["pack_id"],
             pack_id,
@@ -827,6 +839,7 @@ class VoiceStoreTests(unittest.TestCase):
             json={"access": "paid", "price_amount": 299, "currency": "eur"},
         )
         self.assertEqual(priced.status_code, 200)
+        account = self._login_store_account("mapbuyer@example.com")
 
         client_token = "A" * 48
         pairing = self.client.post(
@@ -837,6 +850,7 @@ class VoiceStoreTests(unittest.TestCase):
         store_url = pairing.json()["store_url"]
         self.assertIn("/store?pair=abp_", store_url)
         pair_code = store_url.split("pair=", 1)[1]
+        self._link_store_account_to_pair(pair_code)
 
         client_id = store_api._client_id_from_token(client_token)
         checkout_session = {
@@ -849,6 +863,7 @@ class VoiceStoreTests(unittest.TestCase):
                 "pack_id": pack_id,
                 "community_id": "cs_vlasta_standard",
                 "store_client_id": client_id,
+                "store_user_id": account["_user_id"],
                 "entitlement_scope": "map",
             },
             "payment_status": "unpaid",
@@ -872,6 +887,7 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(checkout.status_code, 200)
         self.assertEqual(create.call_args.args[0]["id"], pack_id)
         self.assertEqual(create.call_args.kwargs["client_id"], client_id)
+        self.assertEqual(create.call_args.kwargs["user_id"], account["_user_id"])
         self.assertEqual(create.call_args.kwargs["pair_code"], pair_code)
         self.assertEqual(create.call_args.kwargs["entitlement_scope"], "map")
 
@@ -925,6 +941,7 @@ class VoiceStoreTests(unittest.TestCase):
             json={"access": "paid", "price_amount": 799, "currency": "eur"},
         )
         self.assertEqual(priced.status_code, 200)
+        account = self._login_store_account("directmap@example.com")
 
         client_token = "D" * 48
         pairing = self.client.post(
@@ -933,6 +950,7 @@ class VoiceStoreTests(unittest.TestCase):
         )
         self.assertEqual(pairing.status_code, 200)
         pair_code = pairing.json()["store_url"].split("pair=", 1)[1]
+        self._link_store_account_to_pair(pair_code)
         client_id = store_api._client_id_from_token(client_token)
 
         checkout_session = {
@@ -945,6 +963,7 @@ class VoiceStoreTests(unittest.TestCase):
                 "pack_id": pack_id,
                 "community_id": "cs_vlasta_standard",
                 "store_client_id": client_id,
+                "store_user_id": account["_user_id"],
                 "pair_code": pair_code,
                 "entitlement_scope": "map",
             },
@@ -974,6 +993,7 @@ class VoiceStoreTests(unittest.TestCase):
             "https://checkout.stripe.com/c/pay/direct-map-test",
         )
         self.assertEqual(create.call_args.kwargs["client_id"], client_id)
+        self.assertEqual(create.call_args.kwargs["user_id"], account["_user_id"])
         self.assertEqual(create.call_args.kwargs["pair_code"], pair_code)
         self.assertEqual(create.call_args.kwargs["entitlement_scope"], "map")
 
@@ -1118,6 +1138,7 @@ class VoiceStoreTests(unittest.TestCase):
             json={"access": "paid", "price_amount": 299, "currency": "eur"},
         )
         self.assertEqual(priced.status_code, 200)
+        account = self._login_store_account("upgrade@example.com")
 
         client_token = "C" * 48
         pairing = self.client.post(
@@ -1126,6 +1147,7 @@ class VoiceStoreTests(unittest.TestCase):
         )
         self.assertEqual(pairing.status_code, 200)
         pair_code = pairing.json()["store_url"].split("pair=", 1)[1]
+        self._link_store_account_to_pair(pair_code)
         client_id = store_api._client_id_from_token(client_token)
 
         order = store_api._upsert_order_from_session(
@@ -1138,6 +1160,7 @@ class VoiceStoreTests(unittest.TestCase):
                     "pack_id": old_pack_id,
                     "community_id": "cs_vlasta_standard",
                     "store_client_id": client_id,
+                    "store_user_id": account["_user_id"],
                 },
                 "payment_status": "paid",
                 "status": "complete",
