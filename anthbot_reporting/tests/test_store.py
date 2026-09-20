@@ -630,6 +630,36 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIn('"ANTHBOT hangcsomagok"', home.text)
         self.assertIn('data-topic-i18n="title"', home.text)
 
+    def test_main_site_has_all_23_languages(self) -> None:
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        html = response.text
+        languages = (
+            ("hu", "Magyar"), ("en", "English"), ("de", "Deutsch"),
+            ("fr", "Français"), ("es", "Español"), ("it", "Italiano"),
+            ("pt", "Português"), ("nl", "Nederlands"), ("pl", "Polski"),
+            ("cs", "Čeština"), ("sk", "Slovenčina"), ("ro", "Română"),
+            ("da", "Dansk"), ("sv", "Svenska"), ("no", "Norsk"),
+            ("fi", "Suomi"), ("zh-CN", "简体中文"), ("zh-TW", "繁體中文"),
+            ("tr", "Türkçe"), ("th", "ไทย"), ("vi", "Tiếng Việt"),
+            ("ko", "한국어"), ("km", "ខ្មែរ"),
+        )
+        for code, label in languages:
+            self.assertIn(
+                f'<option value="{code}">{label}</option>',
+                html,
+            )
+        self.assertIn(
+            'const supported=["hu","en","de","fr","es","it","pt","nl","pl","cs","sk","ro","da","sv","no","fi","zh-CN","zh-TW","tr","th","vi","ko","km"]',
+            html,
+        )
+        self.assertIn('"pt":{"__title":"ANTHBOT Map', html)
+        self.assertIn('"zh-CN":{"__title":"ANTHBOT Map', html)
+        self.assertIn('"km":{"__title":"ANTHBOT Map', html)
+        self.assertIn('"Explorar temas do ANTHBOT Map"', html)
+        self.assertIn('"探索 ANTHBOT Map 主题"', html)
+        self.assertIn('"ស្វែងយល់ប្រធានបទ ANTHBOT Map"', html)
+
     def test_privacy_page_has_gdpr_information_and_23_languages(self) -> None:
         response = self.client.get("/privacy")
         self.assertEqual(response.status_code, 200)
