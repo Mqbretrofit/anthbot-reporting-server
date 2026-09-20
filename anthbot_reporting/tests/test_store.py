@@ -527,7 +527,7 @@ class VoiceStoreTests(unittest.TestCase):
             self.assertIn('<div class="bg-grid"></div>', html)
             self.assertIn('<nav class="nav">', html)
             self.assertIn('class="brand anthbot-brand"', html)
-            self.assertIn('/brand/anthbot-map-logo.webp?v=1', html)
+            self.assertIn('/brand/anthbot-map-logo.webp?v=2', html)
             self.assertIn('class="hero"', html)
             self.assertIn('class="topic-stage glass"', html)
             self.assertIn('class="feature-grid"', html)
@@ -536,6 +536,11 @@ class VoiceStoreTests(unittest.TestCase):
             self.assertIn('href="/#features"', html)
             self.assertIn('href="/#models"', html)
             self.assertIn('href="/#support"', html)
+
+    def test_addon_dockerfile_packages_brand_assets(self) -> None:
+        dockerfile = Path(__file__).parents[1] / "Dockerfile"
+        content = dockerfile.read_text(encoding="utf-8")
+        self.assertIn("COPY assets ./assets", content)
 
     def test_public_pages_expose_custom_anthbot_map_branding(self) -> None:
         for path in (
@@ -554,14 +559,14 @@ class VoiceStoreTests(unittest.TestCase):
             response = self.client.get(path)
             self.assertEqual(response.status_code, 200)
             self.assertIn(
-                '<link rel="icon" href="/favicon.png?v=2" type="image/png">',
+                '<link rel="icon" href="/favicon.png?v=3" type="image/png">',
                 response.text,
             )
             self.assertIn(
-                '<link rel="apple-touch-icon" href="/favicon.png?v=2">',
+                '<link rel="apple-touch-icon" href="/favicon.png?v=3">',
                 response.text,
             )
-            self.assertIn('/brand/anthbot-map-logo.webp?v=1', response.text)
+            self.assertIn('/brand/anthbot-map-logo.webp?v=2', response.text)
             self.assertIn('alt="ANTHBOT Map"', response.text)
 
         png = self.client.get("/favicon.png")
@@ -581,7 +586,7 @@ class VoiceStoreTests(unittest.TestCase):
         for legacy_path in ("/favicon.ico", "/favicon.svg"):
             legacy = self.client.get(legacy_path, follow_redirects=False)
             self.assertEqual(legacy.status_code, 307)
-            self.assertEqual(legacy.headers["location"], "/favicon.png?v=2")
+            self.assertEqual(legacy.headers["location"], "/favicon.png?v=3")
 
     def test_public_pages_share_compact_typography(self) -> None:
         for path in (
