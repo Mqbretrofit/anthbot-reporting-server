@@ -1382,12 +1382,12 @@ class VoiceStoreTests(unittest.TestCase):
             f"/store?pair={pair_code}",
             follow_redirects=False,
         )
-        self.assertEqual(owner_route.status_code, 303)
-        self.assertEqual(
-            owner_route.headers["location"],
-            f"/dashboard/store?owner_pair={pair_code}",
-        )
+        self.assertEqual(owner_route.status_code, 200)
+        self.assertIn("Voice Store", owner_route.text)
+        self.assertNotIn("/dashboard/store?owner_pair=", owner_route.text)
 
+        # Owner access remains an explicit admin action and is no longer
+        # triggered just because the admin browser opened a Map pairing.
         granted = self.client.post(
             "/api/anthbot/admin/store/owner-access",
             headers=self._admin_headers(),
@@ -1463,6 +1463,34 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIn("Tulajdonosi hozzáférés visszavonása", admin_html)
         self.assertIn("method:'DELETE'", admin_html)
         self.assertIn("/api/anthbot/admin/store/owner-access", admin_html)
+
+    def test_admin_session_does_not_hijack_public_store_pairing(self) -> None:
+        client_token = "R" * 48
+        pairing = self.client.post(
+            "/api/anthbot/store/client/pair",
+            json={"client_token": client_token},
+        )
+        self.assertEqual(pairing.status_code, 200)
+        pair_code = pairing.json()["store_url"].split("pair=", 1)[1]
+
+        login = self.client.post(
+            "/dashboard/login",
+            content="token=test-admin-token",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            follow_redirects=False,
+        )
+        self.assertEqual(login.status_code, 303)
+
+        store = self.client.get(
+            f"/store?pair={pair_code}",
+            follow_redirects=False,
+        )
+        self.assertEqual(store.status_code, 200)
+        self.assertIn("Voice Store", store.text)
+        self.assertNotEqual(
+            store.headers.get("location"),
+            f"/dashboard/store?owner_pair={pair_code}",
+        )
 
     def test_admin_can_delete_sandbox_and_explicitly_confirmed_live_test_orders(self) -> None:
         pack = self._upload_pack()

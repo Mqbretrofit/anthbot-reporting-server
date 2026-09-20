@@ -3683,18 +3683,9 @@ def public_privacy_page(request: Request) -> Response:
 
 @router.get("/store", response_class=HTMLResponse)
 def store_page(request: Request) -> Response:
-    pair_code = str(request.query_params.get("pair") or "").strip()
-    if pair_code and core._request_is_admin(request):
-        try:
-            _client_id_from_pairing(pair_code)
-        except HTTPException:
-            pass
-        else:
-            return RedirectResponse(
-                url=f"/dashboard/store?owner_pair={quote(pair_code)}",
-                status_code=303,
-            )
-
+    # A Map pairing is a public Voice Store flow even if the browser also has
+    # an active Reporting Server admin session. Admin owner-access is managed
+    # explicitly from /dashboard/store and must never hijack customer pairing.
     redirect = _canonical_public_redirect(request, "/store")
     if redirect is not None:
         return redirect
