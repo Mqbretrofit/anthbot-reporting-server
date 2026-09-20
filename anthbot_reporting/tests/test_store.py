@@ -1249,11 +1249,34 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertTrue(owner_pack["owner_access"])
         self.assertIn("/owner-download?owner=abo1.", owner_pack["music_url"])
 
-        owner_download = self.client.get(
-            owner_pack["music_url"].removeprefix("https://testserver")
+        owner_download_path = owner_pack["music_url"].removeprefix(
+            "https://testserver"
         )
+        owner_download = self.client.get(owner_download_path)
         self.assertEqual(owner_download.status_code, 200)
         self.assertEqual(owner_download.content, b"paid-community-pack")
+
+        revoked = self.client.request(
+            "DELETE",
+            "/api/anthbot/admin/store/owner-access",
+            headers=self._admin_headers(),
+            json={"pair_code": pair_code},
+        )
+        self.assertEqual(revoked.status_code, 200)
+        self.assertTrue(revoked.json()["revoked"])
+        self.assertFalse(revoked.json()["owner_access"])
+
+        after_revoke = self.client.post(
+            "/api/anthbot/store/client/entitlements",
+            json={"client_token": client_token},
+        )
+        self.assertEqual(after_revoke.status_code, 200)
+        self.assertFalse(after_revoke.json()["licensed"])
+        self.assertFalse(after_revoke.json()["owner_access"])
+        self.assertEqual(after_revoke.json()["packs"], [])
+
+        revoked_download = self.client.get(owner_download_path)
+        self.assertEqual(revoked_download.status_code, 401)
 
         public_catalog = self.client.get("/api/anthbot/store/voice-packs")
         public_pack = next(
@@ -1274,6 +1297,8 @@ class VoiceStoreTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("Minden hang feloldása ezen a HA-n", admin_html)
+        self.assertIn("Tulajdonosi hozzáférés visszavonása", admin_html)
+        self.assertIn("method:'DELETE'", admin_html)
         self.assertIn("/api/anthbot/admin/store/owner-access", admin_html)
 
     def test_admin_lists_active_map_pairings_and_owner_state(self) -> None:
@@ -1331,6 +1356,7 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIn("ANTHBOT Map tulajdonosi hozzáférés", admin_html)
         self.assertIn("/api/anthbot/admin/store/pairings?limit=20", admin_html)
         self.assertIn("Minden hang feloldása", admin_html)
+        self.assertIn("Tulajdonosi hozzáférés visszavonása", admin_html)
 
     def test_owner_access_grant_requires_admin(self) -> None:
         client_token = "Q" * 48
@@ -1344,6 +1370,13 @@ class VoiceStoreTests(unittest.TestCase):
             json={"pair_code": pair_code},
         )
         self.assertEqual(denied.status_code, 401)
+
+        denied_revoke = self.client.request(
+            "DELETE",
+            "/api/anthbot/admin/store/owner-access",
+            json={"pair_code": pair_code},
+        )
+        self.assertEqual(denied_revoke.status_code, 401)
 
     def test_store_admin_can_hide_sold_pack_without_breaking_entitlement(self) -> None:
         pack = self._upload_pack()
