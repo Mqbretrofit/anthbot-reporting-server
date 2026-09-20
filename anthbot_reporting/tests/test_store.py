@@ -860,6 +860,80 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIsNone(duplicate.json()["checkout_url"])
         duplicate_create.assert_not_called()
 
+    def test_direct_map_checkout_redirects_straight_to_stripe(self) -> None:
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        priced = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        self.assertEqual(priced.status_code, 200)
+
+        client_token = "D" * 48
+        pairing = self.client.post(
+            "/api/anthbot/store/client/pair",
+            json={"client_token": client_token},
+        )
+        self.assertEqual(pairing.status_code, 200)
+        pair_code = pairing.json()["store_url"].split("pair=", 1)[1]
+        client_id = store_api._client_id_from_token(client_token)
+
+        checkout_session = {
+            "id": "cs_test_direct_map_123",
+            "object": "checkout.session",
+            "url": "https://checkout.stripe.com/c/pay/direct-map-test",
+            "created": int(time.time()),
+            "client_reference_id": pack_id,
+            "metadata": {
+                "pack_id": pack_id,
+                "community_id": "cs_vlasta_standard",
+                "store_client_id": client_id,
+                "pair_code": pair_code,
+                "entitlement_scope": "map",
+            },
+            "payment_status": "unpaid",
+            "status": "open",
+            "amount_total": 799,
+            "currency": "eur",
+            "customer_details": None,
+            "customer": None,
+            "payment_intent": None,
+        }
+
+        with patch.object(
+            store_api,
+            "_create_checkout_session",
+            return_value=checkout_session,
+        ) as create:
+            response = self.client.get(
+                "/api/anthbot/store/direct-checkout",
+                params={"pair": pair_code, "pack_id": pack_id},
+                follow_redirects=False,
+            )
+
+        self.assertEqual(response.status_code, 303)
+        self.assertEqual(
+            response.headers["location"],
+            "https://checkout.stripe.com/c/pay/direct-map-test",
+        )
+        self.assertEqual(create.call_args.kwargs["client_id"], client_id)
+        self.assertEqual(create.call_args.kwargs["pair_code"], pair_code)
+        self.assertEqual(create.call_args.kwargs["entitlement_scope"], "map")
+
+        with patch.object(store_api, "_create_checkout_session") as duplicate_create:
+            duplicate = self.client.get(
+                "/api/anthbot/store/direct-checkout",
+                params={"pair": pair_code, "pack_id": pack_id},
+                follow_redirects=False,
+            )
+        self.assertEqual(duplicate.status_code, 303)
+        self.assertIn(
+            "/store/success?session_id=cs_test_direct_map_123",
+            duplicate.headers["location"],
+        )
+        duplicate_create.assert_not_called()
+
     def test_live_entitlement_reconciles_refund_missed_by_webhook(self) -> None:
         pack = self._upload_pack()
         pack_id = pack["id"]
