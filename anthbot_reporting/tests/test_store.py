@@ -641,6 +641,39 @@ class VoiceStoreTests(unittest.TestCase):
             "noindex, nofollow",
         )
 
+    def test_public_anthbot_map_version_uses_latest_stable_release(self) -> None:
+        store_api._anthbot_map_release_cache.clear()
+        store_api._anthbot_map_release_cache.update(
+            {
+                "version": store_api._ANTHBOT_MAP_RELEASE_FALLBACK,
+                "tag": f"v{store_api._ANTHBOT_MAP_RELEASE_FALLBACK}",
+                "published_at": None,
+                "source": "fallback",
+                "checked_at": 0.0,
+            }
+        )
+        github_payload = {
+            "tag_name": "v9.8.7.6",
+            "draft": False,
+            "prerelease": False,
+            "published_at": "2026-09-20T20:00:00Z",
+        }
+        fake_response = io.BytesIO(json.dumps(github_payload).encode("utf-8"))
+        with patch.object(store_api, "urlopen", return_value=fake_response):
+            response = self.client.get("/api/anthbot/map/latest-release")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["version"], "9.8.7.6")
+        self.assertEqual(response.json()["tag"], "v9.8.7.6")
+        self.assertEqual(response.json()["source"], "github")
+        self.assertEqual(response.headers.get("cache-control"), "public, max-age=300")
+
+        home = self.client.get("/")
+        self.assertIn('data-anthbot-map-version="prefixed"', home.text)
+        self.assertIn('data-anthbot-map-version="plain"', home.text)
+        self.assertIn("data-anthbot-map-version-note", home.text)
+        self.assertIn('fetch("/api/anthbot/map/latest-release"', home.text)
+
     def test_public_pages_have_branded_social_preview_metadata(self) -> None:
         expected_image = (
             "https://anthbotmap.com/brand/anthbot-map-logo.webp?v=2"
