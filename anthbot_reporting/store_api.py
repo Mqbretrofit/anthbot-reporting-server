@@ -31,6 +31,7 @@ STORE_SCHEMA = "anthbot-community-voice-store-v1"
 _CURRENCY_RE = re.compile(r"^[a-zA-Z]{3}$")
 _SESSION_RE = re.compile(r"^cs_[A-Za-z0-9_]+$")
 _LICENSE_RE = re.compile(r"^abv1\.([A-Za-z0-9_-]+)\.([0-9a-f]{64})$")
+_OWNER_ACCESS_RE = re.compile(r"^abo1\.([A-Za-z0-9_-]+)\.([0-9a-f]{64})$")
 _PAIR_RE = re.compile(r"^abp_[A-Za-z0-9_-]{24,128}$")
 _CLIENT_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{32,512}$")
 _STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300
@@ -409,6 +410,20 @@ class EntitlementPayload(BaseModel):
     license_key: str = Field(min_length=20, max_length=1024)
 
 
+class OwnerPairPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pair_code: str = Field(min_length=20, max_length=160)
+
+    @field_validator("pair_code")
+    @classmethod
+    def _validate_pair_code(cls, value: str) -> str:
+        normalized = value.strip()
+        if not _PAIR_RE.fullmatch(normalized):
+            raise ValueError("invalid store pairing code")
+        return normalized
+
+
 class StorePricingPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -626,6 +641,12 @@ def _init_store_tables() -> None:
                 client_id TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 expires_at INTEGER NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS store_owner_clients (
+                client_id TEXT PRIMARY KEY,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
             );
 
             CREATE INDEX IF NOT EXISTS idx_store_orders_pack_id
@@ -975,6 +996,90 @@ def _client_id_from_pairing(pair_code: str | None) -> str | None:
     if row is None or int(row["expires_at"]) < int(time.time()):
         raise HTTPException(status_code=401, detail="voice store pairing expired")
     return str(row["client_id"])
+
+
+def _is_owner_client(client_id: str) -> bool:
+    """Return whether one anonymous Map client has maintainer-owner access."""
+    _init_store_tables()
+    with core._db() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM store_owner_clients WHERE client_id = ?",
+            (client_id,),
+        ).fetchone()
+    return row is not None
+
+
+def _grant_owner_client(client_id: str) -> None:
+    """Persist maintainer-owner access for one anonymous Map client."""
+    _init_store_tables()
+    now = core._iso()
+    with core._db() as conn:
+        conn.execute(
+            """
+            INSERT INTO store_owner_clients (client_id, created_at, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(client_id) DO UPDATE SET updated_at = excluded.updated_at
+            """,
+            (client_id, now, now),
+        )
+
+
+def _owner_access_for_pack(client_id: str, pack: dict[str, Any]) -> str:
+    """Return a signed non-purchase token for one owner client + stable voice."""
+    secret = _license_secret()
+    if not secret:
+        raise HTTPException(
+            status_code=503,
+            detail="voice store license secret is not configured",
+        )
+    voice_id = (
+        str(pack.get("community_id", "")).strip()
+        or str(pack.get("id", "")).strip()
+    )
+    payload = f"{client_id}|{voice_id}"
+    encoded = (
+        base64.urlsafe_b64encode(payload.encode("utf-8"))
+        .decode("ascii")
+        .rstrip("=")
+    )
+    signature = hmac.new(
+        secret.encode("utf-8"),
+        f"owner|{payload}".encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return f"abo1.{encoded}.{signature}"
+
+
+def _owner_access_client_for_pack(
+    owner_token: str,
+    pack: dict[str, Any],
+) -> str:
+    """Validate owner access for the requested current voice-pack version."""
+    match = _OWNER_ACCESS_RE.fullmatch(owner_token.strip())
+    if not match:
+        raise HTTPException(status_code=401, detail="invalid owner voice access")
+
+    encoded, supplied_signature = match.groups()
+    padding = "=" * ((4 - len(encoded) % 4) % 4)
+    try:
+        payload = base64.urlsafe_b64decode(
+            (encoded + padding).encode("ascii")
+        ).decode("utf-8")
+        client_id, voice_id = payload.split("|", 1)
+    except (ValueError, UnicodeDecodeError):
+        raise HTTPException(status_code=401, detail="invalid owner voice access")
+
+    stable_voice_id = (
+        str(pack.get("community_id", "")).strip()
+        or str(pack.get("id", "")).strip()
+    )
+    if not client_id or voice_id != stable_voice_id or not _is_owner_client(client_id):
+        raise HTTPException(status_code=401, detail="owner voice access is not active")
+
+    expected = _owner_access_for_pack(client_id, pack).rsplit(".", 1)[1]
+    if not secrets.compare_digest(supplied_signature, expected):
+        raise HTTPException(status_code=401, detail="invalid owner voice access")
+    return client_id
 
 
 def _reconcile_paid_order_with_stripe(
@@ -2402,6 +2507,32 @@ def store_client_entitlements(
 ) -> dict[str, Any]:
     client_id = _client_id_from_token(payload.client_token)
     _init_store_tables()
+
+    if _is_owner_client(client_id):
+        base = core._public_base_url(request)
+        owner_packs: list[dict[str, Any]] = []
+        for pack in _uploaded_records():
+            if not _is_paid(pack):
+                continue
+            pack_id = str(pack.get("id", "")).strip()
+            if not pack_id:
+                continue
+            owner_token = _owner_access_for_pack(client_id, pack)
+            public = _public_paid_pack(pack, request)
+            public["music_url"] = (
+                f"{base}/api/anthbot/store/voice-packs/{quote(pack_id)}/owner-download"
+                f"?owner={quote(owner_token)}"
+            )
+            public["entitlement"] = "owner"
+            public["owner_access"] = True
+            owner_packs.append(public)
+
+        return {
+            "licensed": bool(owner_packs),
+            "license_version": 1,
+            "owner_access": True,
+            "packs": owner_packs,
+        }
     with core._db() as conn:
         rows = conn.execute(
             """
@@ -2454,6 +2585,7 @@ def store_client_entitlements(
     return {
         "licensed": bool(packs),
         "license_version": 1,
+        "owner_access": False,
         "packs": packs,
     }
 
@@ -2692,6 +2824,51 @@ def download_paid_voice_pack(
         media_type="application/octet-stream",
         headers={"Cache-Control": "private, max-age=86400"},
     )
+
+
+@router.get("/api/anthbot/store/voice-packs/{pack_id}/owner-download")
+def download_owner_voice_pack(
+    pack_id: str,
+    owner: str,
+) -> FileResponse:
+    """Serve a paid voice to a Map client explicitly granted owner access."""
+    pack = _find_uploaded_pack(pack_id)
+    _owner_access_client_for_pack(owner, pack)
+    if not _is_paid(pack):
+        raise HTTPException(status_code=404, detail="paid voice pack not found")
+
+    filename = str(pack.get("filename", "")).strip()
+    if (
+        not filename
+        or Path(filename).name != filename
+        or not core._VOICE_PACK_SAFE_PART.fullmatch(filename)
+    ):
+        raise HTTPException(status_code=404, detail="paid voice pack not found")
+    path = core._voice_pack_dir() / filename
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="paid voice pack not found")
+    return FileResponse(
+        path,
+        media_type="application/octet-stream",
+        headers={"Cache-Control": "private, no-store"},
+    )
+
+
+@router.post(
+    "/api/anthbot/admin/store/owner-access",
+    dependencies=[Depends(core.require_admin)],
+)
+def grant_owner_store_access(payload: OwnerPairPayload) -> dict[str, Any]:
+    """Grant all paid voice packs to one Map install via its temporary pair code."""
+    client_id = _client_id_from_pairing(payload.pair_code)
+    if client_id is None:
+        raise HTTPException(status_code=404, detail="voice store pairing not found")
+    _grant_owner_client(client_id)
+    return {
+        "granted": True,
+        "owner_access": True,
+        "client_suffix": client_id[-10:],
+    }
 
 
 @router.get(
@@ -3052,6 +3229,18 @@ def public_privacy_page(request: Request) -> Response:
 
 @router.get("/store", response_class=HTMLResponse)
 def store_page(request: Request) -> Response:
+    pair_code = str(request.query_params.get("pair") or "").strip()
+    if pair_code and core._request_is_admin(request):
+        try:
+            _client_id_from_pairing(pair_code)
+        except HTTPException:
+            pass
+        else:
+            return RedirectResponse(
+                url=f"/dashboard/store?owner_pair={quote(pair_code)}",
+                status_code=303,
+            )
+
     redirect = _canonical_public_redirect(request, "/store")
     if redirect is not None:
         return redirect
