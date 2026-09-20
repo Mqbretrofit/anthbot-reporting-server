@@ -503,6 +503,93 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIn('"Minta 2"', html)
         self.assertEqual(html.count("filtersTitle:"), 23)
 
+    def test_search_console_verification_is_optional_and_configurable(self) -> None:
+        home = self.client.get("/")
+        self.assertEqual(home.status_code, 200)
+        self.assertNotIn('name="google-site-verification"', home.text)
+
+        token = "google-site-token_123456789"
+        with patch.dict(
+            os.environ,
+            {"ANTHBOT_GOOGLE_SITE_VERIFICATION": token},
+            clear=False,
+        ):
+            verified_home = self.client.get("/")
+            self.assertIn(
+                f'<meta name="google-site-verification" content="{token}">',
+                verified_home.text,
+            )
+            landing = self.client.get("/home-assistant")
+            self.assertIn(
+                f'<meta name="google-site-verification" content="{token}">',
+                landing.text,
+            )
+
+        with patch.dict(
+            os.environ,
+            {"ANTHBOT_GOOGLE_SITE_VERIFICATION": 'bad token "<script>'},
+            clear=False,
+        ):
+            invalid = self.client.get("/")
+            self.assertNotIn('name="google-site-verification"', invalid.text)
+
+        config = (
+            Path(__file__).parents[1] / "config.yaml"
+        ).read_text(encoding="utf-8")
+        run_script = (
+            Path(__file__).parents[1] / "run.sh"
+        ).read_text(encoding="utf-8")
+        self.assertIn('google_site_verification: ""', config)
+        self.assertIn("google_site_verification: str?", config)
+        self.assertIn(
+            "ANTHBOT_GOOGLE_SITE_VERIFICATION",
+            run_script,
+        )
+
+    def test_sitemap_tracks_all_indexed_public_pages(self) -> None:
+        response = self.client.get("/sitemap.xml")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            response.headers["content-type"].startswith("application/xml")
+        )
+        self.assertEqual(
+            response.headers.get("cache-control"),
+            "public, max-age=3600",
+        )
+        expected = {
+            "/",
+            "/store",
+            "/privacy",
+            "/terms",
+            "/refunds",
+            "/home-assistant",
+            "/models/genie-1000",
+            "/models/m9-pro",
+            "/models/mgc1000",
+            "/voice-packs",
+        }
+        for path in expected:
+            self.assertIn(
+                f"<loc>https://anthbotmap.com{path}</loc>",
+                response.text,
+            )
+        self.assertEqual(response.text.count("<url>"), len(expected))
+        self.assertNotIn("/store/success", response.text)
+        self.assertNotIn("/voice-installer", response.text)
+
+        robots = self.client.get("/robots.txt")
+        self.assertEqual(robots.status_code, 200)
+        self.assertEqual(
+            robots.headers.get("cache-control"),
+            "public, max-age=3600",
+        )
+        self.assertIn(
+            "Sitemap: https://anthbotmap.com/sitemap.xml",
+            robots.text,
+        )
+        self.assertIn("Disallow: /store/success", robots.text)
+        self.assertNotIn("Disallow: /voice-installer", robots.text)
+
     def test_public_seo_targets_anthbotmap_domain(self) -> None:
         canonical_paths = {
             "/": "https://anthbotmap.com/",
