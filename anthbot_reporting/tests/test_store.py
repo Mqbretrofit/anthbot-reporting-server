@@ -1508,7 +1508,7 @@ class VoiceStoreTests(unittest.TestCase):
         admin_html = Path(store_api.__file__).with_name("store_admin.html").read_text(
             encoding="utf-8"
         )
-        self.assertIn("Összes tesztrendelés törlése", admin_html)
+        self.assertIn("Összes Sandbox rendelés törlése", admin_html)
         self.assertIn("deleteOrder(", admin_html)
         self.assertIn("/api/anthbot/admin/store/orders/", admin_html)
         self.assertIn("Live törlés", admin_html)
