@@ -815,6 +815,7 @@ class VoiceStoreTests(unittest.TestCase):
                 json={"pack_id": pack_id, "pair_code": pair_code},
             )
         self.assertEqual(checkout.status_code, 200)
+        self.assertEqual(create.call_args.args[0]["id"], pack_id)
         self.assertEqual(create.call_args.kwargs["client_id"], client_id)
         self.assertEqual(create.call_args.kwargs["pair_code"], pair_code)
         self.assertEqual(create.call_args.kwargs["entitlement_scope"], "map")
@@ -908,7 +909,7 @@ class VoiceStoreTests(unittest.TestCase):
         ) as create:
             response = self.client.get(
                 "/api/anthbot/store/direct-checkout",
-                params={"pair": pair_code, "pack_id": pack_id},
+                params={"pair": pair_code, "voice_id": "cs_vlasta_standard"},
                 follow_redirects=False,
             )
 
@@ -933,7 +934,7 @@ class VoiceStoreTests(unittest.TestCase):
         with patch.object(store_api, "_create_checkout_session") as duplicate_create:
             duplicate = self.client.get(
                 "/api/anthbot/store/direct-checkout",
-                params={"pair": pair_code, "pack_id": pack_id},
+                params={"pair": pair_code, "voice_id": "cs_vlasta_standard"},
                 follow_redirects=False,
             )
         self.assertEqual(duplicate.status_code, 303)

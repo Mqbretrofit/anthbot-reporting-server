@@ -2752,17 +2752,25 @@ async def create_store_checkout(
 async def direct_map_store_checkout(
     request: Request,
     pair: str,
-    pack_id: str,
+    voice_id: str | None = None,
+    pack_id: str | None = None,
 ) -> Response:
     """Open Stripe Checkout directly for one paid voice selected in ANTHBOT Map.
 
-    The temporary Map pairing keeps the purchase attached to the originating
-    Home Assistant install, while avoiding an unnecessary intermediate Store page.
+    Prefer the stable Community voice ID so a Map selection keeps working when
+    the uploaded pack/version ID changes. pack_id remains accepted for backward
+    compatibility with an already-cached frontend.
     """
     pair_code = pair.strip()
-    normalized_pack_id = pack_id.strip()
+    normalized_voice_id = str(voice_id or "").strip()
+    normalized_pack_id = str(pack_id or "").strip()
     if not _PAIR_RE.fullmatch(pair_code):
         raise HTTPException(status_code=422, detail="invalid store pairing code")
+    if normalized_voice_id:
+        if len(normalized_voice_id) > 160:
+            raise HTTPException(status_code=422, detail="invalid Community voice id")
+        record = _find_uploaded_pack_by_community_id(normalized_voice_id)
+        normalized_pack_id = str(record.get("id") or "").strip()
     if not normalized_pack_id or len(normalized_pack_id) > 160:
         raise HTTPException(status_code=422, detail="invalid voice pack id")
 
