@@ -5,6 +5,7 @@ import hmac
 import io
 import json
 import os
+import smtplib
 from pathlib import Path
 import tarfile
 import tempfile
@@ -93,6 +94,46 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIsNotNone(row)
         body["_user_id"] = str(row["user_id"])
         return body
+
+    def test_account_email_failure_returns_safe_smtp_diagnostic(self) -> None:
+        with patch.object(
+            store_accounts,
+            "_send_login_code",
+            side_effect=smtplib.SMTPAuthenticationError(535, b"bad credentials secret"),
+        ):
+            response = self.client.post(
+                "/api/anthbot/store/account/request-code",
+                json={"email": "diagnostic@example.test", "language": "en"},
+            )
+
+        self.assertEqual(response.status_code, 424)
+        self.assertEqual(
+            response.json()["detail"],
+            "SMTP authentication failed (code 535)",
+        )
+        self.assertNotIn("bad credentials", response.text)
+        self.assertNotIn("secret", response.text)
+        with store_api.core._db() as conn:
+            row = conn.execute(
+                "SELECT 1 FROM store_login_codes WHERE email = ?",
+                ("diagnostic@example.test",),
+            ).fetchone()
+        self.assertIsNone(row)
+
+    def test_account_email_network_failure_is_sanitized(self) -> None:
+        with patch.object(
+            store_accounts,
+            "_send_login_code",
+            side_effect=OSError(111, "connection refused internal-host"),
+        ):
+            response = self.client.post(
+                "/api/anthbot/store/account/request-code",
+                json={"email": "network@example.test", "language": "en"},
+            )
+
+        self.assertEqual(response.status_code, 424)
+        self.assertEqual(response.json()["detail"], "SMTP network error (errno 111)")
+        self.assertNotIn("internal-host", response.text)
 
     def _link_store_account_to_pair(self, pair_code: str) -> dict:
         linked = self.client.post(
