@@ -88,7 +88,11 @@ _FAVICON_HEAD = (
     '<link rel="icon" href="/favicon.png?v=3" type="image/png">\n'
     '<link rel="shortcut icon" href="/favicon.ico?v=2">\n'
     '<link rel="apple-touch-icon" href="/favicon.png?v=3">\n'
-    '<meta name="theme-color" content="#081017">'
+    '<link rel="manifest" href="/site.webmanifest?v=1">\n'
+    '<meta name="theme-color" content="#081017">\n'
+    '<meta name="application-name" content="ANTHBOT Map">\n'
+    '<meta name="apple-mobile-web-app-title" content="ANTHBOT Map">\n'
+    '<meta name="mobile-web-app-capable" content="yes">'
 )
 _BRAND_STYLE = """
 <style id="anthbot-brand-style">
@@ -2637,6 +2641,85 @@ def public_favicon_ico() -> Response:
         url="/favicon.png?v=3",
         status_code=307,
         headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+
+@router.get("/site.webmanifest", include_in_schema=False)
+def public_site_manifest() -> Response:
+    manifest = {
+        "id": "/",
+        "name": "ANTHBOT Map",
+        "short_name": "ANTHBOT Map",
+        "description": (
+            "ANTHBOT Map for Home Assistant: maps, zones, schedules, "
+            "diagnostics and Community voice packs."
+        ),
+        "start_url": "/",
+        "scope": "/",
+        "display": "standalone",
+        "background_color": "#081017",
+        "theme_color": "#081017",
+        "icons": [
+            {
+                "src": "/favicon.png?v=3",
+                "sizes": "192x192",
+                "type": "image/png",
+                "purpose": "any",
+            },
+            {
+                "src": "/app-icon-512.svg?v=1",
+                "sizes": "512x512",
+                "type": "image/svg+xml",
+                "purpose": "any",
+            },
+        ],
+        "shortcuts": [
+            {
+                "name": "Voice Store",
+                "short_name": "Voice Store",
+                "url": "/store",
+                "icons": [
+                    {
+                        "src": "/favicon.png?v=3",
+                        "sizes": "192x192",
+                        "type": "image/png",
+                    }
+                ],
+            }
+        ],
+    }
+    return Response(
+        content=json.dumps(manifest, ensure_ascii=False, separators=(",", ":")),
+        media_type="application/manifest+json",
+        headers={
+            "Cache-Control": "public, max-age=604800",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.get("/app-icon-512.svg", include_in_schema=False)
+def public_app_icon_svg() -> Response:
+    path = Path(__file__).with_name("assets") / "anthbot_map_icon.b64"
+    try:
+        encoded = path.read_text(encoding="ascii").strip()
+        base64.b64decode(encoded, validate=True)
+    except (OSError, ValueError) as err:
+        raise HTTPException(status_code=503, detail="app icon unavailable") from err
+    svg = (
+        '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" '
+        'viewBox="0 0 512 512" role="img" aria-label="ANTHBOT Map">'
+        '<image width="512" height="512" preserveAspectRatio="xMidYMid slice" '
+        f'href="data:image/png;base64,{encoded}"/>'
+        "</svg>"
+    )
+    return Response(
+        content=svg,
+        media_type="image/svg+xml",
+        headers={
+            "Cache-Control": "public, max-age=604800, immutable",
+            "X-Content-Type-Options": "nosniff",
+        },
     )
 
 
