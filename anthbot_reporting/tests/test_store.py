@@ -774,6 +774,84 @@ class VoiceStoreTests(unittest.TestCase):
             self.assertEqual(legacy.status_code, 307)
             self.assertEqual(legacy.headers["location"], "/favicon.png?v=3")
 
+    def test_public_and_api_security_headers_are_conservative(self) -> None:
+        home = self.client.get("/")
+        self.assertEqual(home.status_code, 200)
+        self.assertEqual(
+            home.headers.get("x-content-type-options"),
+            "nosniff",
+        )
+        self.assertEqual(
+            home.headers.get("referrer-policy"),
+            "strict-origin-when-cross-origin",
+        )
+        self.assertEqual(
+            home.headers.get("permissions-policy"),
+            "geolocation=(), camera=(), microphone=()",
+        )
+        self.assertEqual(
+            home.headers.get("x-permitted-cross-domain-policies"),
+            "none",
+        )
+        self.assertEqual(
+            home.headers.get("x-dns-prefetch-control"),
+            "off",
+        )
+        self.assertEqual(
+            home.headers.get("strict-transport-security"),
+            "max-age=31536000",
+        )
+        csp = home.headers.get("content-security-policy", "")
+        self.assertIn("default-src 'self'", csp)
+        self.assertIn("object-src 'none'", csp)
+        self.assertIn(
+            "form-action 'self' https://checkout.stripe.com",
+            csp,
+        )
+        self.assertIn("script-src 'self' 'unsafe-inline'", csp)
+        self.assertIn("connect-src 'self'", csp)
+        self.assertNotIn("frame-ancestors", csp)
+
+        installer = self.client.get("/voice-installer")
+        self.assertEqual(installer.status_code, 200)
+        self.assertEqual(
+            installer.headers.get("referrer-policy"),
+            "no-referrer",
+        )
+        self.assertIn(
+            "default-src 'self'",
+            installer.headers.get("content-security-policy", ""),
+        )
+        self.assertEqual(
+            installer.headers.get("permissions-policy"),
+            "geolocation=(), camera=(), microphone=()",
+        )
+
+        api = self.client.get("/api/anthbot/store/voice-packs")
+        self.assertEqual(api.status_code, 200)
+        self.assertEqual(
+            api.headers.get("x-content-type-options"),
+            "nosniff",
+        )
+        self.assertEqual(
+            api.headers.get("strict-transport-security"),
+            "max-age=31536000",
+        )
+        self.assertNotIn("content-security-policy", api.headers)
+
+    def test_dashboard_keeps_its_home_assistant_frame_policy(self) -> None:
+        response = self.client.get("/dashboard", follow_redirects=False)
+        self.assertIn(response.status_code, {200, 302, 303, 307})
+        csp = response.headers.get("content-security-policy", "")
+        self.assertIn("frame-ancestors 'self'", csp)
+        self.assertIn("http://homeassistant.local:8123", csp)
+        self.assertNotIn("default-src", csp)
+        self.assertNotIn("x-frame-options", response.headers)
+        self.assertEqual(
+            response.headers.get("x-content-type-options"),
+            "nosniff",
+        )
+
     def test_public_pages_have_keyboard_and_mobile_accessibility_basics(self) -> None:
         for path in (
             "/",
