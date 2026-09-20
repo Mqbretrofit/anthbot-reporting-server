@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from email.message import EmailMessage
 import hashlib
+import logging
 import os
 import re
 import secrets
@@ -19,6 +20,7 @@ import app as core
 
 
 router = APIRouter()
+_LOGGER = logging.getLogger(__name__)
 
 _ACCOUNT_COOKIE = "anthbot_store_session"
 _ACCOUNT_SESSION_SECONDS = 30 * 24 * 60 * 60
@@ -163,6 +165,30 @@ def _smtp_ssl() -> bool:
 
 def _smtp_ready() -> bool:
     return bool(_smtp_host() and _smtp_from_email())
+
+
+def _smtp_failure_detail(err: Exception) -> str:
+    """Return a safe, actionable SMTP error without secrets or server text."""
+    if isinstance(err, smtplib.SMTPAuthenticationError):
+        return f"SMTP authentication failed (code {err.smtp_code})"
+    if isinstance(err, smtplib.SMTPSenderRefused):
+        return f"SMTP sender rejected (code {err.smtp_code})"
+    if isinstance(err, smtplib.SMTPRecipientsRefused):
+        return "SMTP recipient rejected"
+    if isinstance(err, smtplib.SMTPConnectError):
+        return f"SMTP connection failed (code {err.smtp_code})"
+    if isinstance(err, smtplib.SMTPServerDisconnected):
+        return "SMTP server disconnected"
+    if isinstance(err, smtplib.SMTPDataError):
+        return f"SMTP message rejected (code {err.smtp_code})"
+    if isinstance(err, ssl.SSLError):
+        return "SMTP TLS/SSL negotiation failed"
+    if isinstance(err, TimeoutError):
+        return "SMTP connection timed out"
+    if isinstance(err, OSError):
+        suffix = f" (errno {err.errno})" if err.errno is not None else ""
+        return f"SMTP network error{suffix}"
+    return f"SMTP delivery failed ({type(err).__name__})"
 
 
 def _login_code_hash(email: str, code: str, salt: str) -> str:
@@ -566,9 +592,22 @@ async def request_login_code(payload: AccountEmailPayload) -> dict[str, Any]:
                 "DELETE FROM store_login_codes WHERE email = ?",
                 (payload.email,),
             )
+        detail = _smtp_failure_detail(err)
+        _LOGGER.error(
+            "Voice Store SMTP delivery failed: %s [host=%s port=%s starttls=%s ssl=%s auth=%s]",
+            detail,
+            _smtp_host(),
+            _smtp_port(),
+            _smtp_starttls(),
+            _smtp_ssl(),
+            bool(_smtp_username()),
+        )
+        # Use 424 rather than 502 so reverse proxies do not replace the JSON
+        # diagnostic with a generic gateway-error page. The frontend can then
+        # show the safe SMTP failure reason directly to the user.
         raise HTTPException(
-            status_code=502,
-            detail=f"Could not send sign-in email: {type(err).__name__}",
+            status_code=424,
+            detail=detail,
         ) from err
 
     return {
