@@ -136,11 +136,17 @@ def _smtp_password() -> str:
 
 
 def _smtp_from_email() -> str:
-    return os.environ.get("ANTHBOT_SMTP_FROM_EMAIL", "").strip() or _smtp_username()
+    email = os.environ.get("ANTHBOT_SMTP_FROM_EMAIL", "").strip() or _smtp_username()
+    if email.casefold() == "support@mqbretrofithungary.online":
+        return "support@anthbotmap.com"
+    return email
 
 
 def _smtp_from_name() -> str:
-    return os.environ.get("ANTHBOT_SMTP_FROM_NAME", "ANTHBOT Map").strip() or "ANTHBOT Map"
+    name = os.environ.get("ANTHBOT_SMTP_FROM_NAME", "ANTHBOT Map").strip() or "ANTHBOT Map"
+    if name.casefold() == "mqb retrofit hungary":
+        return "ANTHBOT Map"
+    return name
 
 
 def _smtp_starttls() -> bool:
