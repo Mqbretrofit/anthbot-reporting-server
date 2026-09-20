@@ -78,17 +78,29 @@ _ANALYTICS_PUBLIC_HTML = {
 }
 _PUBLIC_SITE_BASE_URL = "https://anthbotmap.com"
 _LEGACY_PUBLIC_HOSTS = {"reports.mqbretrofithungary.online"}
+_BRAND_LOGO_URL = "/brand/anthbot-map-logo.webp?v=1"
+_BRAND_LOGO_IMG = (
+    f'<img class="anthbot-brand-logo" src="{_BRAND_LOGO_URL}" '
+    'alt="ANTHBOT Map" width="480" height="160">'
+)
 _FAVICON_HEAD = (
-    '<link rel="icon" href="/favicon.svg" type="image/svg+xml">\n'
-    '<link rel="shortcut icon" href="/favicon.ico">\n'
+    '<link rel="icon" href="/favicon.png?v=2" type="image/png">\n'
+    '<link rel="shortcut icon" href="/favicon.ico?v=2">\n'
+    '<link rel="apple-touch-icon" href="/favicon.png?v=2">\n'
     '<meta name="theme-color" content="#081017">'
 )
-_FAVICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ANTHBOT Map">
-<defs><linearGradient id="g" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#31bf62"/><stop offset="1" stop-color="#248a46"/></linearGradient></defs>
-<rect width="64" height="64" rx="16" fill="#081017"/>
-<rect x="5" y="5" width="54" height="54" rx="14" fill="url(#g)"/>
-<path fill="#fff" d="M17 47 28.7 17h6.6L47 47h-8.1l-2.1-6.3H27.1L25 47h-8Zm12.3-13.1h5.4L32 25.8l-2.7 8.1Z"/>
-</svg>"""
+_BRAND_STYLE = """
+<style id="anthbot-brand-style">
+.anthbot-brand{display:inline-flex;align-items:center;text-decoration:none;flex:0 0 auto}
+.anthbot-brand-logo{display:block;width:190px;max-width:42vw;height:auto;object-fit:contain}
+.navlinks .anthbot-brand{border:0!important;background:transparent!important;padding:0 4px!important;min-height:38px}
+.top .anthbot-brand-logo{width:176px;max-width:52vw}
+@media(max-width:760px){
+  .anthbot-brand-logo{width:165px;max-width:52vw}
+  .navlinks .anthbot-brand{grid-column:1/-1;justify-content:flex-start}
+}
+</style>
+"""
 _SEO_PAGES: dict[str, dict[str, Any]] = {
     "public_site.html": {
         "path": "/",
@@ -2085,6 +2097,51 @@ def _verify_stripe_signature(body: bytes, signature_header: str | None) -> None:
         raise HTTPException(status_code=400, detail="invalid Stripe webhook signature")
 
 
+def _brand_asset_bytes(filename: str) -> bytes:
+    path = Path(__file__).with_name("assets") / filename
+    try:
+        encoded = path.read_text(encoding="ascii").strip()
+        return base64.b64decode(encoded, validate=True)
+    except (OSError, ValueError) as err:
+        raise HTTPException(status_code=503, detail="brand asset unavailable") from err
+
+
+def _brand_link(*, css_class: str = "anthbot-brand") -> str:
+    return (
+        f'<a class="{css_class}" href="/" aria-label="ANTHBOT Map home">'
+        f'{_BRAND_LOGO_IMG}</a>'
+    )
+
+
+def _apply_public_branding(name: str, html: str) -> str:
+    brand = _brand_link()
+    if name == "public_site.html":
+        html = html.replace(
+            '<a class="brand" href="/"><span class="logo">A</span><span>ANTHBOT Map</span></a>',
+            _brand_link(css_class="brand anthbot-brand"),
+            1,
+        )
+    elif name in {"public_terms.html", "public_refunds.html", "public_privacy.html"}:
+        html = html.replace(
+            '<a class="brand" href="/">ANTHBOT Map</a>',
+            _brand_link(css_class="brand anthbot-brand"),
+            1,
+        )
+    elif name == "store.html":
+        html = html.replace(
+            '<nav class="navlinks" aria-label="Site navigation">',
+            '<nav class="navlinks" aria-label="Site navigation">' + brand,
+            1,
+        )
+    elif name == "store_success.html":
+        html = html.replace(
+            '<div class="eyebrow">ANTHBOT Community</div>',
+            brand,
+            1,
+        )
+    return html
+
+
 def _canonical_public_redirect(
     request: Request,
     path: str,
@@ -2109,6 +2166,7 @@ def _apply_seo_metadata(name: str, html: str) -> str:
     if not page or "</head>" not in html:
         return html
 
+    html = _apply_public_branding(name, html)
     title = str(page["title"])
     description = str(page["description"])
     canonical = f"{_PUBLIC_SITE_BASE_URL}{page['path']}"
@@ -2163,6 +2221,7 @@ def _apply_seo_metadata(name: str, html: str) -> str:
     social = [
         extra_description.rstrip("\n"),
         _FAVICON_HEAD,
+        _BRAND_STYLE,
         f'<link rel="canonical" href="{escape(canonical, quote=True)}">',
         f'<meta name="robots" content="{robots}">',
         '<meta property="og:type" content="website">',
@@ -2334,6 +2393,7 @@ def _seo_landing_html(path: str) -> str:
 <title>{escape(title)}</title>
 <meta name="description" content="{escape(description, quote=True)}">
 {_FAVICON_HEAD}
+{_BRAND_STYLE}
 <link rel="canonical" href="{escape(canonical, quote=True)}">
 <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
 <meta property="og:type" content="website">
@@ -2369,8 +2429,7 @@ a{{color:inherit}}.wrap{{max-width:var(--max);margin:auto;padding:0 22px}}
  mask-image:linear-gradient(to bottom,#000,transparent 80%)}}
 .nav{{position:sticky;top:0;z-index:50;background:rgba(8,16,23,.76);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}}
 .navin{{height:72px;display:flex;align-items:center;justify-content:space-between;gap:22px}}
-.brand{{display:flex;gap:11px;align-items:center;text-decoration:none;font-weight:850}}
-.logo{{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(145deg,#31bf62,#249c4d);box-shadow:0 0 30px rgba(94,224,131,.18)}}
+.brand{{display:flex;align-items:center;text-decoration:none;font-weight:850}}
 .links{{display:flex;gap:16px;flex-wrap:wrap;align-items:center}}
 .links a{{text-decoration:none;color:var(--muted);font-size:14px}}.links a:hover{{color:#fff}}
 .lang-wrap{{display:flex;align-items:center;gap:8px;flex:0 0 auto}}.lang-label{{color:var(--faint);font-size:12px}}.lang-select{{height:38px;min-width:116px;border-radius:11px;border:1px solid var(--line2);background:var(--card2);color:#fff;padding:0 9px;font:inherit;font-size:12px}}
@@ -2412,7 +2471,7 @@ a{{color:inherit}}.wrap{{max-width:var(--max);margin:auto;padding:0 22px}}
 <body>
 <div class="bg-grid"></div>
 <nav class="nav"><div class="wrap navin">
-  <a class="brand" href="/"><span class="logo">A</span><span>ANTHBOT Map</span></a>
+  <a class="brand anthbot-brand" href="/" aria-label="ANTHBOT Map home">{_BRAND_LOGO_IMG}</a>
   <div class="links">
     <a href="/#anthbot-map">ANTHBOT Map</a>
     <a href="/#features" data-i18n="features">Features</a>
@@ -2536,24 +2595,45 @@ def _html_file(name: str) -> str:
     return _apply_seo_metadata(name, html)
 
 
-@router.get("/favicon.svg", include_in_schema=False)
-def public_favicon_svg() -> Response:
+@router.get("/favicon.png", include_in_schema=False)
+def public_favicon_png() -> Response:
     return Response(
-        content=_FAVICON_SVG,
-        media_type="image/svg+xml",
+        content=_brand_asset_bytes("anthbot_map_icon.b64"),
+        media_type="image/png",
         headers={
-            "Cache-Control": "public, max-age=604800",
+            "Cache-Control": "public, max-age=604800, immutable",
             "X-Content-Type-Options": "nosniff",
         },
+    )
+
+
+@router.get("/favicon.svg", include_in_schema=False)
+def public_favicon_svg() -> Response:
+    return RedirectResponse(
+        url="/favicon.png?v=2",
+        status_code=307,
+        headers={"Cache-Control": "public, max-age=3600"},
     )
 
 
 @router.get("/favicon.ico", include_in_schema=False)
 def public_favicon_ico() -> Response:
     return RedirectResponse(
-        url="/favicon.svg",
+        url="/favicon.png?v=2",
         status_code=307,
-        headers={"Cache-Control": "public, max-age=604800"},
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+
+@router.get("/brand/anthbot-map-logo.webp", include_in_schema=False)
+def public_brand_logo() -> Response:
+    return Response(
+        content=_brand_asset_bytes("anthbot_map_logo.b64"),
+        media_type="image/webp",
+        headers={
+            "Cache-Control": "public, max-age=604800, immutable",
+            "X-Content-Type-Options": "nosniff",
+        },
     )
 
 
