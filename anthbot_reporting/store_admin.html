@@ -27,7 +27,7 @@
     </div>
     <section class="card section">
       <div class="head">ANTHBOT Map tulajdonosi hozzáférés</div>
-      <div style="padding:12px 16px" class="small">Itt látszanak az aktív ANTHBOT Map → Community Hangbolt párosítások. A legfrissebb van felül. A saját Home Assistant sorában a <strong>Minden hang feloldása</strong> gomb egyszeri megnyomása után az összes fizetős Community hang lakat nélkül elérhető lesz, Stripe-vásárlás nélkül.</div>
+      <div style="padding:12px 16px" class="small">Itt látszanak az aktív ANTHBOT Map → Community Hangbolt párosítások. A legfrissebb van felül. A saját Home Assistant sorában a <strong>Minden hang feloldása</strong> gomb owner hozzáférést ad Stripe-vásárlás nélkül. A hozzáférés később ugyanitt <strong>visszavonható</strong>; ekkor az owner-letöltések azonnal érvénytelenné válnak, és a Map ismét normál vásárlói jogosultságokat használ.</div>
       <div class="table-wrap"><table><thead><tr><th>Létrehozva</th><th>HA azonosító</th><th>Lejár</th><th>Állapot</th><th>Művelet</th></tr></thead><tbody id="owner-pairings"></tbody></table></div>
     </section>
     <section class="card section">
@@ -94,6 +94,22 @@
         alert('Tulajdonosi feloldási hiba: '+e.message);
       }
     }
+    async function revokeOwnerPairCode(pairCode,button){
+      if(!pairCode)return;
+      if(!confirm('Biztosan visszavonod a tulajdonosi hozzáférést ennél a Home Assistantnál? A fizetős hangok ismét normál vásárlói jogosultsághoz lesznek kötve.'))return;
+      if(button)button.disabled=true;
+      try{
+        await api('/api/anthbot/admin/store/owner-access',{
+          method:'DELETE',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({pair_code:pairCode})
+        });
+        await load();
+      }catch(e){
+        if(button)button.disabled=false;
+        alert('Tulajdonosi hozzáférés visszavonási hiba: '+e.message);
+      }
+    }
     function ownerPairingRows(items){
       const body=document.getElementById('owner-pairings');
       if(!items.length){
@@ -105,7 +121,7 @@
           ? '<span class="pill good">Feloldva ✓</span>'
           : '<span class="pill warn">Nincs feloldva</span>';
         const action=p.owner_access
-          ? '<button class="btn" disabled>Minden hang feloldva</button>'
+          ? '<button class="btn" onclick="revokeOwnerPairCode(\''+esc(p.pair_code)+'\',this)">Tulajdonosi hozzáférés visszavonása</button>'
           : '<button class="btn primary" onclick="grantOwnerPairCode(\''+esc(p.pair_code)+'\',this)">Minden hang feloldása</button>';
         const newest=index===0?'<span class="pill good">Legfrissebb</span> ':'';
         return '<tr><td>'+newest+esc(fmt(p.created_at))+'</td><td class="mono">…'+esc(p.client_suffix||'')+'</td><td>'+esc(fmt(p.expires_at))+'</td><td>'+state+'</td><td>'+action+'</td></tr>';
