@@ -84,7 +84,7 @@ _ANTHBOT_MAP_RELEASE_API = (
 )
 _ANTHBOT_MAP_RELEASE_FALLBACK = "2.4.8.2"
 _ANTHBOT_MAP_RELEASE_CACHE_SECONDS = 15 * 60
-_ANTHBOT_MAP_VERSION_RE = re.compile(r"^v?(\\d+(?:\\.\\d+){2,3})$")
+_ANTHBOT_MAP_VERSION_RE = re.compile(r"^v?(\d+(?:\.\d+){2,3})$")
 _anthbot_map_release_cache: dict[str, Any] = {
     "version": _ANTHBOT_MAP_RELEASE_FALLBACK,
     "tag": f"v{_ANTHBOT_MAP_RELEASE_FALLBACK}",
