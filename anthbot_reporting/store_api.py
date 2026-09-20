@@ -2695,6 +2695,40 @@ def download_paid_voice_pack(
 
 
 @router.get(
+    "/api/anthbot/admin/store/voice-packs/{pack_id}/download",
+    dependencies=[Depends(core.require_admin)],
+)
+def admin_download_voice_pack(pack_id: str) -> FileResponse:
+    """Allow the authenticated project owner to download any uploaded voice pack.
+
+    This bypasses customer purchase/licence checks only for the existing admin
+    session/token. It does not create an order, entitlement, sale or Stripe event.
+    """
+    pack = _find_uploaded_pack(pack_id)
+    filename = str(pack.get("filename", "")).strip()
+    if (
+        not filename
+        or Path(filename).name != filename
+        or not core._VOICE_PACK_SAFE_PART.fullmatch(filename)
+    ):
+        raise HTTPException(status_code=404, detail="voice pack file not found")
+
+    path = core._voice_pack_dir() / filename
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="voice pack file not found")
+
+    return FileResponse(
+        path,
+        media_type="application/octet-stream",
+        filename=filename,
+        headers={
+            "Cache-Control": "private, no-store",
+            "Pragma": "no-cache",
+        },
+    )
+
+
+@router.get(
     "/api/anthbot/admin/store/voice-packs",
     dependencies=[Depends(core.require_admin)],
 )
