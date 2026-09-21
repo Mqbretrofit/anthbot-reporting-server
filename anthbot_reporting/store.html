@@ -456,8 +456,12 @@ function resetPreviewButton(){
 }
 function stopPreview(){
   if(previewAudio){
+    previewAudio.onended=null;
+    previewAudio.onerror=null;
     previewAudio.pause();
     try{previewAudio.currentTime=0}catch(_){}
+    try{previewAudio.removeAttribute('src');previewAudio.load()}catch(_){}
+    try{previewAudio.remove()}catch(_){}
   }
   previewAudio=null;
   resetPreviewButton();
@@ -466,19 +470,30 @@ function stopPreview(){
 function playPreview(url,button){
   if(previewButton===button&&previewAudio&&!previewAudio.paused){stopPreview();return}
   stopPreview();
-  const audio=new Audio(url);
+  if(!url){alert(ou('previewError'));return}
+  // Keep the media element attached to the document. This is more reliable on
+  // mobile Chromium/WebView than playing a detached Audio() instance.
+  const audio=document.createElement('audio');
+  audio.preload='auto';
+  audio.setAttribute('playsinline','');
+  audio.style.display='none';
+  audio.src=url;
+  document.body.appendChild(audio);
   let failed=false;
   previewAudio=audio;previewButton=button;
   button.classList.add('playing');
   button.textContent='■ '+ou('stop');
-  const fail=()=>{
+  const fail=(error)=>{
     if(failed)return;
+    // pause()/src replacement can reject an older play() with AbortError.
+    if(error&&error.name==='AbortError')return;
     failed=true;
     if(previewAudio===audio)stopPreview();
     alert(ou('previewError'));
   };
   audio.onended=()=>{if(previewAudio===audio)stopPreview()};
-  audio.onerror=fail;
+  audio.onerror=()=>fail(audio.error);
+  audio.load();
   const pending=audio.play();
   if(pending&&typeof pending.catch==='function')pending.catch(fail);
 }
