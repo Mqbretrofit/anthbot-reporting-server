@@ -2471,7 +2471,7 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIn("p.pair_code===ownerPairCode", admin_html)
         self.assertIn("pair-row-current", admin_html)
         self.assertIn("anthbot_owner_pair_code", admin_html)
-        self.assertIn("Ez az én HA-m", admin_html)
+        self.assertIn("Saját HA kijelölése", admin_html)
         self.assertIn("Saját HA jelölés törlése", admin_html)
         self.assertIn("rememberOwnerPairCode", admin_html)
 
