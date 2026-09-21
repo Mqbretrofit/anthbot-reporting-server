@@ -3944,10 +3944,22 @@ def admin_store_pairings(limit: int = 50) -> dict[str, Any]:
         if client_id in seen_clients:
             continue
         seen_clients.add(client_id)
+        linked_user_id = store_accounts.user_id_for_client(client_id)
+        linked_user = (
+            store_accounts.get_user(linked_user_id)
+            if linked_user_id
+            else None
+        )
+        account_email = (
+            str(linked_user.get("email") or "").strip()
+            if isinstance(linked_user, dict)
+            else ""
+        )
         items.append(
             {
                 "pair_code": str(row["pair_code"]),
                 "client_suffix": client_id[-10:],
+                "account_email": account_email or None,
                 "created_at": row["created_at"],
                 "expires_at": _iso_from_epoch(int(row["expires_at"])),
                 "owner_access": client_id in owners,
