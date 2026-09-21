@@ -2463,10 +2463,13 @@ class VoiceStoreTests(unittest.TestCase):
         admin_html = Path(store_api.__file__).with_name("store_admin.html").read_text(
             encoding="utf-8"
         )
-        self.assertIn("ANTHBOT Map tulajdonosi hozzáférés", admin_html)
+        self.assertIn("Aktív ANTHBOT Map párosítások – külön Home Assistant telepítések", admin_html)
         self.assertIn("/api/anthbot/admin/store/pairings?limit=20", admin_html)
         self.assertIn("Minden hang feloldása", admin_html)
         self.assertIn("Tulajdonosi hozzáférés visszavonása", admin_html)
+        self.assertIn("Ez a HA", admin_html)
+        self.assertIn("p.pair_code===ownerPairCode", admin_html)
+        self.assertIn("pair-row-current", admin_html)
 
     def test_owner_access_grant_requires_admin(self) -> None:
         client_token = "Q" * 48
