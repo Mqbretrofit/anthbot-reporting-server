@@ -168,13 +168,39 @@ let currentLang='en';
 const esc=(v)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const t=(k)=>I18N[currentLang]?.[k]||I18N.en[k]||k;
 const ou=(k)=>STORE_UI[currentLang]?.[k]||STORE_UI.en[k]||k;
+const VOICE_COMPATIBILITY={
+hu:"A beszédhangcsomagok csak kompatibilis ANTHBOT Genie modellekhez érhetők el. Az M9 és M9 Pro nem támogat beszédhangcsomagokat; ezeknél csak a meglévő hangerőkezelés használható.",
+en:"Spoken voice packs are available only for compatible ANTHBOT Genie models. M9 and M9 Pro do not support spoken voice packs; only their existing volume control remains available.",
+de:"Sprachpakete mit gesprochenen Stimmen sind nur für kompatible ANTHBOT-Genie-Modelle verfügbar. M9 und M9 Pro unterstützen keine gesprochenen Sprachpakete; dort bleibt nur die vorhandene Lautstärkeregelung verfügbar.",
+fr:"Les packs vocaux parlés sont disponibles uniquement pour les modèles ANTHBOT Genie compatibles. Les M9 et M9 Pro ne prennent pas en charge les packs vocaux parlés ; seule leur commande de volume existante reste disponible.",
+es:"Los paquetes de voz hablada solo están disponibles para modelos ANTHBOT Genie compatibles. M9 y M9 Pro no admiten paquetes de voz hablada; solo permanece disponible su control de volumen existente.",
+it:"I pacchetti vocali parlati sono disponibili solo per i modelli ANTHBOT Genie compatibili. M9 e M9 Pro non supportano i pacchetti vocali parlati; rimane disponibile solo il controllo del volume esistente.",
+pt:"Os pacotes de voz falada estão disponíveis apenas para modelos ANTHBOT Genie compatíveis. M9 e M9 Pro não suportam pacotes de voz falada; apenas o controlo de volume existente permanece disponível.",
+nl:"Gesproken stempakketten zijn alleen beschikbaar voor compatibele ANTHBOT Genie-modellen. M9 en M9 Pro ondersteunen geen gesproken stempakketten; alleen de bestaande volumeregeling blijft beschikbaar.",
+pl:"Pakiety głosowe z mową są dostępne wyłącznie dla kompatybilnych modeli ANTHBOT Genie. M9 i M9 Pro nie obsługują pakietów mowy; dostępna pozostaje tylko istniejąca regulacja głośności.",
+cs:"Mluvené hlasové balíčky jsou dostupné pouze pro kompatibilní modely ANTHBOT Genie. M9 a M9 Pro mluvené hlasové balíčky nepodporují; zůstává u nich pouze stávající ovládání hlasitosti.",
+sk:"Hovorené hlasové balíčky sú dostupné iba pre kompatibilné modely ANTHBOT Genie. M9 a M9 Pro hovorené hlasové balíčky nepodporujú; zostáva pri nich iba existujúce ovládanie hlasitosti.",
+ro:"Pachetele vocale vorbite sunt disponibile numai pentru modelele ANTHBOT Genie compatibile. M9 și M9 Pro nu acceptă pachete vocale vorbite; rămâne disponibil doar controlul existent al volumului.",
+da:"Talestemmepakker er kun tilgængelige til kompatible ANTHBOT Genie-modeller. M9 og M9 Pro understøtter ikke talestemmepakker; kun den eksisterende lydstyrkestyring er fortsat tilgængelig.",
+sv:"Talade röstpaket är endast tillgängliga för kompatibla ANTHBOT Genie-modeller. M9 och M9 Pro stöder inte talade röstpaket; endast den befintliga volymkontrollen är fortsatt tillgänglig.",
+no:"Talestemmepakker er bare tilgjengelige for kompatible ANTHBOT Genie-modeller. M9 og M9 Pro støtter ikke talestemmepakker; bare den eksisterende volumkontrollen er fortsatt tilgjengelig.",
+fi:"Puhutut äänipaketit ovat saatavilla vain yhteensopiville ANTHBOT Genie -malleille. M9 ja M9 Pro eivät tue puhuttuja äänipaketteja; niissä on käytettävissä vain nykyinen äänenvoimakkuuden säätö.",
+"zh-CN":"语音包仅适用于兼容的 ANTHBOT Genie 型号。M9 和 M9 Pro 不支持语音包；这些型号仅保留现有的音量控制功能。",
+"zh-TW":"語音包僅適用於相容的 ANTHBOT Genie 型號。M9 和 M9 Pro 不支援語音包；這些型號僅保留現有的音量控制功能。",
+tr:"Konuşmalı ses paketleri yalnızca uyumlu ANTHBOT Genie modellerinde kullanılabilir. M9 ve M9 Pro konuşmalı ses paketlerini desteklemez; yalnızca mevcut ses seviyesi kontrolü kullanılabilir.",
+th:"แพ็กเสียงพูดใช้ได้เฉพาะกับ ANTHBOT Genie รุ่นที่รองรับเท่านั้น M9 และ M9 Pro ไม่รองรับแพ็กเสียงพูด โดยยังคงใช้ได้เฉพาะการควบคุมระดับเสียงที่มีอยู่",
+vi:"Gói giọng nói chỉ khả dụng cho các mẫu ANTHBOT Genie tương thích. M9 và M9 Pro không hỗ trợ gói giọng nói; chỉ chức năng điều chỉnh âm lượng hiện có vẫn khả dụng.",
+ko:"음성 팩은 호환되는 ANTHBOT Genie 모델에서만 사용할 수 있습니다. M9 및 M9 Pro는 음성 팩을 지원하지 않으며 기존 볼륨 조절 기능만 사용할 수 있습니다.",
+km:"កញ្ចប់សំឡេងនិយាយអាចប្រើបានតែជាមួយម៉ូដែល ANTHBOT Genie ដែលសមស្របប៉ុណ្ណោះ។ M9 និង M9 Pro មិនគាំទ្រកញ្ចប់សំឡេងនិយាយទេ ហើយអាចប្រើបានតែការគ្រប់គ្រងកម្រិតសំឡេងដែលមានស្រាប់ប៉ុណ្ណោះ។"
+};
+const vc=()=>VOICE_COMPATIBILITY[currentLang]||VOICE_COMPATIBILITY.en;
 const money=(amount,currency)=>{try{return new Intl.NumberFormat(LOCALE[currentLang]||'en-GB',{style:'currency',currency:String(currency||'EUR').toUpperCase()}).format(Number(amount||0)/100)}catch(_){return (Number(amount||0)/100).toFixed(2)+' '+String(currency||'EUR').toUpperCase()}};
 function applyLanguage(lang){
   currentLang=SUPPORTED.includes(lang)?lang:'en';
   document.documentElement.lang=currentLang;
   document.getElementById('site-language').value=currentLang;
   document.title=t('pageTitle');
-  document.getElementById('voice-compatibility-note').textContent=currentLang==='hu'?'A beszédhangcsomagok csak kompatibilis ANTHBOT Genie modellekhez érhetők el. Az M9 és M9 Pro nem támogat beszédhangcsomagokat; ezeknél csak a meglévő hangerőkezelés használható.':'Spoken voice packs are available only for compatible ANTHBOT Genie models. M9 and M9 Pro do not support spoken voice packs; only their existing volume control remains available.';
+  document.getElementById('voice-compatibility-note').textContent=vc();
   document.querySelectorAll('[data-i18n]').forEach(el=>{const key=el.dataset.i18n;el.textContent=t(key)});
   document.getElementById('requested-language').placeholder=t('placeholderLang');
   document.getElementById('voice-style').placeholder=t('placeholderVoice');
