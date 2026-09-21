@@ -2473,12 +2473,16 @@ class VoiceStoreTests(unittest.TestCase):
         admin_html = Path(store_api.__file__).with_name("store_admin.html").read_text(
             encoding="utf-8"
         )
-        self.assertIn("Aktív ANTHBOT Map párosítások – külön Home Assistant telepítések", admin_html)
+        self.assertIn("Saját Home Assistant", admin_html)
+        self.assertIn("További aktív ANTHBOT Map Hangbolt telepítések", admin_html)
         self.assertIn("/api/anthbot/admin/store/pairings?limit=20", admin_html)
         self.assertIn("Minden hang feloldása", admin_html)
         self.assertIn("Tulajdonosi hozzáférés visszavonása", admin_html)
         self.assertIn("Ez a HA", admin_html)
         self.assertIn("p.pair_code===ownerPairCode", admin_html)
+        self.assertIn("anthbot_owner_client_suffix", admin_html)
+        self.assertIn("owner-current-pairing", admin_html)
+        self.assertIn("owner-other-pairings", admin_html)
         self.assertIn("pair-row-current", admin_html)
         self.assertIn("anthbot_owner_pair_code", admin_html)
         self.assertIn("Saját HA kijelölése", admin_html)
