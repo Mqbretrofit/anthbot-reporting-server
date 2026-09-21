@@ -27,8 +27,8 @@
     </div>
     <section class="card section">
       <div class="head">Aktív ANTHBOT Map párosítások – külön Home Assistant telepítések</div>
-      <div style="padding:12px 16px" class="small">Minden sor egy külön anonim ANTHBOT Map / Home Assistant telepítést jelent, nem vásárlást vagy licencet. A legfrissebb aktív párosítás van felül. Ha az admin oldal tulajdonosi párosításból nyílik meg, a saját sor automatikusan <strong>Ez a HA</strong> jelölést kap és ezt a böngésző megjegyzi. Közvetlen admin megnyitásnál a <strong>Saját HA kijelölése</strong> gombbal egyszer kézzel is megjelölheted a saját sort; ez csak helyi böngésző-jelölés, nem ad hozzáférést. A fizetős hangok feloldása ettől külön művelet marad. A hozzáférés később ugyanitt <strong>visszavonható</strong>.</div>
-      <div class="table-wrap"><table><thead><tr><th>Létrehozva</th><th>HA azonosító</th><th>Lejár</th><th>Állapot</th><th>Művelet</th></tr></thead><tbody id="owner-pairings"></tbody></table></div>
+      <div style="padding:12px 16px" class="small">Minden sor egy külön anonim ANTHBOT Map / Home Assistant telepítést jelent, nem vásárlást vagy licencet. A legfrissebb aktív párosítás van felül. Ha az admin oldal tulajdonosi párosításból nyílik meg, a saját sor automatikusan <strong>Ez a HA</strong> jelölést kap és ezt a böngésző megjegyzi. Ha a telepítés kapcsolva van egy ellenőrzött Hangbolt-fiókhoz, a kapcsolt email cím is megjelenik, így könnyebb beazonosítani. Az anonim, még fiókhoz nem kapcsolt telepítéseknél email nem áll rendelkezésre. Közvetlen admin megnyitásnál a <strong>Saját HA kijelölése</strong> gombbal egyszer kézzel is megjelölheted a saját sort; ez csak helyi böngésző-jelölés, nem ad hozzáférést. A fizetős hangok feloldása ettől külön művelet marad. A hozzáférés később ugyanitt <strong>visszavonható</strong>.</div>
+      <div class="table-wrap"><table><thead><tr><th>Létrehozva</th><th>HA azonosító</th><th>Kapcsolt email</th><th>Lejár</th><th>Állapot</th><th>Művelet</th></tr></thead><tbody id="owner-pairings"></tbody></table></div>
     </section>
     <section class="card section">
       <div class="head">Weboldal látogatottság · privacy-barát statisztika</div>
@@ -127,7 +127,7 @@
     function ownerPairingRows(items){
       const body=document.getElementById('owner-pairings');
       if(!items.length){
-        body.innerHTML='<tr><td colspan="5" class="empty">Nincs aktív ANTHBOT Map párosítás. Nyisd meg egyszer az ANTHBOT Map hangcsomag-kezelőjében a Community Hangboltot, majd nyomj Frissítést ezen az oldalon.</td></tr>';
+        body.innerHTML='<tr><td colspan="6" class="empty">Nincs aktív ANTHBOT Map párosítás. Nyisd meg egyszer az ANTHBOT Map hangcsomag-kezelőjében a Community Hangboltot, majd nyomj Frissítést ezen az oldalon.</td></tr>';
         return;
       }
       body.innerHTML=items.map((p,index)=>{
@@ -144,7 +144,10 @@
         const action='<div class="actions">'+accessButton+identifyButton+'</div>';
         const newest=index===0?'<span class="pill good">Legfrissebb</span> ':'';
         const current=isCurrent?'<span class="pill good">Ez a HA</span> ':'';
-        return '<tr class="'+(isCurrent?'pair-row-current':'')+'"><td>'+current+newest+esc(fmt(p.created_at))+'</td><td class="mono">…'+esc(p.client_suffix||'')+'</td><td>'+esc(fmt(p.expires_at))+'</td><td>'+state+'</td><td>'+action+'</td></tr>';
+        const email=p.account_email
+          ? '<span>'+esc(p.account_email)+'</span>'
+          : '<span class="small">Anonim · nincs kapcsolt email</span>';
+        return '<tr class="'+(isCurrent?'pair-row-current':'')+'"><td>'+current+newest+esc(fmt(p.created_at))+'</td><td class="mono">…'+esc(p.client_suffix||'')+'</td><td>'+email+'</td><td>'+esc(fmt(p.expires_at))+'</td><td>'+state+'</td><td>'+action+'</td></tr>';
       }).join('');
     }
     async function save(id,select){
