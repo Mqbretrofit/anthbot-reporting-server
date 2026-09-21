@@ -2425,6 +2425,10 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(first_pair.status_code, 200)
         self.assertEqual(second_pair.status_code, 200)
 
+        first_pair_code = first_pair.json()["store_url"].split("pair=", 1)[1]
+        self._login_store_account("pair-owner@example.test")
+        self._link_store_account_to_pair(first_pair_code)
+
         denied = self.client.get("/api/anthbot/admin/store/pairings")
         self.assertEqual(denied.status_code, 401)
 
@@ -2437,9 +2441,17 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(len(items), 2)
         self.assertTrue(all("pair_code" in item for item in items))
         self.assertTrue(all("client_suffix" in item for item in items))
+        self.assertTrue(all("account_email" in item for item in items))
         self.assertTrue(all(item["owner_access"] is False for item in items))
+        first_client = store_api._client_id_from_token(first_token)
+        second_client = store_api._client_id_from_token(second_token)
+        emails = {
+            item["client_suffix"]: item["account_email"]
+            for item in items
+        }
+        self.assertEqual(emails[first_client[-10:]], "pair-owner@example.test")
+        self.assertIsNone(emails[second_client[-10:]])
 
-        first_pair_code = first_pair.json()["store_url"].split("pair=", 1)[1]
         granted = self.client.post(
             "/api/anthbot/admin/store/owner-access",
             headers=self._admin_headers(),
@@ -2455,8 +2467,6 @@ class VoiceStoreTests(unittest.TestCase):
             item["client_suffix"]: item["owner_access"]
             for item in listed_after.json()["items"]
         }
-        first_client = store_api._client_id_from_token(first_token)
-        second_client = store_api._client_id_from_token(second_token)
         self.assertTrue(states[first_client[-10:]])
         self.assertFalse(states[second_client[-10:]])
 
@@ -2473,6 +2483,8 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIn("anthbot_owner_pair_code", admin_html)
         self.assertIn("Saját HA kijelölése", admin_html)
         self.assertIn("Saját HA jelölés törlése", admin_html)
+        self.assertIn("Kapcsolt email", admin_html)
+        self.assertIn("Anonim · nincs kapcsolt email", admin_html)
         self.assertIn("rememberOwnerPairCode", admin_html)
 
     def test_owner_access_grant_requires_admin(self) -> None:
