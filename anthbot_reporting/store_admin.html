@@ -11,7 +11,7 @@
     .grid{display:grid;gap:14px}.kpis{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:16px}.card{background:linear-gradient(180deg,rgba(24,34,53,.97),rgba(15,23,38,.97));border:1px solid var(--line);border-radius:17px;box-shadow:0 16px 44px rgba(0,0,0,.25)}.kpi{padding:18px}.label{color:var(--muted);font-size:.82rem}.value{font-size:1.6rem;font-weight:800;margin-top:7px}
     .status{padding:14px 16px;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}.pill{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:4px 8px;font-size:.76rem}.pill.good{color:#baf7e7;border-color:rgba(128,224,199,.3)}.pill.warn{color:#ffe3a7;border-color:rgba(255,204,102,.3)}
     .section{margin-bottom:16px;overflow:hidden}.head{padding:16px 18px;border-bottom:1px solid var(--line);font-weight:750}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:980px}th,td{padding:11px 13px;border-bottom:1px solid var(--line);text-align:left;font-size:.87rem}th{color:var(--muted);background:rgba(255,255,255,.02)}.control{background:#0d1626;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:8px;min-height:38px}.price{width:110px}.currency{width:80px}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.78rem}.small{color:var(--muted);font-size:.78rem}.empty{padding:28px;text-align:center;color:var(--muted)}
-    .analytics-kpis{grid-template-columns:repeat(4,minmax(0,1fr));padding:14px}.analytics-kpis .kpi{background:rgba(255,255,255,.02);box-shadow:none}.analytics-panels{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:12px;padding:0 14px 14px}.analytics-panel{border:1px solid var(--line);border-radius:13px;overflow:hidden;background:rgba(7,14,25,.35)}.analytics-panel .head{font-size:.86rem;padding:11px 13px}.analytics-panel table{min-width:0}.analytics-panel th,.analytics-panel td{font-size:.8rem;padding:8px 10px}.analytics-note{padding:0 16px 14px;color:var(--muted);font-size:.78rem}.pair-row-current{background:rgba(128,224,199,.07)}.pair-row-current td:first-child{box-shadow:inset 4px 0 0 var(--good)}
+    .analytics-kpis{grid-template-columns:repeat(4,minmax(0,1fr));padding:14px}.analytics-kpis .kpi{background:rgba(255,255,255,.02);box-shadow:none}.analytics-panels{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:12px;padding:0 14px 14px}.analytics-panel{border:1px solid var(--line);border-radius:13px;overflow:hidden;background:rgba(7,14,25,.35)}.analytics-panel .head{font-size:.86rem;padding:11px 13px}.analytics-panel table{min-width:0}.analytics-panel th,.analytics-panel td{font-size:.8rem;padding:8px 10px}.analytics-note{padding:0 16px 14px;color:var(--muted);font-size:.78rem}.pair-row-current{background:rgba(128,224,199,.07)}.pair-row-current td:first-child{box-shadow:inset 4px 0 0 var(--good)}.pairing-details>summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px}.pairing-details>summary::-webkit-details-marker{display:none}.pairing-details>summary::after{content:"▾";font-size:1rem;color:var(--muted);transition:transform .18s ease}.pairing-details[open]>summary::after{transform:rotate(180deg)}.pairing-current-note{padding:12px 16px}.pairing-current-empty{padding:18px;color:var(--muted)}
     @media(max-width:900px){.kpis,.analytics-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.analytics-panels{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}.shell{padding:18px 12px}}
   </style>
 </head>
@@ -26,10 +26,15 @@
       <button class="btn primary" id="owner-pair-grant">Minden hang feloldása ezen a HA-n</button>
     </div>
     <section class="card section">
-      <div class="head">Aktív ANTHBOT Map párosítások – külön Home Assistant telepítések</div>
-      <div style="padding:12px 16px" class="small">Minden sor egy külön anonim ANTHBOT Map / Home Assistant telepítést jelent, nem vásárlást vagy licencet. A legfrissebb aktív párosítás van felül. Ha az admin oldal tulajdonosi párosításból nyílik meg, a saját sor automatikusan <strong>Ez a HA</strong> jelölést kap és ezt a böngésző megjegyzi. Ha a telepítés kapcsolva van egy ellenőrzött Hangbolt-fiókhoz, a kapcsolt email cím is megjelenik, így könnyebb beazonosítani. Az anonim, még fiókhoz nem kapcsolt telepítéseknél email nem áll rendelkezésre. Közvetlen admin megnyitásnál a <strong>Saját HA kijelölése</strong> gombbal egyszer kézzel is megjelölheted a saját sort; ez csak helyi böngésző-jelölés, nem ad hozzáférést. A fizetős hangok feloldása ettől külön művelet marad. A hozzáférés később ugyanitt <strong>visszavonható</strong>.</div>
-      <div class="table-wrap"><table><thead><tr><th>Létrehozva</th><th>HA azonosító</th><th>Kapcsolt email</th><th>Lejár</th><th>Állapot</th><th>Művelet</th></tr></thead><tbody id="owner-pairings"></tbody></table></div>
+      <div class="head">Saját Home Assistant</div>
+      <div class="small pairing-current-note">A saját Hangbolt-kompatibilis ANTHBOT Map telepítésed külön jelenik meg. A jelölést a böngésző megőrzi akkor is, ha a háttérben új 7 napos párosítási kód készül.</div>
+      <div id="owner-current-pairing"></div>
     </section>
+    <details class="card section pairing-details" id="owner-other-pairings">
+      <summary class="head"><span>További aktív ANTHBOT Map Hangbolt telepítések</span><span class="small" id="owner-other-count">0 telepítés</span></summary>
+      <div style="padding:12px 16px" class="small">Ezek más aktív, hangcsomagot támogató ANTHBOT Map / Home Assistant telepítések. A lista alapból zárva marad. Ha egy telepítés ellenőrzött Hangbolt-fiókhoz van kapcsolva, a kapcsolt email cím is látszik; az anonim telepítéseknél nincs email adat. Ha még nincs kijelölve a saját HA-d, itt a <strong>Saját HA kijelölése</strong> gombbal választhatod ki.</div>
+      <div class="table-wrap"><table><thead><tr><th>Létrehozva</th><th>HA azonosító</th><th>Kapcsolt email</th><th>Lejár</th><th>Állapot</th><th>Művelet</th></tr></thead><tbody id="owner-pairings"></tbody></table></div>
+    </details>
     <section class="card section">
       <div class="head">Weboldal látogatottság · privacy-barát statisztika</div>
       <div class="grid analytics-kpis" id="analytics-kpis"></div>
@@ -52,18 +57,24 @@
     async function api(path,options={}){const r=await fetch(path,{credentials:'same-origin',...options});if(r.status===401){location.href='/dashboard';throw new Error('Nincs jogosultság')}const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(typeof d.detail==='string'?d.detail:JSON.stringify(d.detail||('HTTP '+r.status)));return d}
     function kpi(label,value){return '<div class="card kpi"><div class="label">'+esc(label)+'</div><div class="value">'+esc(value)+'</div></div>'}
     const ownerPairStorageKey='anthbot_owner_pair_code';
+    const ownerClientStorageKey='anthbot_owner_client_suffix';
     const ownerPairFromUrl=new URLSearchParams(location.search).get('owner_pair')||'';
     let ownerPairCode=ownerPairFromUrl||localStorage.getItem(ownerPairStorageKey)||'';
+    let ownerClientSuffix=localStorage.getItem(ownerClientStorageKey)||'';
     if(ownerPairFromUrl)localStorage.setItem(ownerPairStorageKey,ownerPairFromUrl);
-    function rememberOwnerPairCode(pairCode){
-      if(!pairCode)return;
+    function rememberOwnerPairCode(pairCode,clientSuffix){
+      if(!pairCode||!clientSuffix)return;
       ownerPairCode=pairCode;
+      ownerClientSuffix=clientSuffix;
       localStorage.setItem(ownerPairStorageKey,pairCode);
+      localStorage.setItem(ownerClientStorageKey,clientSuffix);
       load();
     }
     function forgetOwnerPairCode(){
       ownerPairCode='';
+      ownerClientSuffix='';
       localStorage.removeItem(ownerPairStorageKey);
+      localStorage.removeItem(ownerClientStorageKey);
       load();
     }
     async function grantOwnerPair(){
@@ -124,32 +135,66 @@
         alert('Tulajdonosi hozzáférés visszavonási hiba: '+e.message);
       }
     }
+    function pairingRow(p,{current=false,allowIdentify=true}={}){
+      const state=p.owner_access
+        ? '<span class="pill good">Feloldva ✓</span>'
+        : '<span class="pill warn">Nincs feloldva</span>';
+      const accessButton=p.owner_access
+        ? '<button class="btn" onclick="revokeOwnerPairCode(\''+esc(p.pair_code)+'\',this)">Tulajdonosi hozzáférés visszavonása</button>'
+        : '<button class="btn primary" onclick="grantOwnerPairCode(\''+esc(p.pair_code)+'\',this)">'+(current?'Minden hang feloldása ezen a HA-n':'Minden hang feloldása')+'</button>';
+      const identifyButton=current
+        ? '<button class="btn" onclick="forgetOwnerPairCode()">Saját HA jelölés törlése</button>'
+        : allowIdentify
+          ? '<button class="btn" onclick="rememberOwnerPairCode(\''+esc(p.pair_code)+'\',\''+esc(p.client_suffix||'')+'\')">Saját HA kijelölése</button>'
+          : '';
+      const action='<div class="actions">'+accessButton+identifyButton+'</div>';
+      const email=p.account_email
+        ? '<span>'+esc(p.account_email)+'</span>'
+        : '<span class="small">Anonim · nincs kapcsolt email</span>';
+      return '<tr class="'+(current?'pair-row-current':'')+'"><td>'+(current?'<span class="pill good">Ez a HA</span> ':'')+esc(fmt(p.created_at))+'</td><td class="mono">…'+esc(p.client_suffix||'')+'</td><td>'+email+'</td><td>'+esc(fmt(p.expires_at))+'</td><td>'+state+'</td><td>'+action+'</td></tr>';
+    }
     function ownerPairingRows(items){
-      const body=document.getElementById('owner-pairings');
-      if(!items.length){
-        body.innerHTML='<tr><td colspan="6" class="empty">Nincs aktív ANTHBOT Map párosítás. Nyisd meg egyszer az ANTHBOT Map hangcsomag-kezelőjében a Community Hangboltot, majd nyomj Frissítést ezen az oldalon.</td></tr>';
+      const currentHost=document.getElementById('owner-current-pairing');
+      const othersBody=document.getElementById('owner-pairings');
+      const othersCount=document.getElementById('owner-other-count');
+      const othersDetails=document.getElementById('owner-other-pairings');
+
+      let currentItem=null;
+      for(const p of items){
+        const pairMatches=Boolean(ownerPairCode)&&p.pair_code===ownerPairCode;
+        if(pairMatches&&p.client_suffix){
+          ownerClientSuffix=String(p.client_suffix);
+          localStorage.setItem(ownerClientStorageKey,ownerClientSuffix);
+        }
+        const clientMatches=Boolean(ownerClientSuffix)&&p.client_suffix===ownerClientSuffix;
+        if((pairMatches||clientMatches)&&!currentItem){
+          currentItem=p;
+          if(p.pair_code&&p.pair_code!==ownerPairCode){
+            ownerPairCode=p.pair_code;
+            localStorage.setItem(ownerPairStorageKey,ownerPairCode);
+          }
+        }
+      }
+
+      if(currentItem){
+        currentHost.innerHTML='<div class="table-wrap"><table><thead><tr><th>Létrehozva</th><th>HA azonosító</th><th>Kapcsolt email</th><th>Lejár</th><th>Állapot</th><th>Művelet</th></tr></thead><tbody>'+pairingRow(currentItem,{current:true,allowIdentify:false})+'</tbody></table></div>';
+      }else{
+        currentHost.innerHTML='<div class="pairing-current-empty">A saját Home Assistant még nincs beazonosítva. Nyisd le lent a többi telepítést, és egyszer kattints a saját sorodnál a <strong>Saját HA kijelölése</strong> gombra. Ha a Hangboltból érkezel tulajdonosi párosítási linkkel, a kijelölés automatikus.</div>';
+      }
+
+      const others=items.filter(p=>!currentItem||p.client_suffix!==currentItem.client_suffix);
+      if(othersCount)othersCount.textContent=others.length+' telepítés';
+      if(!others.length){
+        othersBody.innerHTML='<tr><td colspan="6" class="empty">Nincs más aktív Hangbolt-kompatibilis ANTHBOT Map telepítés.</td></tr>';
+        if(othersDetails)othersDetails.open=false;
         return;
       }
-      body.innerHTML=items.map((p,index)=>{
-        const isCurrent=Boolean(ownerPairCode)&&p.pair_code===ownerPairCode;
-        const state=p.owner_access
-          ? '<span class="pill good">Feloldva ✓</span>'
-          : '<span class="pill warn">Nincs feloldva</span>';
-        const accessButton=p.owner_access
-          ? '<button class="btn" onclick="revokeOwnerPairCode(\''+esc(p.pair_code)+'\',this)">Tulajdonosi hozzáférés visszavonása</button>'
-          : '<button class="btn primary" onclick="grantOwnerPairCode(\''+esc(p.pair_code)+'\',this)">'+(isCurrent?'Minden hang feloldása ezen a HA-n':'Minden hang feloldása')+'</button>';
-        const identifyButton=isCurrent
-          ? '<button class="btn" onclick="forgetOwnerPairCode()">Saját HA jelölés törlése</button>'
-          : '<button class="btn" onclick="rememberOwnerPairCode(\''+esc(p.pair_code)+'\')">Saját HA kijelölése</button>';
-        const action='<div class="actions">'+accessButton+identifyButton+'</div>';
+      othersBody.innerHTML=others.map((p,index)=>{
         const newest=index===0?'<span class="pill good">Legfrissebb</span> ':'';
-        const current=isCurrent?'<span class="pill good">Ez a HA</span> ':'';
-        const email=p.account_email
-          ? '<span>'+esc(p.account_email)+'</span>'
-          : '<span class="small">Anonim · nincs kapcsolt email</span>';
-        return '<tr class="'+(isCurrent?'pair-row-current':'')+'"><td>'+current+newest+esc(fmt(p.created_at))+'</td><td class="mono">…'+esc(p.client_suffix||'')+'</td><td>'+email+'</td><td>'+esc(fmt(p.expires_at))+'</td><td>'+state+'</td><td>'+action+'</td></tr>';
+        return pairingRow({...p,created_at:p.created_at},{current:false,allowIdentify:true}).replace('<td>','<td>'+newest);
       }).join('');
     }
+
     async function save(id,select){
       const row=select.closest('tr'),access=select.value;
       const priceAmount=access==='paid'?799:0,currency='eur';
