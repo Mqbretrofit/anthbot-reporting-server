@@ -11,7 +11,7 @@
     .grid{display:grid;gap:14px}.kpis{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:16px}.card{background:linear-gradient(180deg,rgba(24,34,53,.97),rgba(15,23,38,.97));border:1px solid var(--line);border-radius:17px;box-shadow:0 16px 44px rgba(0,0,0,.25)}.kpi{padding:18px}.label{color:var(--muted);font-size:.82rem}.value{font-size:1.6rem;font-weight:800;margin-top:7px}
     .status{padding:14px 16px;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}.pill{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:4px 8px;font-size:.76rem}.pill.good{color:#baf7e7;border-color:rgba(128,224,199,.3)}.pill.warn{color:#ffe3a7;border-color:rgba(255,204,102,.3)}
     .section{margin-bottom:16px;overflow:hidden}.head{padding:16px 18px;border-bottom:1px solid var(--line);font-weight:750}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:980px}th,td{padding:11px 13px;border-bottom:1px solid var(--line);text-align:left;font-size:.87rem}th{color:var(--muted);background:rgba(255,255,255,.02)}.control{background:#0d1626;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:8px;min-height:38px}.price{width:110px}.currency{width:80px}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.78rem}.small{color:var(--muted);font-size:.78rem}.empty{padding:28px;text-align:center;color:var(--muted)}
-    .analytics-kpis{grid-template-columns:repeat(4,minmax(0,1fr));padding:14px}.analytics-kpis .kpi{background:rgba(255,255,255,.02);box-shadow:none}.analytics-panels{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:12px;padding:0 14px 14px}.analytics-panel{border:1px solid var(--line);border-radius:13px;overflow:hidden;background:rgba(7,14,25,.35)}.analytics-panel .head{font-size:.86rem;padding:11px 13px}.analytics-panel table{min-width:0}.analytics-panel th,.analytics-panel td{font-size:.8rem;padding:8px 10px}.analytics-note{padding:0 16px 14px;color:var(--muted);font-size:.78rem}
+    .analytics-kpis{grid-template-columns:repeat(4,minmax(0,1fr));padding:14px}.analytics-kpis .kpi{background:rgba(255,255,255,.02);box-shadow:none}.analytics-panels{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:12px;padding:0 14px 14px}.analytics-panel{border:1px solid var(--line);border-radius:13px;overflow:hidden;background:rgba(7,14,25,.35)}.analytics-panel .head{font-size:.86rem;padding:11px 13px}.analytics-panel table{min-width:0}.analytics-panel th,.analytics-panel td{font-size:.8rem;padding:8px 10px}.analytics-note{padding:0 16px 14px;color:var(--muted);font-size:.78rem}.pair-row-current{background:rgba(128,224,199,.07)}.pair-row-current td:first-child{box-shadow:inset 4px 0 0 var(--good)}
     @media(max-width:900px){.kpis,.analytics-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.analytics-panels{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}.shell{padding:18px 12px}}
   </style>
 </head>
@@ -26,8 +26,8 @@
       <button class="btn primary" id="owner-pair-grant">Minden hang feloldása ezen a HA-n</button>
     </div>
     <section class="card section">
-      <div class="head">ANTHBOT Map tulajdonosi hozzáférés</div>
-      <div style="padding:12px 16px" class="small">Itt látszanak az aktív ANTHBOT Map → Community Hangbolt párosítások. A legfrissebb van felül. A saját Home Assistant sorában a <strong>Minden hang feloldása</strong> gomb owner hozzáférést ad Stripe-vásárlás nélkül. A hozzáférés később ugyanitt <strong>visszavonható</strong>; ekkor az owner-letöltések azonnal érvénytelenné válnak, és a Map ismét normál vásárlói jogosultságokat használ.</div>
+      <div class="head">Aktív ANTHBOT Map párosítások – külön Home Assistant telepítések</div>
+      <div style="padding:12px 16px" class="small">Minden sor egy külön anonim ANTHBOT Map / Home Assistant telepítést jelent, nem vásárlást vagy licencet. A legfrissebb aktív párosítás van felül. Ha ezt az admin oldalt az adott ANTHBOT Map tulajdonosi párosításából nyitottad meg, a saját sora <strong>Ez a HA</strong> jelölést kap. Csak ennél a biztosan azonosított sornál használd a <strong>Minden hang feloldása</strong> műveletet. A hozzáférés később ugyanitt <strong>visszavonható</strong>; ekkor az owner-letöltések azonnal érvénytelenné válnak, és a Map ismét normál vásárlói jogosultságokat használ.</div>
       <div class="table-wrap"><table><thead><tr><th>Létrehozva</th><th>HA azonosító</th><th>Lejár</th><th>Állapot</th><th>Művelet</th></tr></thead><tbody id="owner-pairings"></tbody></table></div>
     </section>
     <section class="card section">
@@ -66,7 +66,7 @@
         });
         if(text)text.textContent='Kész: ezen a Home Assistanton minden fizetős Community hang tulajdonosi hozzáféréssel elérhető. Az ANTHBOT Map legfeljebb kb. 60 másodpercen belül frissíti a listát.';
         if(button){button.textContent='Feloldva ✓';button.disabled=true}
-        history.replaceState(null,'',location.pathname);
+        await load();
       }catch(e){
         if(text)text.textContent='Feloldási hiba: '+e.message;
         if(button)button.disabled=false;
@@ -117,14 +117,16 @@
         return;
       }
       body.innerHTML=items.map((p,index)=>{
+        const isCurrent=Boolean(ownerPairCode)&&p.pair_code===ownerPairCode;
         const state=p.owner_access
           ? '<span class="pill good">Feloldva ✓</span>'
           : '<span class="pill warn">Nincs feloldva</span>';
         const action=p.owner_access
           ? '<button class="btn" onclick="revokeOwnerPairCode(\''+esc(p.pair_code)+'\',this)">Tulajdonosi hozzáférés visszavonása</button>'
-          : '<button class="btn primary" onclick="grantOwnerPairCode(\''+esc(p.pair_code)+'\',this)">Minden hang feloldása</button>';
+          : '<button class="btn primary" onclick="grantOwnerPairCode(\''+esc(p.pair_code)+'\',this)">'+(isCurrent?'Minden hang feloldása ezen a HA-n':'Minden hang feloldása')+'</button>';
         const newest=index===0?'<span class="pill good">Legfrissebb</span> ':'';
-        return '<tr><td>'+newest+esc(fmt(p.created_at))+'</td><td class="mono">…'+esc(p.client_suffix||'')+'</td><td>'+esc(fmt(p.expires_at))+'</td><td>'+state+'</td><td>'+action+'</td></tr>';
+        const current=isCurrent?'<span class="pill good">Ez a HA</span> ':'';
+        return '<tr class="'+(isCurrent?'pair-row-current':'')+'"><td>'+current+newest+esc(fmt(p.created_at))+'</td><td class="mono">…'+esc(p.client_suffix||'')+'</td><td>'+esc(fmt(p.expires_at))+'</td><td>'+state+'</td><td>'+action+'</td></tr>';
       }).join('');
     }
     async function save(id,select){
