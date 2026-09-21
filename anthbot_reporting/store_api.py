@@ -1546,7 +1546,6 @@ def _store_catalog(request: Request) -> dict[str, Any]:
         for item in _uploaded_records()
         if str(item.get("id", "")).strip()
     }
-    base = core._public_base_url(request)
     for item in packs:
         pack_id = str(item.get("id", "")).strip()
         if pack_id not in uploaded_ids:
@@ -1554,8 +1553,11 @@ def _store_catalog(request: Request) -> dict[str, Any]:
         item["preview_samples"] = [
             {
                 "sample": index,
+                # Keep previews on the same origin as the storefront. An absolute
+                # public base can point at the reporting backend instead of the
+                # customer-facing anthbotmap.com proxy and break browser playback.
                 "url": (
-                    f"{base}/api/anthbot/store/voice-packs/{quote(pack_id)}"
+                    f"/api/anthbot/store/voice-packs/{quote(pack_id)}"
                     f"/preview/{index}"
                 ),
             }
