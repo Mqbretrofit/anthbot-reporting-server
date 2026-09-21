@@ -27,7 +27,7 @@
     </div>
     <section class="card section">
       <div class="head">Aktív ANTHBOT Map párosítások – külön Home Assistant telepítések</div>
-      <div style="padding:12px 16px" class="small">Minden sor egy külön anonim ANTHBOT Map / Home Assistant telepítést jelent, nem vásárlást vagy licencet. A legfrissebb aktív párosítás van felül. Ha az admin oldal tulajdonosi párosításból nyílik meg, a saját sor automatikusan <strong>Ez a HA</strong> jelölést kap és ezt a böngésző megjegyzi. Közvetlen admin megnyitásnál az <strong>Ez az én HA-m</strong> gombbal egyszer kézzel is kijelölheted a saját sort; ez csak helyi böngésző-jelölés, nem ad hozzáférést. A fizetős hangok feloldása ettől külön művelet marad. A hozzáférés később ugyanitt <strong>visszavonható</strong>.</div>
+      <div style="padding:12px 16px" class="small">Minden sor egy külön anonim ANTHBOT Map / Home Assistant telepítést jelent, nem vásárlást vagy licencet. A legfrissebb aktív párosítás van felül. Ha az admin oldal tulajdonosi párosításból nyílik meg, a saját sor automatikusan <strong>Ez a HA</strong> jelölést kap és ezt a böngésző megjegyzi. Közvetlen admin megnyitásnál a <strong>Saját HA kijelölése</strong> gombbal egyszer kézzel is megjelölheted a saját sort; ez csak helyi böngésző-jelölés, nem ad hozzáférést. A fizetős hangok feloldása ettől külön művelet marad. A hozzáférés később ugyanitt <strong>visszavonható</strong>.</div>
       <div class="table-wrap"><table><thead><tr><th>Létrehozva</th><th>HA azonosító</th><th>Lejár</th><th>Állapot</th><th>Művelet</th></tr></thead><tbody id="owner-pairings"></tbody></table></div>
     </section>
     <section class="card section">
@@ -140,7 +140,7 @@
           : '<button class="btn primary" onclick="grantOwnerPairCode(\''+esc(p.pair_code)+'\',this)">'+(isCurrent?'Minden hang feloldása ezen a HA-n':'Minden hang feloldása')+'</button>';
         const identifyButton=isCurrent
           ? '<button class="btn" onclick="forgetOwnerPairCode()">Saját HA jelölés törlése</button>'
-          : '<button class="btn" onclick="rememberOwnerPairCode(\''+esc(p.pair_code)+'\')">Ez az én HA-m</button>';
+          : '<button class="btn" onclick="rememberOwnerPairCode(\''+esc(p.pair_code)+'\')">Saját HA kijelölése</button>';
         const action='<div class="actions">'+accessButton+identifyButton+'</div>';
         const newest=index===0?'<span class="pill good">Legfrissebb</span> ':'';
         const current=isCurrent?'<span class="pill good">Ez a HA</span> ':'';
