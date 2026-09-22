@@ -2477,27 +2477,49 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertTrue(states[first_client[-10:]])
         self.assertFalse(states[second_client[-10:]])
 
+        with store_api.core._db() as conn:
+            conn.execute(
+                "UPDATE store_client_pairings SET expires_at = 0 WHERE client_id = ?",
+                (first_client,),
+            )
+
+        listed_expired_owner = self.client.get(
+            "/api/anthbot/admin/store/pairings",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(listed_expired_owner.status_code, 200)
+        persistent = next(
+            item for item in listed_expired_owner.json()["items"]
+            if item["client_suffix"] == first_client[-10:]
+        )
+        self.assertTrue(persistent["owner_access"])
+        self.assertTrue(persistent["persistent_owner"])
+        self.assertFalse(persistent["active_pairing"])
+        self.assertIsNone(persistent["expires_at"])
+
         admin_html = Path(store_api.__file__).with_name("store_admin.html").read_text(
             encoding="utf-8"
         )
         self.assertIn("Saját Home Assistant", admin_html)
         self.assertIn("További aktív ANTHBOT Map Hangbolt telepítések", admin_html)
         self.assertIn("/api/anthbot/admin/store/pairings?limit=200", admin_html)
-        self.assertIn("Minden hang feloldása", admin_html)
-        self.assertIn("Tulajdonosi hozzáférés visszavonása", admin_html)
+        self.assertIn("Saját HA · minden hang elérhető", admin_html)
+        self.assertIn("Nem jár le", admin_html)
         self.assertIn("Ez a HA", admin_html)
-        self.assertIn("p.pair_code===ownerPairCode", admin_html)
         self.assertIn("anthbot_owner_client_suffix", admin_html)
         self.assertIn("owner-current-pairing", admin_html)
         self.assertIn("owner-other-pairings", admin_html)
         self.assertIn("pair-row-current", admin_html)
         self.assertIn("anthbot_owner_pair_code", admin_html)
         self.assertIn("Saját HA kijelölése", admin_html)
-        self.assertIn("Saját HA jelölés törlése", admin_html)
+        self.assertNotIn("Saját HA jelölés törlése", admin_html)
+        self.assertNotIn("ANTHBOT Map tulajdonosi párosítás", admin_html)
         self.assertIn("Kapcsolt email", admin_html)
         self.assertIn("Anonim · nincs kapcsolt email", admin_html)
         self.assertIn("rememberOwnerPairCode", admin_html)
         self.assertIn("p.current_account", admin_html)
+        self.assertIn("p.persistent_owner", admin_html)
+        self.assertIn("allowIdentify:!currentItem", admin_html)
 
     def test_owner_access_grant_requires_admin(self) -> None:
         client_token = "Q" * 48
