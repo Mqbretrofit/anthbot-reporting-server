@@ -31,6 +31,14 @@
       <div class="table-wrap"><table><thead id="owner-pairings-head"></thead><tbody id="owner-pairings"></tbody></table></div>
     </details>
     <section class="card section">
+      <div class="head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <span>Regisztrált Hangbolt-fiókok</span>
+        <span class="small" id="store-account-count">0 regisztrált fiók</span>
+      </div>
+      <div style="padding:12px 16px" class="small">Itt minden sikeresen email-kóddal hitelesített Hangbolt-fiók megjelenik. A HA-kapcsolat és a vásárolt hangok száma külön látszik.</div>
+      <div class="table-wrap"><table><thead><tr><th>Regisztrált</th><th>Email</th><th>HA kapcsolat</th><th>Vásárolt hang</th><th>Utolsó bejelentkezés</th><th>Nyelv</th></tr></thead><tbody id="store-accounts"></tbody></table></div>
+    </section>
+    <section class="card section">
       <div class="head">Weboldal látogatottság · privacy-barát statisztika</div>
       <div class="grid analytics-kpis" id="analytics-kpis"></div>
       <div class="analytics-panels">
@@ -66,7 +74,7 @@
       load();
     }
     async function ensureOwnerAccess(item){
-      if(!item||item.owner_access||!item.pair_code)return item;
+      if(!item||!item.pair_code)return item;
       await api('/api/anthbot/admin/store/owner-access',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
@@ -131,14 +139,14 @@
       }
 
       if(currentItem){
-        currentHost.innerHTML='<div class="table-wrap"><table><thead><tr><th>Létrehozva</th><th>HA azonosító</th><th>Kapcsolt email</th><th>Lejár</th><th>Állapot</th></tr></thead><tbody>'+pairingRow(currentItem,{current:true,allowIdentify:false,includeAction:false})+'</tbody></table></div>';
+        currentHost.innerHTML='<div class="table-wrap"><table><thead><tr><th>Utolsó jelentkezés</th><th>HA azonosító</th><th>Kapcsolt email</th><th>Aktív eddig</th><th>Állapot</th></tr></thead><tbody>'+pairingRow(currentItem,{current:true,allowIdentify:false,includeAction:false})+'</tbody></table></div>';
       }else{
         currentHost.innerHTML='<div class="pairing-current-empty">A saját Home Assistant még nincs beazonosítva. Ha az emailes Hangbolt-fiókodhoz már kapcsolódik, jelentkezz be ugyanebben a böngészőben; egyébként lent egyszer válaszd ki a saját HA-dat. Az első sikeres azonosítás után a tulajdonosi jelölés tartós marad.</div>';
       }
 
       const others=items.filter(p=>p.active_pairing!==false&&(!currentItem||p.client_suffix!==currentItem.client_suffix));
       const needsIdentify=!currentItem;
-      if(othersHead)othersHead.innerHTML='<tr><th>Létrehozva</th><th>HA azonosító</th><th>Kapcsolt email</th><th>Lejár</th><th>Állapot</th>'+(needsIdentify?'<th>Művelet</th>':'')+'</tr>';
+      if(othersHead)othersHead.innerHTML='<tr><th>Utolsó jelentkezés</th><th>HA azonosító</th><th>Kapcsolt email</th><th>Aktív eddig</th><th>Állapot</th>'+(needsIdentify?'<th>Művelet</th>':'')+'</tr>';
       if(othersCount)othersCount.textContent=others.length+' aktív ANTHBOT Map telepítés hangcsomag-támogatással';
       if(!others.length){
         othersBody.innerHTML='<tr><td colspan="'+(needsIdentify?'6':'5')+'" class="empty">Nincs más aktív Hangbolt-kompatibilis ANTHBOT Map telepítés.</td></tr>';
@@ -148,6 +156,23 @@
       othersBody.innerHTML=others.map((p,index)=>{
         const newest=index===0?'<span class="pill good">Legfrissebb</span> ':'';
         return pairingRow({...p,created_at:p.created_at},{current:false,allowIdentify:needsIdentify,includeAction:needsIdentify}).replace('<td>','<td>'+newest);
+      }).join('');
+    }
+
+    function storeAccountRows(data){
+      const body=document.getElementById('store-accounts');
+      const count=document.getElementById('store-account-count');
+      const items=(data&&data.items)||[];
+      const total=Number((data&&data.count)||0);
+      if(count)count.textContent=total+' regisztrált fiók';
+      if(!items.length){
+        body.innerHTML='<tr><td colspan="6" class="empty">Még nincs regisztrált Hangbolt-fiók.</td></tr>';
+        return;
+      }
+      body.innerHTML=items.map(a=>{
+        const linked=Number(a.linked_map_count||0);
+        const purchased=Number(a.purchased_count||0);
+        return '<tr><td>'+esc(fmt(a.created_at))+'</td><td><strong>'+esc(a.email||'—')+'</strong></td><td>'+(linked?'<span class="pill good">'+esc(linked)+' kapcsolt HA</span>':'<span class="small">Nincs kapcsolt HA</span>')+'</td><td>'+esc(purchased)+'</td><td>'+esc(fmt(a.last_seen_at))+'</td><td>'+esc(a.preferred_language||'—')+'</td></tr>';
       }).join('');
     }
 
@@ -341,11 +366,11 @@
     }
     async function load(){
       try{
-        const [catalog,stats,orders,customRequests,privacyRequests,siteAnalytics,ownerPairings]=await Promise.all([api('/api/anthbot/admin/store/voice-packs'),api('/api/anthbot/admin/store/stats'),api('/api/anthbot/admin/store/orders?limit=100'),api('/api/anthbot/admin/store/custom-voice-requests?limit=100'),api('/api/anthbot/admin/privacy-requests?limit=100'),api('/api/anthbot/admin/site-analytics?days=30'),api('/api/anthbot/admin/store/pairings?limit=200')]);
+        const [catalog,stats,orders,customRequests,privacyRequests,siteAnalytics,ownerPairings,storeAccounts]=await Promise.all([api('/api/anthbot/admin/store/voice-packs'),api('/api/anthbot/admin/store/stats'),api('/api/anthbot/admin/store/orders?limit=100'),api('/api/anthbot/admin/store/custom-voice-requests?limit=100'),api('/api/anthbot/admin/privacy-requests?limit=100'),api('/api/anthbot/admin/site-analytics?days=30'),api('/api/anthbot/admin/store/pairings?limit=200'),api('/api/anthbot/admin/store/accounts?limit=200')]);
         const revenue=(stats.revenue||[]).map(x=>money(x.amount,x.currency)).join(' + ')||money(0,'eur');
         document.getElementById('kpis').innerHTML=kpi('Feltöltött csomag',catalog.items.length)+kpi('Rendelés',stats.orders||0)+kpi('Fizetett rendelés',stats.paid_orders||0)+kpi('Bevétel',revenue);
         document.getElementById('status').innerHTML='<span class="pill good">Tulajdonosi hozzáférés: minden csomag letölthető</span><span class="pill '+(stats.store_enabled?'good':'warn')+'">Store: '+(stats.store_enabled?'bekapcsolva':'kikapcsolva')+'</span><span class="pill '+(stats.checkout_ready?'good':'warn')+'">Stripe: '+(stats.checkout_ready?'kész':'nincs teljesen konfigurálva')+'</span><span class="pill '+(stats.automatic_tax?'good':'warn')+'">Stripe automatic tax: '+(stats.automatic_tax?'be':'ki')+'</span><span class="small">A tulajdonosi letöltés admin jogosultsághoz kötött, nem hoz létre rendelést vagy licencet. A fizetős csomagok publikus letöltése továbbra is vásárláshoz kötött.</span>';
-        await ownerPairingRows(ownerPairings.items||[]);analyticsRows(siteAnalytics);packRows(catalog.items||[]);customRequestRows(customRequests.items||[]);privacyRequestRows(privacyRequests.items||[]);orderRows(orders.items||[]);
+        await ownerPairingRows(ownerPairings.items||[]);storeAccountRows(storeAccounts);analyticsRows(siteAnalytics);packRows(catalog.items||[]);customRequestRows(customRequests.items||[]);privacyRequestRows(privacyRequests.items||[]);orderRows(orders.items||[]);
       }catch(e){document.getElementById('status').innerHTML='<span style="color:#ffc4cc">Hiba: '+esc(e.message)+'</span>'}
     }
     document.getElementById('refresh').onclick=load;document.getElementById('delete-test-orders').onclick=deleteAllTestOrders;document.getElementById('delete-all-orders').onclick=deleteAllLocalOrders;load();
