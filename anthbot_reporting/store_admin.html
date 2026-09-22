@@ -31,7 +31,7 @@
       <div id="owner-current-pairing"></div>
     </section>
     <details class="card section pairing-details" id="owner-other-pairings">
-      <summary class="head"><span>További aktív ANTHBOT Map Hangbolt telepítések</span><span class="small" id="owner-other-count">0 telepítés</span></summary>
+      <summary class="head"><span>További aktív ANTHBOT Map Hangbolt telepítések</span><span class="small" id="owner-other-count">0 aktív ANTHBOT Map telepítés hangcsomag-támogatással</span></summary>
       <div style="padding:12px 16px" class="small">Ezek más aktív, hangcsomagot támogató ANTHBOT Map / Home Assistant telepítések. A lista alapból zárva marad. Ha egy telepítés ellenőrzött Hangbolt-fiókhoz van kapcsolva, a kapcsolt email cím is látszik; az anonim telepítéseknél nincs email adat. Ha még nincs kijelölve a saját HA-d, itt a <strong>Saját HA kijelölése</strong> gombbal választhatod ki.</div>
       <div class="table-wrap"><table><thead><tr><th>Létrehozva</th><th>HA azonosító</th><th>Kapcsolt email</th><th>Lejár</th><th>Állapot</th><th>Művelet</th></tr></thead><tbody id="owner-pairings"></tbody></table></div>
     </details>
@@ -183,7 +183,7 @@
       }
 
       const others=items.filter(p=>!currentItem||p.client_suffix!==currentItem.client_suffix);
-      if(othersCount)othersCount.textContent=others.length+' telepítés';
+      if(othersCount)othersCount.textContent=others.length+' aktív ANTHBOT Map telepítés hangcsomag-támogatással';
       if(!others.length){
         othersBody.innerHTML='<tr><td colspan="6" class="empty">Nincs más aktív Hangbolt-kompatibilis ANTHBOT Map telepítés.</td></tr>';
         if(othersDetails)othersDetails.open=false;
