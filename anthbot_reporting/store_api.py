@@ -1153,10 +1153,16 @@ def _is_owner_client(client_id: str) -> bool:
 
 
 def _grant_owner_client(client_id: str) -> None:
-    """Persist maintainer-owner access for one anonymous Map client."""
+    """Persist the single maintainer-owner Map client."""
     _init_store_tables()
     now = core._iso()
     with core._db() as conn:
+        # There is exactly one project-owner Home Assistant. Selecting or
+        # recognizing it replaces any stale owner rows left by older versions.
+        conn.execute(
+            "DELETE FROM store_owner_clients WHERE client_id != ?",
+            (client_id,),
+        )
         conn.execute(
             """
             INSERT INTO store_owner_clients (client_id, created_at, updated_at)
@@ -3906,6 +3912,75 @@ def download_owner_voice_pack(
         media_type="application/octet-stream",
         headers={"Cache-Control": "private, no-store"},
     )
+
+
+@router.get(
+    "/api/anthbot/admin/store/accounts",
+    dependencies=[Depends(core.require_admin)],
+)
+def admin_store_accounts(limit: int = 200) -> dict[str, Any]:
+    """List verified Voice Store accounts for the admin dashboard."""
+    _init_store_tables()
+    store_accounts._init_account_tables()
+    limit = max(1, min(int(limit), 500))
+    with core._db() as conn:
+        total = int(
+            conn.execute(
+                "SELECT COUNT(*) FROM store_users WHERE email_verified = 1"
+            ).fetchone()[0]
+            or 0
+        )
+        rows = conn.execute(
+            """
+            SELECT
+                u.user_id,
+                u.email,
+                u.email_verified,
+                u.preferred_language,
+                u.created_at,
+                u.updated_at,
+                (
+                    SELECT COUNT(*)
+                    FROM store_user_clients c
+                    WHERE c.user_id = u.user_id
+                ) AS linked_map_count,
+                (
+                    SELECT COUNT(
+                        DISTINCT COALESCE(NULLIF(o.community_id, ''), o.pack_id)
+                    )
+                    FROM store_orders o
+                    WHERE o.user_id = u.user_id
+                      AND o.payment_status = 'paid'
+                ) AS purchased_count,
+                (
+                    SELECT MAX(s.last_seen_at)
+                    FROM store_sessions s
+                    WHERE s.user_id = u.user_id
+                ) AS last_seen_at
+            FROM store_users u
+            WHERE u.email_verified = 1
+            ORDER BY u.created_at DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+
+    return {
+        "count": total,
+        "items": [
+            {
+                "email": str(row["email"]),
+                "email_verified": bool(row["email_verified"]),
+                "preferred_language": str(row["preferred_language"] or "en"),
+                "created_at": row["created_at"],
+                "updated_at": row["updated_at"],
+                "linked_map_count": int(row["linked_map_count"] or 0),
+                "purchased_count": int(row["purchased_count"] or 0),
+                "last_seen_at": row["last_seen_at"],
+            }
+            for row in rows
+        ],
+    }
 
 
 @router.get(
