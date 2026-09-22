@@ -2442,6 +2442,7 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertTrue(all("pair_code" in item for item in items))
         self.assertTrue(all("client_suffix" in item for item in items))
         self.assertTrue(all("account_email" in item for item in items))
+        self.assertTrue(all("current_account" in item for item in items))
         self.assertTrue(all(item["owner_access"] is False for item in items))
         first_client = store_api._client_id_from_token(first_token)
         second_client = store_api._client_id_from_token(second_token)
@@ -2451,6 +2452,12 @@ class VoiceStoreTests(unittest.TestCase):
         }
         self.assertEqual(emails[first_client[-10:]], "pair-owner@example.test")
         self.assertIsNone(emails[second_client[-10:]])
+        current_accounts = {
+            item["client_suffix"]: item["current_account"]
+            for item in items
+        }
+        self.assertTrue(current_accounts[first_client[-10:]])
+        self.assertFalse(current_accounts[second_client[-10:]])
 
         granted = self.client.post(
             "/api/anthbot/admin/store/owner-access",
@@ -2475,7 +2482,7 @@ class VoiceStoreTests(unittest.TestCase):
         )
         self.assertIn("Saját Home Assistant", admin_html)
         self.assertIn("További aktív ANTHBOT Map Hangbolt telepítések", admin_html)
-        self.assertIn("/api/anthbot/admin/store/pairings?limit=20", admin_html)
+        self.assertIn("/api/anthbot/admin/store/pairings?limit=200", admin_html)
         self.assertIn("Minden hang feloldása", admin_html)
         self.assertIn("Tulajdonosi hozzáférés visszavonása", admin_html)
         self.assertIn("Ez a HA", admin_html)
@@ -2490,6 +2497,7 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIn("Kapcsolt email", admin_html)
         self.assertIn("Anonim · nincs kapcsolt email", admin_html)
         self.assertIn("rememberOwnerPairCode", admin_html)
+        self.assertIn("p.current_account", admin_html)
 
     def test_owner_access_grant_requires_admin(self) -> None:
         client_token = "Q" * 48
