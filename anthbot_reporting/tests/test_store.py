@@ -2275,9 +2275,10 @@ class VoiceStoreTests(unittest.TestCase):
         admin_html = Path(store_api.__file__).with_name("store_admin.html").read_text(
             encoding="utf-8"
         )
-        self.assertIn("Minden hang feloldása ezen a HA-n", admin_html)
-        self.assertIn("Tulajdonosi hozzáférés visszavonása", admin_html)
-        self.assertIn("method:'DELETE'", admin_html)
+        self.assertIn("ensureOwnerAccess", admin_html)
+        self.assertIn("Saját HA · minden hang elérhető", admin_html)
+        self.assertNotIn("Tulajdonosi hozzáférés visszavonása", admin_html)
+        self.assertIn("method:'POST'", admin_html)
         self.assertIn("/api/anthbot/admin/store/owner-access", admin_html)
 
     def test_admin_can_delete_sandbox_and_explicitly_confirmed_live_test_orders(self) -> None:
