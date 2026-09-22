@@ -3912,11 +3912,17 @@ def download_owner_voice_pack(
     "/api/anthbot/admin/store/pairings",
     dependencies=[Depends(core.require_admin)],
 )
-def admin_store_pairings(limit: int = 50) -> dict[str, Any]:
+def admin_store_pairings(request: Request, limit: int = 50) -> dict[str, Any]:
     """List active ANTHBOT Map store pairings, newest client first."""
     _init_store_tables()
     limit = max(1, min(int(limit), 200))
     now_epoch = int(time.time())
+    current_store_user = store_accounts.current_user(request, touch=False)
+    current_store_user_id = (
+        str(current_store_user.get("user_id"))
+        if isinstance(current_store_user, dict) and current_store_user.get("user_id")
+        else None
+    )
     with core._db() as conn:
         conn.execute(
             "DELETE FROM store_client_pairings WHERE expires_at < ?",
@@ -3960,6 +3966,10 @@ def admin_store_pairings(limit: int = 50) -> dict[str, Any]:
                 "pair_code": str(row["pair_code"]),
                 "client_suffix": client_id[-10:],
                 "account_email": account_email or None,
+                "current_account": bool(
+                    current_store_user_id
+                    and linked_user_id == current_store_user_id
+                ),
                 "created_at": row["created_at"],
                 "expires_at": _iso_from_epoch(int(row["expires_at"])),
                 "owner_access": client_id in owners,
