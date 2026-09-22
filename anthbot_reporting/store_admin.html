@@ -27,7 +27,7 @@
     </div>
     <section class="card section">
       <div class="head">Saját Home Assistant</div>
-      <div class="small pairing-current-note">A saját Hangbolt-kompatibilis ANTHBOT Map telepítésed külön jelenik meg. A jelölést a böngésző megőrzi akkor is, ha a háttérben új 7 napos párosítási kód készül.</div>
+      <div class="small pairing-current-note">A saját Hangbolt-kompatibilis ANTHBOT Map telepítésed külön jelenik meg. Ha ugyanebben a böngészőben be vagy jelentkezve a Hangbolt-fiókodba, az emailhez kapcsolt egyetlen aktív HA-t automatikusan felismerjük. A kézi jelölést a böngésző megőrzi akkor is, ha a háttérben új 7 napos párosítási kód készül.</div>
       <div id="owner-current-pairing"></div>
     </section>
     <details class="card section pairing-details" id="owner-other-pairings">
@@ -173,6 +173,17 @@
             ownerPairCode=p.pair_code;
             localStorage.setItem(ownerPairStorageKey,ownerPairCode);
           }
+        }
+      }
+
+      if(!currentItem){
+        const accountMatches=items.filter(p=>p.current_account);
+        if(accountMatches.length===1){
+          currentItem=accountMatches[0];
+          ownerClientSuffix=String(currentItem.client_suffix||'');
+          ownerPairCode=String(currentItem.pair_code||'');
+          if(ownerClientSuffix)localStorage.setItem(ownerClientStorageKey,ownerClientSuffix);
+          if(ownerPairCode)localStorage.setItem(ownerPairStorageKey,ownerPairCode);
         }
       }
 
@@ -385,7 +396,7 @@
     }
     async function load(){
       try{
-        const [catalog,stats,orders,customRequests,privacyRequests,siteAnalytics,ownerPairings]=await Promise.all([api('/api/anthbot/admin/store/voice-packs'),api('/api/anthbot/admin/store/stats'),api('/api/anthbot/admin/store/orders?limit=100'),api('/api/anthbot/admin/store/custom-voice-requests?limit=100'),api('/api/anthbot/admin/privacy-requests?limit=100'),api('/api/anthbot/admin/site-analytics?days=30'),api('/api/anthbot/admin/store/pairings?limit=20')]);
+        const [catalog,stats,orders,customRequests,privacyRequests,siteAnalytics,ownerPairings]=await Promise.all([api('/api/anthbot/admin/store/voice-packs'),api('/api/anthbot/admin/store/stats'),api('/api/anthbot/admin/store/orders?limit=100'),api('/api/anthbot/admin/store/custom-voice-requests?limit=100'),api('/api/anthbot/admin/privacy-requests?limit=100'),api('/api/anthbot/admin/site-analytics?days=30'),api('/api/anthbot/admin/store/pairings?limit=200')]);
         const revenue=(stats.revenue||[]).map(x=>money(x.amount,x.currency)).join(' + ')||money(0,'eur');
         document.getElementById('kpis').innerHTML=kpi('Feltöltött csomag',catalog.items.length)+kpi('Rendelés',stats.orders||0)+kpi('Fizetett rendelés',stats.paid_orders||0)+kpi('Bevétel',revenue);
         document.getElementById('status').innerHTML='<span class="pill good">Tulajdonosi hozzáférés: minden csomag letölthető</span><span class="pill '+(stats.store_enabled?'good':'warn')+'">Store: '+(stats.store_enabled?'bekapcsolva':'kikapcsolva')+'</span><span class="pill '+(stats.checkout_ready?'good':'warn')+'">Stripe: '+(stats.checkout_ready?'kész':'nincs teljesen konfigurálva')+'</span><span class="pill '+(stats.automatic_tax?'good':'warn')+'">Stripe automatic tax: '+(stats.automatic_tax?'be':'ki')+'</span><span class="small">A tulajdonosi letöltés admin jogosultsághoz kötött, nem hoz létre rendelést vagy licencet. A fizetős csomagok publikus letöltése továbbra is vásárláshoz kötött.</span>';
