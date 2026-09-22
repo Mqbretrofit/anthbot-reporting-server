@@ -3939,7 +3939,11 @@ def admin_store_pairings(request: Request, limit: int = 50) -> dict[str, Any]:
             (now_epoch, max(limit * 4, limit)),
         ).fetchall()
         owner_rows = conn.execute(
-            "SELECT client_id FROM store_owner_clients"
+            """
+            SELECT client_id, created_at, updated_at
+            FROM store_owner_clients
+            ORDER BY updated_at DESC
+            """
         ).fetchall()
 
     owners = {str(row["client_id"]) for row in owner_rows}
@@ -3973,11 +3977,51 @@ def admin_store_pairings(request: Request, limit: int = 50) -> dict[str, Any]:
                 "created_at": row["created_at"],
                 "expires_at": _iso_from_epoch(int(row["expires_at"])),
                 "owner_access": client_id in owners,
+                "persistent_owner": client_id in owners,
+                "active_pairing": True,
             }
         )
         if len(items) >= limit:
             break
-    return {"count": len(items), "items": items}
+
+    active_count = len(items)
+
+    # Owner access is a durable server-side identity. Keep the owner's own
+    # Home Assistant visible even when its temporary 7-day pairing has expired.
+    for owner_row in owner_rows:
+        client_id = str(owner_row["client_id"])
+        if client_id in seen_clients:
+            continue
+        linked_user_id = store_accounts.user_id_for_client(client_id)
+        linked_user = (
+            store_accounts.get_user(linked_user_id)
+            if linked_user_id
+            else None
+        )
+        account_email = (
+            str(linked_user.get("email") or "").strip()
+            if isinstance(linked_user, dict)
+            else ""
+        )
+        items.append(
+            {
+                "pair_code": None,
+                "client_suffix": client_id[-10:],
+                "account_email": account_email or None,
+                "current_account": bool(
+                    current_store_user_id
+                    and linked_user_id == current_store_user_id
+                ),
+                "created_at": owner_row["created_at"],
+                "expires_at": None,
+                "owner_access": True,
+                "persistent_owner": True,
+                "active_pairing": False,
+            }
+        )
+        seen_clients.add(client_id)
+
+    return {"count": active_count, "items": items}
 
 
 @router.post(
