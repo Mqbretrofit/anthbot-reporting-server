@@ -2520,7 +2520,8 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIn("rememberOwnerPairCode", admin_html)
         self.assertIn("p.current_account", admin_html)
         self.assertIn("p.persistent_owner", admin_html)
-        self.assertIn("allowIdentify:!currentItem", admin_html)
+        self.assertIn("includeAction:needsIdentify", admin_html)
+        self.assertIn("owner-pairings-head", admin_html)
 
     def test_owner_access_grant_requires_admin(self) -> None:
         client_token = "Q" * 48
