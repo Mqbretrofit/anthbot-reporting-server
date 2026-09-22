@@ -2522,6 +2522,83 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIn("p.persistent_owner", admin_html)
         self.assertIn("includeAction:needsIdentify", admin_html)
         self.assertIn("owner-pairings-head", admin_html)
+        self.assertIn("Utolsó jelentkezés", admin_html)
+        self.assertIn("Aktív eddig", admin_html)
+        self.assertIn("Regisztrált Hangbolt-fiókok", admin_html)
+        self.assertIn("/api/anthbot/admin/store/accounts?limit=200", admin_html)
+
+    def test_admin_lists_registered_store_accounts(self) -> None:
+        email = "registered-user@example.test"
+        self._login_store_account(email)
+
+        token = "U" * 48
+        pairing = self.client.post(
+            "/api/anthbot/store/client/pair",
+            json={"client_token": token},
+        )
+        self.assertEqual(pairing.status_code, 200)
+        pair_code = pairing.json()["store_url"].split("pair=", 1)[1]
+        self._link_store_account_to_pair(pair_code)
+
+        denied = self.client.get("/api/anthbot/admin/store/accounts")
+        self.assertEqual(denied.status_code, 401)
+
+        listed = self.client.get(
+            "/api/anthbot/admin/store/accounts",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(listed.status_code, 200)
+        body = listed.json()
+        self.assertEqual(body["count"], 1)
+        self.assertEqual(len(body["items"]), 1)
+        account = body["items"][0]
+        self.assertEqual(account["email"], email)
+        self.assertTrue(account["email_verified"])
+        self.assertEqual(account["linked_map_count"], 1)
+        self.assertEqual(account["purchased_count"], 0)
+        self.assertIsNotNone(account["created_at"])
+        self.assertIsNotNone(account["last_seen_at"])
+
+    def test_owner_access_is_singleton(self) -> None:
+        first_token = "V" * 48
+        second_token = "W" * 48
+        first_pair = self.client.post(
+            "/api/anthbot/store/client/pair",
+            json={"client_token": first_token},
+        )
+        second_pair = self.client.post(
+            "/api/anthbot/store/client/pair",
+            json={"client_token": second_token},
+        )
+        first_code = first_pair.json()["store_url"].split("pair=", 1)[1]
+        second_code = second_pair.json()["store_url"].split("pair=", 1)[1]
+
+        self.assertEqual(
+            self.client.post(
+                "/api/anthbot/admin/store/owner-access",
+                headers=self._admin_headers(),
+                json={"pair_code": first_code},
+            ).status_code,
+            200,
+        )
+        self.assertEqual(
+            self.client.post(
+                "/api/anthbot/admin/store/owner-access",
+                headers=self._admin_headers(),
+                json={"pair_code": second_code},
+            ).status_code,
+            200,
+        )
+
+        first_client = store_api._client_id_from_token(first_token)
+        second_client = store_api._client_id_from_token(second_token)
+        with store_api.core._db() as conn:
+            owners = conn.execute(
+                "SELECT client_id FROM store_owner_clients"
+            ).fetchall()
+        self.assertEqual([str(row["client_id"]) for row in owners], [second_client])
+        self.assertFalse(store_api._is_owner_client(first_client))
+        self.assertTrue(store_api._is_owner_client(second_client))
 
     def test_owner_access_grant_requires_admin(self) -> None:
         client_token = "Q" * 48
