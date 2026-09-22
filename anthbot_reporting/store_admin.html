@@ -28,7 +28,7 @@
     <details class="card section pairing-details" id="owner-other-pairings">
       <summary class="head"><span>További aktív ANTHBOT Map Hangbolt telepítések</span><span class="small" id="owner-other-count">0 aktív ANTHBOT Map telepítés hangcsomag-támogatással</span></summary>
       <div style="padding:12px 16px" class="small">Ezek más aktív, hangcsomagot támogató ANTHBOT Map / Home Assistant telepítések. A lista alapból zárva marad. Ha a saját HA már fel van ismerve, a többi sornál nincs szükség saját-HA jelölésre. Kézi kijelölés csak akkor jelenik meg, ha a saját HA még nincs azonosítva.</div>
-      <div class="table-wrap"><table><thead><tr><th>Létrehozva</th><th>HA azonosító</th><th>Kapcsolt email</th><th>Lejár</th><th>Állapot</th><th>Művelet</th></tr></thead><tbody id="owner-pairings"></tbody></table></div>
+      <div class="table-wrap"><table><thead id="owner-pairings-head"></thead><tbody id="owner-pairings"></tbody></table></div>
     </details>
     <section class="card section">
       <div class="head">Weboldal látogatottság · privacy-barát statisztika</div>
@@ -76,23 +76,26 @@
       item.persistent_owner=true;
       return item;
     }
-    function pairingRow(p,{current=false,allowIdentify=false}={}){
+    function pairingRow(p,{current=false,allowIdentify=false,includeAction=false}={}){
       const state=current
         ? '<span class="pill good">Saját HA · minden hang elérhető</span>'
         : '<span class="pill good">Aktív</span>';
       const identifyButton=!current&&allowIdentify&&p.pair_code
         ? '<button class="btn" onclick="rememberOwnerPairCode(\''+esc(p.pair_code)+'\',\''+esc(p.client_suffix||'')+'\')">Saját HA kijelölése</button>'
         : '';
-      const action=identifyButton?'<div class="actions">'+identifyButton+'</div>':'<span class="small">—</span>';
+      const actionCell=includeAction
+        ? '<td>'+(identifyButton?'<div class="actions">'+identifyButton+'</div>':'<span class="small">—</span>')+'</td>'
+        : '';
       const email=p.account_email
         ? '<span>'+esc(p.account_email)+'</span>'
         : '<span class="small">Anonim · nincs kapcsolt email</span>';
       const expires=current&&p.persistent_owner?'Nem jár le':fmt(p.expires_at);
-      return '<tr class="'+(current?'pair-row-current':'')+'"><td>'+(current?'<span class="pill good">Ez a HA</span> ':'')+esc(fmt(p.created_at))+'</td><td class="mono">…'+esc(p.client_suffix||'')+'</td><td>'+email+'</td><td>'+esc(expires)+'</td><td>'+state+'</td><td>'+action+'</td></tr>';
+      return '<tr class="'+(current?'pair-row-current':'')+'"><td>'+(current?'<span class="pill good">Ez a HA</span> ':'')+esc(fmt(p.created_at))+'</td><td class="mono">…'+esc(p.client_suffix||'')+'</td><td>'+email+'</td><td>'+esc(expires)+'</td><td>'+state+'</td>'+actionCell+'</tr>';
     }
     async function ownerPairingRows(items){
       const currentHost=document.getElementById('owner-current-pairing');
       const othersBody=document.getElementById('owner-pairings');
+      const othersHead=document.getElementById('owner-pairings-head');
       const othersCount=document.getElementById('owner-other-count');
       const othersDetails=document.getElementById('owner-other-pairings');
 
@@ -128,21 +131,23 @@
       }
 
       if(currentItem){
-        currentHost.innerHTML='<div class="table-wrap"><table><thead><tr><th>Létrehozva</th><th>HA azonosító</th><th>Kapcsolt email</th><th>Lejár</th><th>Állapot</th><th>Művelet</th></tr></thead><tbody>'+pairingRow(currentItem,{current:true,allowIdentify:false})+'</tbody></table></div>';
+        currentHost.innerHTML='<div class="table-wrap"><table><thead><tr><th>Létrehozva</th><th>HA azonosító</th><th>Kapcsolt email</th><th>Lejár</th><th>Állapot</th></tr></thead><tbody>'+pairingRow(currentItem,{current:true,allowIdentify:false,includeAction:false})+'</tbody></table></div>';
       }else{
         currentHost.innerHTML='<div class="pairing-current-empty">A saját Home Assistant még nincs beazonosítva. Ha az emailes Hangbolt-fiókodhoz már kapcsolódik, jelentkezz be ugyanebben a böngészőben; egyébként lent egyszer válaszd ki a saját HA-dat. Az első sikeres azonosítás után a tulajdonosi jelölés tartós marad.</div>';
       }
 
       const others=items.filter(p=>p.active_pairing!==false&&(!currentItem||p.client_suffix!==currentItem.client_suffix));
+      const needsIdentify=!currentItem;
+      if(othersHead)othersHead.innerHTML='<tr><th>Létrehozva</th><th>HA azonosító</th><th>Kapcsolt email</th><th>Lejár</th><th>Állapot</th>'+(needsIdentify?'<th>Művelet</th>':'')+'</tr>';
       if(othersCount)othersCount.textContent=others.length+' aktív ANTHBOT Map telepítés hangcsomag-támogatással';
       if(!others.length){
-        othersBody.innerHTML='<tr><td colspan="6" class="empty">Nincs más aktív Hangbolt-kompatibilis ANTHBOT Map telepítés.</td></tr>';
+        othersBody.innerHTML='<tr><td colspan="'+(needsIdentify?'6':'5')+'" class="empty">Nincs más aktív Hangbolt-kompatibilis ANTHBOT Map telepítés.</td></tr>';
         if(othersDetails)othersDetails.open=false;
         return;
       }
       othersBody.innerHTML=others.map((p,index)=>{
         const newest=index===0?'<span class="pill good">Legfrissebb</span> ':'';
-        return pairingRow({...p,created_at:p.created_at},{current:false,allowIdentify:!currentItem}).replace('<td>','<td>'+newest);
+        return pairingRow({...p,created_at:p.created_at},{current:false,allowIdentify:needsIdentify,includeAction:needsIdentify}).replace('<td>','<td>'+newest);
       }).join('');
     }
 
