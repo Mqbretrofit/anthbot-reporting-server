@@ -38,6 +38,7 @@ _CURRENCY_RE = re.compile(r"^[a-zA-Z]{3}$")
 _SESSION_RE = re.compile(r"^cs_[A-Za-z0-9_]+$")
 _LICENSE_RE = re.compile(r"^abv1\.([A-Za-z0-9_-]+)\.([0-9a-f]{64})$")
 _OWNER_ACCESS_RE = re.compile(r"^abo1\.([A-Za-z0-9_-]+)\.([0-9a-f]{64})$")
+_ADMIN_GRANT_RE = re.compile(r"^abg1\.([A-Za-z0-9_-]+)\.([0-9a-f]{64})$")
 _PAIR_RE = re.compile(r"^abp_[A-Za-z0-9_-]{24,128}$")
 _CLIENT_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{32,512}$")
 _STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300
@@ -535,6 +536,18 @@ class StoreAccountLinkPayload(OwnerPairPayload):
     pass
 
 
+class AdminVoiceGrantPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    user_id: str = Field(min_length=1, max_length=160)
+    pack_id: str = Field(min_length=1, max_length=160)
+
+    @field_validator("user_id", "pack_id")
+    @classmethod
+    def _strip_identifiers(cls, value: str) -> str:
+        return value.strip()
+
+
 class StorePricingPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -767,6 +780,20 @@ def _init_store_tables() -> None:
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS store_admin_voice_grants (
+                grant_id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                voice_id TEXT NOT NULL,
+                pack_id TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                UNIQUE(user_id, voice_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_store_admin_voice_grants_user
+                ON store_admin_voice_grants(user_id);
+            CREATE INDEX IF NOT EXISTS idx_store_admin_voice_grants_voice
+                ON store_admin_voice_grants(voice_id);
 
             CREATE INDEX IF NOT EXISTS idx_store_orders_pack_id
                 ON store_orders(pack_id);
@@ -1182,6 +1209,119 @@ def _revoke_owner_client(client_id: str) -> bool:
             (client_id,),
         )
     return bool(cursor.rowcount)
+
+
+def _stable_voice_id(pack: dict[str, Any]) -> str:
+    return (
+        str(pack.get("community_id", "")).strip()
+        or str(pack.get("id", "")).strip()
+    )
+
+
+def _admin_voice_grant_for_user_pack(
+    user_id: str,
+    pack: dict[str, Any],
+) -> dict[str, Any] | None:
+    _init_store_tables()
+    voice_id = _stable_voice_id(pack)
+    if not user_id or not voice_id:
+        return None
+    with core._db() as conn:
+        row = conn.execute(
+            """
+            SELECT *
+            FROM store_admin_voice_grants
+            WHERE user_id = ? AND voice_id = ?
+            LIMIT 1
+            """,
+            (user_id, voice_id),
+        ).fetchone()
+    return dict(row) if row is not None else None
+
+
+def _admin_voice_grant_by_id(grant_id: str) -> dict[str, Any] | None:
+    _init_store_tables()
+    with core._db() as conn:
+        row = conn.execute(
+            "SELECT * FROM store_admin_voice_grants WHERE grant_id = ?",
+            (grant_id,),
+        ).fetchone()
+    return dict(row) if row is not None else None
+
+
+def _resolve_admin_voice_grant_pack(grant: dict[str, Any]) -> dict[str, Any]:
+    """Resolve an admin-granted voice to its current uploaded version."""
+    voice_id = str(grant.get("voice_id") or "").strip()
+    if voice_id:
+        try:
+            return _find_uploaded_pack_by_community_id(voice_id)
+        except HTTPException:
+            pass
+    return _find_uploaded_pack(str(grant.get("pack_id") or "").strip())
+
+
+def _admin_grant_access_for_pack(
+    grant: dict[str, Any],
+    pack: dict[str, Any],
+) -> str:
+    """Return a signed, revocable non-purchase download token."""
+    secret = _license_secret()
+    if not secret:
+        raise HTTPException(
+            status_code=503,
+            detail="voice store license secret is not configured",
+        )
+    grant_id = str(grant.get("grant_id") or "").strip()
+    voice_id = _stable_voice_id(pack)
+    if not grant_id or not voice_id:
+        raise HTTPException(status_code=401, detail="invalid granted voice access")
+    payload = f"{grant_id}|{voice_id}"
+    encoded = (
+        base64.urlsafe_b64encode(payload.encode("utf-8"))
+        .decode("ascii")
+        .rstrip("=")
+    )
+    signature = hmac.new(
+        secret.encode("utf-8"),
+        f"admin-grant|{payload}".encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return f"abg1.{encoded}.{signature}"
+
+
+def _admin_grant_from_token(
+    grant_token: str,
+    pack: dict[str, Any],
+) -> dict[str, Any]:
+    """Validate a current admin grant for one stable voice."""
+    match = _ADMIN_GRANT_RE.fullmatch(grant_token.strip())
+    if not match:
+        raise HTTPException(status_code=401, detail="invalid granted voice access")
+
+    encoded, supplied_signature = match.groups()
+    padding = "=" * ((4 - len(encoded) % 4) % 4)
+    try:
+        payload = base64.urlsafe_b64decode(
+            (encoded + padding).encode("ascii")
+        ).decode("utf-8")
+        grant_id, voice_id = payload.split("|", 1)
+    except (ValueError, UnicodeDecodeError):
+        raise HTTPException(status_code=401, detail="invalid granted voice access")
+
+    stable_voice_id = _stable_voice_id(pack)
+    grant = _admin_voice_grant_by_id(grant_id)
+    if (
+        grant is None
+        or not voice_id
+        or voice_id != stable_voice_id
+        or str(grant.get("voice_id") or "").strip() != voice_id
+    ):
+        raise HTTPException(status_code=401, detail="granted voice access is not active")
+
+    expected = _admin_grant_access_for_pack(grant, pack).rsplit(".", 1)[1]
+    if not secrets.compare_digest(supplied_signature, expected):
+        raise HTTPException(status_code=401, detail="invalid granted voice access")
+    return grant
 
 
 def _owner_access_for_pack(client_id: str, pack: dict[str, Any]) -> str:
@@ -3186,9 +3326,12 @@ def store_voice_packs(request: Request) -> dict[str, Any]:
                 )
             except HTTPException:
                 order = None
-            public["owned"] = order is not None
-            if order is not None:
+            grant = _admin_voice_grant_for_user_pack(user_id, record)
+            public["owned"] = order is not None or grant is not None
+            if public["owned"]:
                 public["ownership"] = "web"
+            if grant is not None and order is None:
+                public["entitlement"] = "admin_grant"
         packs.append(public)
     catalog["packs"] = packs
     return catalog
@@ -3216,12 +3359,17 @@ async def create_store_client_checkout(
         user_id,
         record,
     )
-    if existing_order is not None:
+    existing_grant = _admin_voice_grant_for_user_pack(user_id, record)
+    if existing_order is not None or existing_grant is not None:
         return {
             "already_owned": True,
             "pack_id": payload.pack_id,
             "checkout_url": None,
-            "session_id": existing_order["stripe_session_id"],
+            "session_id": (
+                existing_order["stripe_session_id"]
+                if existing_order is not None
+                else None
+            ),
         }
 
     session = await asyncio.to_thread(
@@ -3328,6 +3476,7 @@ def store_client_entitlements(
             "packs": owner_packs,
         }
     linked_user_id = store_accounts.user_id_for_client(client_id)
+    grant_rows: list[Any] = []
     with core._db() as conn:
         if linked_user_id:
             rows = conn.execute(
@@ -3337,6 +3486,15 @@ def store_client_entitlements(
                 WHERE user_id = ?
                   AND payment_status = 'paid'
                 ORDER BY COALESCE(paid_at, updated_at) DESC
+                """,
+                (linked_user_id,),
+            ).fetchall()
+            grant_rows = conn.execute(
+                """
+                SELECT *
+                FROM store_admin_voice_grants
+                WHERE user_id = ?
+                ORDER BY created_at DESC
                 """,
                 (linked_user_id,),
             ).fetchall()
@@ -3388,6 +3546,31 @@ def store_client_entitlements(
             f"?license={quote(license_key)}"
         )
         public["entitlement"] = "purchased"
+        packs.append(public)
+        seen_voice_ids.add(stable_voice_id)
+
+    for row in grant_rows:
+        grant = dict(row)
+        try:
+            pack = _resolve_admin_voice_grant_pack(grant)
+        except HTTPException:
+            continue
+        if not _is_paid(pack):
+            continue
+
+        current_pack_id = str(pack.get("id", "")).strip()
+        stable_voice_id = _stable_voice_id(pack)
+        if not current_pack_id or not stable_voice_id or stable_voice_id in seen_voice_ids:
+            continue
+
+        grant_token = _admin_grant_access_for_pack(grant, pack)
+        public = _public_paid_pack(pack, request)
+        public["music_url"] = (
+            f"{base}/api/anthbot/store/voice-packs/{quote(current_pack_id)}/grant-download"
+            f"?grant={quote(grant_token)}"
+        )
+        public["entitlement"] = "admin_grant"
+        public["admin_grant"] = True
         packs.append(public)
         seen_voice_ids.add(stable_voice_id)
 
@@ -3495,12 +3678,17 @@ async def create_store_checkout(
         user_id,
         record,
     )
-    if existing_order is not None:
+    existing_grant = _admin_voice_grant_for_user_pack(user_id, record)
+    if existing_order is not None or existing_grant is not None:
         return {
             "already_owned": True,
             "pack_id": payload.pack_id,
             "checkout_url": None,
-            "session_id": existing_order["stripe_session_id"],
+            "session_id": (
+                existing_order["stripe_session_id"]
+                if existing_order is not None
+                else None
+            ),
             "entitlement_scope": entitlement_scope,
         }
 
@@ -3579,11 +3767,14 @@ async def direct_map_store_checkout(
     )
     session_id = str(result.get("session_id") or "").strip()
     if result.get("already_owned"):
-        if not session_id:
-            raise HTTPException(status_code=409, detail="voice pack is already owned")
         base = core._public_base_url(request)
+        if session_id:
+            return RedirectResponse(
+                url=f"{base}/store/success?session_id={quote(session_id)}",
+                status_code=303,
+            )
         return RedirectResponse(
-            url=f"{base}/store/success?session_id={quote(session_id)}",
+            url=f"{base}/store?pair={quote(pair_code)}",
             status_code=303,
         )
 
@@ -3886,6 +4077,34 @@ def download_paid_voice_pack(
     )
 
 
+@router.get("/api/anthbot/store/voice-packs/{pack_id}/grant-download")
+def download_granted_voice_pack(
+    pack_id: str,
+    grant: str,
+) -> FileResponse:
+    """Serve one paid voice through a revocable admin-granted entitlement."""
+    pack = _find_uploaded_pack(pack_id)
+    _admin_grant_from_token(grant, pack)
+    if not _is_paid(pack):
+        raise HTTPException(status_code=404, detail="paid voice pack not found")
+
+    filename = str(pack.get("filename", "")).strip()
+    if (
+        not filename
+        or Path(filename).name != filename
+        or not core._VOICE_PACK_SAFE_PART.fullmatch(filename)
+    ):
+        raise HTTPException(status_code=404, detail="paid voice pack not found")
+    path = core._voice_pack_dir() / filename
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="paid voice pack not found")
+    return FileResponse(
+        path,
+        media_type="application/octet-stream",
+        headers={"Cache-Control": "private, no-store"},
+    )
+
+
 @router.get("/api/anthbot/store/voice-packs/{pack_id}/owner-download")
 def download_owner_voice_pack(
     pack_id: str,
@@ -3964,11 +4183,31 @@ def admin_store_accounts(limit: int = 200) -> dict[str, Any]:
             """,
             (limit,),
         ).fetchall()
+        grant_rows = conn.execute(
+            """
+            SELECT grant_id, user_id, voice_id, pack_id, created_at, updated_at
+            FROM store_admin_voice_grants
+            ORDER BY created_at DESC
+            """
+        ).fetchall()
+
+    grants_by_user: dict[str, list[dict[str, Any]]] = {}
+    for row in grant_rows:
+        grants_by_user.setdefault(str(row["user_id"]), []).append(
+            {
+                "grant_id": str(row["grant_id"]),
+                "voice_id": str(row["voice_id"]),
+                "pack_id": str(row["pack_id"]),
+                "created_at": row["created_at"],
+                "updated_at": row["updated_at"],
+            }
+        )
 
     return {
         "count": total,
         "items": [
             {
+                "user_id": str(row["user_id"]),
                 "email": str(row["email"]),
                 "email_verified": bool(row["email_verified"]),
                 "preferred_language": str(row["preferred_language"] or "en"),
@@ -3976,10 +4215,123 @@ def admin_store_accounts(limit: int = 200) -> dict[str, Any]:
                 "updated_at": row["updated_at"],
                 "linked_map_count": int(row["linked_map_count"] or 0),
                 "purchased_count": int(row["purchased_count"] or 0),
+                "granted_count": len(grants_by_user.get(str(row["user_id"]), [])),
+                "grants": grants_by_user.get(str(row["user_id"]), []),
                 "last_seen_at": row["last_seen_at"],
             }
             for row in rows
         ],
+    }
+
+
+@router.post(
+    "/api/anthbot/admin/store/grants",
+    dependencies=[Depends(core.require_admin)],
+)
+def admin_grant_voice_access(payload: AdminVoiceGrantPayload) -> dict[str, Any]:
+    """Grant one paid voice to one verified Voice Store account without Stripe."""
+    _init_store_tables()
+    store_accounts._init_account_tables()
+    pack = _find_uploaded_pack(payload.pack_id)
+    if not _is_paid(pack):
+        raise HTTPException(status_code=409, detail="only paid voice packs can be granted")
+    if _paid_order_for_user_pack(payload.user_id, pack) is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="store account already owns this voice through a paid purchase",
+        )
+
+    with core._db() as conn:
+        user = conn.execute(
+            """
+            SELECT user_id, email
+            FROM store_users
+            WHERE user_id = ? AND email_verified = 1
+            """,
+            (payload.user_id,),
+        ).fetchone()
+        if user is None:
+            raise HTTPException(status_code=404, detail="verified store account not found")
+
+        voice_id = _stable_voice_id(pack)
+        if not voice_id:
+            raise HTTPException(status_code=422, detail="voice pack has no stable id")
+        existing = conn.execute(
+            """
+            SELECT *
+            FROM store_admin_voice_grants
+            WHERE user_id = ? AND voice_id = ?
+            """,
+            (payload.user_id, voice_id),
+        ).fetchone()
+        now = core._iso()
+        if existing is None:
+            grant_id = f"abg_{secrets.token_urlsafe(12)}"
+            conn.execute(
+                """
+                INSERT INTO store_admin_voice_grants (
+                    grant_id, user_id, voice_id, pack_id, created_at, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (grant_id, payload.user_id, voice_id, payload.pack_id, now, now),
+            )
+        else:
+            grant_id = str(existing["grant_id"])
+            conn.execute(
+                """
+                UPDATE store_admin_voice_grants
+                SET pack_id = ?, updated_at = ?
+                WHERE grant_id = ?
+                """,
+                (payload.pack_id, now, grant_id),
+            )
+        row = conn.execute(
+            "SELECT * FROM store_admin_voice_grants WHERE grant_id = ?",
+            (grant_id,),
+        ).fetchone()
+
+    grant = dict(row)
+    return {
+        "granted": True,
+        "email": str(user["email"]),
+        "grant": {
+            "grant_id": str(grant["grant_id"]),
+            "user_id": str(grant["user_id"]),
+            "voice_id": str(grant["voice_id"]),
+            "pack_id": str(grant["pack_id"]),
+            "created_at": grant["created_at"],
+            "updated_at": grant["updated_at"],
+        },
+    }
+
+
+@router.delete(
+    "/api/anthbot/admin/store/grants/{grant_id}",
+    dependencies=[Depends(core.require_admin)],
+)
+def admin_revoke_voice_access(grant_id: str) -> dict[str, Any]:
+    """Revoke one non-purchase voice entitlement."""
+    normalized = grant_id.strip()
+    if not normalized or len(normalized) > 160:
+        raise HTTPException(status_code=422, detail="invalid voice grant id")
+    _init_store_tables()
+    with core._db() as conn:
+        existing = conn.execute(
+            "SELECT * FROM store_admin_voice_grants WHERE grant_id = ?",
+            (normalized,),
+        ).fetchone()
+        if existing is None:
+            raise HTTPException(status_code=404, detail="voice grant not found")
+        conn.execute(
+            "DELETE FROM store_admin_voice_grants WHERE grant_id = ?",
+            (normalized,),
+        )
+    return {
+        "revoked": True,
+        "grant_id": normalized,
+        "user_id": str(existing["user_id"]),
+        "voice_id": str(existing["voice_id"]),
     }
 
 

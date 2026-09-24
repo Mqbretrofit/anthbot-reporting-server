@@ -227,6 +227,7 @@ def _catalog(request: Request, store_token: str) -> dict[str, Any]:
     owned: set[str] = set()
     with core._db() as conn:
         if account is not None:
+            account_user_id = str(account["user_id"])
             rows = conn.execute(
                 """
                 SELECT pack_id, community_id
@@ -234,7 +235,15 @@ def _catalog(request: Request, store_token: str) -> dict[str, Any]:
                 WHERE user_id = ?
                   AND payment_status = 'paid'
                 """,
-                (str(account["user_id"]),),
+                (account_user_id,),
+            ).fetchall()
+            grant_rows = conn.execute(
+                """
+                SELECT pack_id, voice_id
+                FROM store_admin_voice_grants
+                WHERE user_id = ?
+                """,
+                (account_user_id,),
             ).fetchall()
         else:
             # Legacy browser-linked purchases remain installable while the
@@ -252,9 +261,13 @@ def _catalog(request: Request, store_token: str) -> dict[str, Any]:
                 """,
                 (client_id,),
             ).fetchall()
+            grant_rows = []
     for row in rows:
         owned.add(str(row["pack_id"] or "").strip())
         owned.add(str(row["community_id"] or "").strip())
+    for row in grant_rows:
+        owned.add(str(row["pack_id"] or "").strip())
+        owned.add(str(row["voice_id"] or "").strip())
 
     packs: list[dict[str, Any]] = []
     for item in catalog.get("packs", []):
@@ -329,9 +342,15 @@ def _resolve_pack(
     if raw is not None:
         if store_api._is_paid(raw):
             account = store_accounts.current_user(request)
+            grant = None
             if account is not None:
+                user_id = str(account["user_id"])
                 order = store_api._paid_order_for_user_pack(
-                    str(account["user_id"]),
+                    user_id,
+                    raw,
+                )
+                grant = store_api._admin_voice_grant_for_user_pack(
+                    user_id,
                     raw,
                 )
             else:
@@ -341,17 +360,24 @@ def _resolve_pack(
                     raw,
                     entitlement_scope="web",
                 )
-            if order is None:
+            if order is None and grant is None:
                 raise HTTPException(
                     status_code=402,
-                    detail="This voice pack has not been purchased by this Voice Store account.",
+                    detail="This voice pack has not been unlocked for this Voice Store account.",
                 )
-            license_key = store_api._license_for_order(order)
             base = core._public_base_url(request)
-            music_url = (
-                f"{base}/api/anthbot/store/voice-packs/{quote(pack_id)}/download"
-                f"?license={quote(license_key)}"
-            )
+            if order is not None:
+                license_key = store_api._license_for_order(order)
+                music_url = (
+                    f"{base}/api/anthbot/store/voice-packs/{quote(pack_id)}/download"
+                    f"?license={quote(license_key)}"
+                )
+            else:
+                grant_token = store_api._admin_grant_access_for_pack(grant, raw)
+                music_url = (
+                    f"{base}/api/anthbot/store/voice-packs/{quote(pack_id)}/grant-download"
+                    f"?grant={quote(grant_token)}"
+                )
         else:
             music_url = str(core._public_voice_pack(raw, request).get("music_url") or "")
         pack = dict(raw)
@@ -592,7 +618,8 @@ async def installer_checkout(payload: CheckoutPayload, request: Request) -> Resp
         user_id,
         record,
     )
-    if existing is not None:
+    grant = store_api._admin_voice_grant_for_user_pack(user_id, record)
+    if existing is not None or grant is not None:
         return _json(
             {
                 "already_owned": True,
