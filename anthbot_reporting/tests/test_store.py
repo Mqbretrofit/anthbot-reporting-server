@@ -2559,6 +2559,137 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIsNotNone(account["created_at"])
         self.assertIsNotNone(account["last_seen_at"])
 
+    def test_admin_can_grant_and_revoke_one_voice_without_creating_sale(self) -> None:
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        priced = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        self.assertEqual(priced.status_code, 200)
+
+        account = self._login_store_account("gift-user@example.test")
+        user_id = account["_user_id"]
+        client_token = "G" * 48
+        pairing = self.client.post(
+            "/api/anthbot/store/client/pair",
+            json={"client_token": client_token},
+        )
+        self.assertEqual(pairing.status_code, 200)
+        pair_code = pairing.json()["store_url"].split("pair=", 1)[1]
+        self._link_store_account_to_pair(pair_code)
+
+        denied = self.client.post(
+            "/api/anthbot/admin/store/grants",
+            json={"user_id": user_id, "pack_id": pack_id},
+        )
+        self.assertEqual(denied.status_code, 401)
+
+        granted = self.client.post(
+            "/api/anthbot/admin/store/grants",
+            headers=self._admin_headers(),
+            json={"user_id": user_id, "pack_id": pack_id},
+        )
+        self.assertEqual(granted.status_code, 200)
+        grant_id = granted.json()["grant"]["grant_id"]
+        self.assertEqual(granted.json()["grant"]["voice_id"], "cs_vlasta_standard")
+
+        accounts = self.client.get(
+            "/api/anthbot/admin/store/accounts",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(accounts.status_code, 200)
+        listed = next(
+            item for item in accounts.json()["items"]
+            if item["email"] == "gift-user@example.test"
+        )
+        self.assertEqual(listed["user_id"], user_id)
+        self.assertEqual(listed["purchased_count"], 0)
+        self.assertEqual(listed["granted_count"], 1)
+        self.assertEqual(listed["grants"][0]["grant_id"], grant_id)
+
+        catalog = self.client.get("/api/anthbot/store/voice-packs")
+        self.assertEqual(catalog.status_code, 200)
+        catalog_pack = next(
+            item for item in catalog.json()["packs"] if item["id"] == pack_id
+        )
+        self.assertTrue(catalog_pack["owned"])
+        self.assertEqual(catalog_pack["ownership"], "web")
+        self.assertEqual(catalog_pack["entitlement"], "admin_grant")
+
+        entitlements = self.client.post(
+            "/api/anthbot/store/client/entitlements",
+            json={"client_token": client_token},
+        )
+        self.assertEqual(entitlements.status_code, 200)
+        self.assertTrue(entitlements.json()["licensed"])
+        entitled = next(
+            item for item in entitlements.json()["packs"] if item["id"] == pack_id
+        )
+        self.assertEqual(entitled["entitlement"], "admin_grant")
+        self.assertTrue(entitled["admin_grant"])
+        self.assertIn("/grant-download?grant=", entitled["music_url"])
+
+        download_path = entitled["music_url"].removeprefix("https://testserver")
+        download = self.client.get(download_path)
+        self.assertEqual(download.status_code, 200)
+        self.assertEqual(download.content, b"paid-community-pack")
+
+        with patch.object(store_api, "_create_checkout_session") as create_checkout:
+            checkout = self.client.post(
+                "/api/anthbot/store/checkout",
+                json={"pack_id": pack_id, "pair_code": pair_code},
+            )
+        self.assertEqual(checkout.status_code, 200)
+        self.assertTrue(checkout.json()["already_owned"])
+        self.assertIsNone(checkout.json()["session_id"])
+        create_checkout.assert_not_called()
+
+        stats = self.client.get(
+            "/api/anthbot/admin/store/stats",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(stats.status_code, 200)
+        self.assertEqual(stats.json()["orders"], 0)
+        self.assertEqual(stats.json()["paid_orders"], 0)
+        self.assertEqual(stats.json()["revenue"], [])
+
+        admin_catalog = self.client.get(
+            "/api/anthbot/admin/store/voice-packs",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(admin_catalog.status_code, 200)
+        admin_pack = next(
+            item for item in admin_catalog.json()["items"] if item["id"] == pack_id
+        )
+        self.assertEqual(admin_pack["sales"], 0)
+
+        revoked = self.client.delete(
+            f"/api/anthbot/admin/store/grants/{grant_id}",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(revoked.status_code, 200)
+        self.assertTrue(revoked.json()["revoked"])
+
+        expired_download = self.client.get(download_path)
+        self.assertEqual(expired_download.status_code, 401)
+
+        entitlements_after = self.client.post(
+            "/api/anthbot/store/client/entitlements",
+            json={"client_token": client_token},
+        )
+        self.assertEqual(entitlements_after.status_code, 200)
+        self.assertFalse(entitlements_after.json()["licensed"])
+        self.assertEqual(entitlements_after.json()["packs"], [])
+
+        catalog_after = self.client.get("/api/anthbot/store/voice-packs")
+        catalog_pack_after = next(
+            item for item in catalog_after.json()["packs"] if item["id"] == pack_id
+        )
+        self.assertFalse(catalog_pack_after["owned"])
+
+
     def test_owner_access_is_singleton(self) -> None:
         first_token = "V" * 48
         second_token = "W" * 48
