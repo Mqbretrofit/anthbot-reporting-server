@@ -35,8 +35,8 @@
         <span>Regisztrált Hangbolt-fiókok</span>
         <span class="small" id="store-account-count">0 regisztrált fiók</span>
       </div>
-      <div style="padding:12px 16px" class="small">Itt minden sikeresen email-kóddal hitelesített Hangbolt-fiók megjelenik. A HA-kapcsolat és a vásárolt hangok száma külön látszik.</div>
-      <div class="table-wrap"><table><thead><tr><th>Regisztrált</th><th>Email</th><th>HA kapcsolat</th><th>Vásárolt hang</th><th>Utolsó bejelentkezés</th><th>Nyelv</th></tr></thead><tbody id="store-accounts"></tbody></table></div>
+      <div style="padding:12px 16px" class="small">Itt minden sikeresen email-kóddal hitelesített Hangbolt-fiók megjelenik. A HA-kapcsolat és a vásárolt hangok mellett felhasználónként külön fizetés nélküli hang-hozzáférést is adhatsz. Ez nem hoz létre Stripe-rendelést, nem növeli az eladás/bevétel statisztikát, és később visszavonható.</div>
+      <div class="table-wrap"><table><thead><tr><th>Regisztrált</th><th>Email</th><th>HA kapcsolat</th><th>Vásárolt hang</th><th>Ingyenes hozzáférés</th><th>Hang hozzáadása</th><th>Utolsó bejelentkezés</th><th>Nyelv</th></tr></thead><tbody id="store-accounts"></tbody></table></div>
     </section>
     <section class="card section">
       <div class="head">Weboldal látogatottság · privacy-barát statisztika</div>
@@ -159,21 +159,92 @@
       }).join('');
     }
 
-    function storeAccountRows(data){
+    function storeAccountRows(data,catalogItems=[]){
       const body=document.getElementById('store-accounts');
       const count=document.getElementById('store-account-count');
       const items=(data&&data.items)||[];
       const total=Number((data&&data.count)||0);
+      const allPacks=Array.isArray(catalogItems)?catalogItems:[];
+      const grantable=allPacks.filter(p=>p&&p.access==='paid'&&!p.store_hidden);
       if(count)count.textContent=total+' regisztrált fiók';
       if(!items.length){
-        body.innerHTML='<tr><td colspan="6" class="empty">Még nincs regisztrált Hangbolt-fiók.</td></tr>';
+        body.innerHTML='<tr><td colspan="8" class="empty">Még nincs regisztrált Hangbolt-fiók.</td></tr>';
         return;
       }
+      const packForGrant=(g)=>allPacks.find(p=>{
+        const pid=String(p.id||'');
+        const voice=String(p.community_id||'')||pid;
+        return voice===String(g.voice_id||'')||pid===String(g.pack_id||'');
+      });
       body.innerHTML=items.map(a=>{
         const linked=Number(a.linked_map_count||0);
         const purchased=Number(a.purchased_count||0);
-        return '<tr><td>'+esc(fmt(a.created_at))+'</td><td><strong>'+esc(a.email||'—')+'</strong></td><td>'+(linked?'<span class="pill good">'+esc(linked)+' kapcsolt HA</span>':'<span class="small">Nincs kapcsolt HA</span>')+'</td><td>'+esc(purchased)+'</td><td>'+esc(fmt(a.last_seen_at))+'</td><td>'+esc(a.preferred_language||'—')+'</td></tr>';
+        const grants=Array.isArray(a.grants)?a.grants:[];
+        const grantVoiceIds=new Set(grants.map(g=>String(g.voice_id||'')));
+        const grantList=grants.length
+          ? grants.map(g=>{
+              const p=packForGrant(g);
+              const label=p
+                ? [p.language||p.english_name||p.id,p.variant_name||p.community_id||''].filter(Boolean).join(' · ')
+                : (g.voice_id||g.pack_id||'Ismeretlen hang');
+              return '<div class="actions" style="margin:3px 0"><span class="pill good">'+esc(label)+'</span><button class="btn danger" type="button" data-grant-id="'+esc(g.grant_id||'')+'" onclick="revokeVoiceGrant(this)">Visszavonás</button></div>';
+            }).join('')
+          : '<span class="small">Nincs kézzel adott hang</span>';
+        const options=grantable
+          .filter(p=>{
+            const voice=String(p.community_id||'')||String(p.id||'');
+            return !grantVoiceIds.has(voice);
+          })
+          .map(p=>{
+            const label=[p.language||p.english_name||p.id,p.variant_name||p.community_id||''].filter(Boolean).join(' · ');
+            return '<option value="'+esc(p.id||'')+'">'+esc(label)+'</option>';
+          }).join('');
+        const grantControl=options
+          ? '<div class="actions"><select class="control grant-pack-select"><option value="">Válassz hangot…</option>'+options+'</select><button class="btn primary" type="button" onclick="grantVoice(this)">Ingyenes hozzáadás</button></div>'
+          : '<span class="small">Nincs további adható fizetős hang.</span>';
+        return '<tr data-user-id="'+esc(a.user_id||'')+'"><td>'+esc(fmt(a.created_at))+'</td><td><strong>'+esc(a.email||'—')+'</strong></td><td>'+(linked?'<span class="pill good">'+esc(linked)+' kapcsolt HA</span>':'<span class="small">Nincs kapcsolt HA</span>')+'</td><td>'+esc(purchased)+'</td><td>'+grantList+'</td><td>'+grantControl+'</td><td>'+esc(fmt(a.last_seen_at))+'</td><td>'+esc(a.preferred_language||'—')+'</td></tr>';
       }).join('');
+    }
+
+    async function grantVoice(button){
+      const row=button.closest('tr');
+      const select=row&&row.querySelector('.grant-pack-select');
+      const userId=row?String(row.dataset.userId||''):'';
+      const packId=select?String(select.value||''):'';
+      if(!userId||!packId){
+        alert('Válassz ki egy hangcsomagot.');
+        return;
+      }
+      button.disabled=true;
+      if(select)select.disabled=true;
+      try{
+        await api('/api/anthbot/admin/store/grants',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({user_id:userId,pack_id:packId})
+        });
+        await load();
+      }catch(e){
+        button.disabled=false;
+        if(select)select.disabled=false;
+        alert('Ingyenes hang hozzáadási hiba: '+e.message);
+      }
+    }
+
+    async function revokeVoiceGrant(button){
+      const grantId=String(button.dataset.grantId||'');
+      if(!grantId)return;
+      if(!confirm('Biztosan visszavonod ezt az ingyenes hang-hozzáférést?'))return;
+      button.disabled=true;
+      try{
+        await api('/api/anthbot/admin/store/grants/'+encodeURIComponent(grantId),{
+          method:'DELETE'
+        });
+        await load();
+      }catch(e){
+        button.disabled=false;
+        alert('Ingyenes hang visszavonási hiba: '+e.message);
+      }
     }
 
     async function save(id,select){
@@ -370,7 +441,7 @@
         const revenue=(stats.revenue||[]).map(x=>money(x.amount,x.currency)).join(' + ')||money(0,'eur');
         document.getElementById('kpis').innerHTML=kpi('Feltöltött csomag',catalog.items.length)+kpi('Rendelés',stats.orders||0)+kpi('Fizetett rendelés',stats.paid_orders||0)+kpi('Bevétel',revenue);
         document.getElementById('status').innerHTML='<span class="pill good">Tulajdonosi hozzáférés: minden csomag letölthető</span><span class="pill '+(stats.store_enabled?'good':'warn')+'">Store: '+(stats.store_enabled?'bekapcsolva':'kikapcsolva')+'</span><span class="pill '+(stats.checkout_ready?'good':'warn')+'">Stripe: '+(stats.checkout_ready?'kész':'nincs teljesen konfigurálva')+'</span><span class="pill '+(stats.automatic_tax?'good':'warn')+'">Stripe automatic tax: '+(stats.automatic_tax?'be':'ki')+'</span><span class="small">A tulajdonosi letöltés admin jogosultsághoz kötött, nem hoz létre rendelést vagy licencet. A fizetős csomagok publikus letöltése továbbra is vásárláshoz kötött.</span>';
-        await ownerPairingRows(ownerPairings.items||[]);storeAccountRows(storeAccounts);analyticsRows(siteAnalytics);packRows(catalog.items||[]);customRequestRows(customRequests.items||[]);privacyRequestRows(privacyRequests.items||[]);orderRows(orders.items||[]);
+        await ownerPairingRows(ownerPairings.items||[]);storeAccountRows(storeAccounts,catalog.items||[]);analyticsRows(siteAnalytics);packRows(catalog.items||[]);customRequestRows(customRequests.items||[]);privacyRequestRows(privacyRequests.items||[]);orderRows(orders.items||[]);
       }catch(e){document.getElementById('status').innerHTML='<span style="color:#ffc4cc">Hiba: '+esc(e.message)+'</span>'}
     }
     document.getElementById('refresh').onclick=load;document.getElementById('delete-test-orders').onclick=deleteAllTestOrders;document.getElementById('delete-all-orders').onclick=deleteAllLocalOrders;load();
