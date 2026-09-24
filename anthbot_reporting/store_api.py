@@ -4235,6 +4235,11 @@ def admin_grant_voice_access(payload: AdminVoiceGrantPayload) -> dict[str, Any]:
     pack = _find_uploaded_pack(payload.pack_id)
     if not _is_paid(pack):
         raise HTTPException(status_code=409, detail="only paid voice packs can be granted")
+    if _paid_order_for_user_pack(payload.user_id, pack) is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="store account already owns this voice through a paid purchase",
+        )
 
     with core._db() as conn:
         user = conn.execute(
