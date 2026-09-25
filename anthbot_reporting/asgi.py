@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from app import app as fastapi_app
-from presence_api import init_presence_tables, router as presence_router
+from presence_api import router as presence_router
 from developer_agent_api import (
     init_developer_agent_tables,
     router as developer_agent_router,
@@ -15,7 +15,6 @@ fastapi_app.include_router(developer_agent_router)
 fastapi_app.include_router(developer_agent_dashboard_router)
 fastapi_app.include_router(diagnostics_dashboard_router)
 fastapi_app.include_router(presence_router)
-init_presence_tables()
 
 _FRAME_ANCESTORS = (
     "'self' "
