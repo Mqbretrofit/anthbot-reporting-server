@@ -1,0 +1,116 @@
+name: Add presence dashboard once
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[presence-dashboard-applied]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - shell: python
+        run: |
+          from pathlib import Path
+
+          app = Path('anthbot_reporting/app.py')
+          s = app.read_text(encoding='utf-8')
+          marker = '@app.get("/api/anthbot/admin/stats", dependencies=[Depends(require_admin)])\n'
+          endpoint = '''@app.get("/api/anthbot/admin/presence-stats", dependencies=[Depends(require_admin)])
+def admin_presence_stats() -> dict[str, Any]:
+    now = _utcnow()
+    since_24h = _iso(now - timedelta(hours=24))
+    since_7d = _iso(now - timedelta(days=7))
+    since_30d = _iso(now - timedelta(days=30))
+    with _db() as conn:
+        conn.executescript("""
+        CREATE TABLE IF NOT EXISTS installation_presence (
+            install_id TEXT PRIMARY KEY, version TEXT NOT NULL,
+            first_seen TEXT NOT NULL, last_seen TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS installation_presence_models (
+            install_id TEXT NOT NULL, model TEXT NOT NULL,
+            first_seen TEXT NOT NULL, last_seen TEXT NOT NULL,
+            PRIMARY KEY (install_id, model)
+        );
+        """)
+        total = conn.execute("SELECT COUNT(*) FROM installation_presence").fetchone()[0]
+        active_24h = conn.execute("SELECT COUNT(*) FROM installation_presence WHERE last_seen >= ?", (since_24h,)).fetchone()[0]
+        active_7d = conn.execute("SELECT COUNT(*) FROM installation_presence WHERE last_seen >= ?", (since_7d,)).fetchone()[0]
+        active_30d = conn.execute("SELECT COUNT(*) FROM installation_presence WHERE last_seen >= ?", (since_30d,)).fetchone()[0]
+        versions = [dict(r) for r in conn.execute("SELECT version AS name, COUNT(*) AS count FROM installation_presence GROUP BY version ORDER BY count DESC, name ASC").fetchall()]
+        models = [dict(r) for r in conn.execute("SELECT model AS name, COUNT(DISTINCT install_id) AS count FROM installation_presence_models GROUP BY model ORDER BY count DESC, name ASC").fetchall()]
+        rows = conn.execute("""SELECT p.install_id, p.version, p.first_seen, p.last_seen,
+            GROUP_CONCAT(m.model, ' | ') AS models
+            FROM installation_presence p LEFT JOIN installation_presence_models m ON m.install_id=p.install_id
+            GROUP BY p.install_id, p.version, p.first_seen, p.last_seen
+            ORDER BY p.last_seen DESC LIMIT 500""").fetchall()
+    return {
+        "generated_at": _iso(now),
+        "total": total, "active_24h": active_24h, "active_7d": active_7d, "active_30d": active_30d,
+        "by_version": versions, "by_model": models, "items": [dict(r) for r in rows],
+    }
+
+
+'''
+          if 'def admin_presence_stats()' not in s:
+              if marker not in s: raise SystemExit('admin stats anchor missing')
+              s = s.replace(marker, endpoint + marker, 1)
+              app.write_text(s, encoding='utf-8')
+
+          dash = Path('anthbot_reporting/dashboard.html')
+          d = dash.read_text(encoding='utf-8')
+          d = d.replace("const state = { stats: null, installations: [], diagnostics: [], sort: 'last_seen', order: 'desc' };",
+                        "const state = { stats: null, presence: null, installations: [], diagnostics: [], sort: 'last_seen', order: 'desc' };")
+          anchor = '          <div class="card filters">\n'
+          block = '''          <div class="card section" style="margin-bottom:18px">
+            <div class="section-head"><div><div class="section-title">Aktív ANTHBOT Map telepítések</div><div class="small">Minimális presence heartbeat — install_id + verzió + modell</div></div><div class="small">Frissítve: ${fmt(state.presence?.generated_at)}</div></div>
+            <div class="grid kpis" style="margin-bottom:18px">
+              ${kpi('Összes telepítés', state.presence?.total ?? 0, 'Egyedi Anthbot Map install_id')}
+              ${kpi('Aktív 24 óra', state.presence?.active_24h ?? 0, 'Heartbeat az elmúlt 24 órában')}
+              ${kpi('Aktív 7 nap', state.presence?.active_7d ?? 0, 'Heartbeat az elmúlt 7 napban')}
+              ${kpi('Aktív 30 nap', state.presence?.active_30d ?? 0, 'Heartbeat az elmúlt 30 napban')}
+              ${kpi('Modellek', state.presence?.by_model?.length ?? 0, 'Különböző jelentett modellek')}
+            </div>
+            <div class="grid section-grid" style="margin-bottom:18px">
+              <div><div class="section-head"><div class="section-title">Verzióeloszlás</div></div>${bars(state.presence?.by_version || [])}</div>
+              <div><div class="section-head"><div class="section-title">Modellmegoszlás</div></div>${bars(state.presence?.by_model || [])}</div>
+            </div>
+            <div class="table-wrap"><table><thead><tr><th>Telepítés</th><th>Verzió</th><th>Modellek</th><th>Első jelentkezés</th><th>Utolsó jelentkezés</th></tr></thead><tbody>
+              ${(state.presence?.items || []).map(r => `<tr><td class="mono" title="${esc(r.install_id)}">${esc(shortId(r.install_id))}</td><td>${esc(r.version)}</td><td>${esc(r.models || '—')}</td><td>${esc(fmt(r.first_seen))}</td><td>${esc(fmt(r.last_seen))}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">Még nem érkezett presence heartbeat.</td></tr>'}
+            </tbody></table></div>
+          </div>
+'''
+          if 'Aktív ANTHBOT Map telepítések' not in d:
+              if anchor not in d: raise SystemExit('dashboard anchor missing')
+              d = d.replace(anchor, block + anchor, 1)
+          old = '''      const [stats, installations, diagnostics] = await Promise.all([
+        api('/api/anthbot/admin/stats'),
+        api('/api/anthbot/admin/installations?sort=last_seen&order=desc&limit=500'),
+        api('/api/anthbot/admin/diagnostics?limit=500')
+      ]);
+      state.stats = stats; state.installations = installations.items || []; state.diagnostics = diagnostics.items || [];'''
+          new = '''      const [stats, presence, installations, diagnostics] = await Promise.all([
+        api('/api/anthbot/admin/stats'),
+        api('/api/anthbot/admin/presence-stats'),
+        api('/api/anthbot/admin/installations?sort=last_seen&order=desc&limit=500'),
+        api('/api/anthbot/admin/diagnostics?limit=500')
+      ]);
+      state.stats = stats; state.presence = presence; state.installations = installations.items || []; state.diagnostics = diagnostics.items || [];'''
+          if old in d: d = d.replace(old, new, 1)
+          elif "api('/api/anthbot/admin/presence-stats')" not in d: raise SystemExit('loadAll anchor missing')
+          dash.write_text(d, encoding='utf-8')
+
+          cfg = Path('anthbot_reporting/config.yaml')
+          c = cfg.read_text(encoding='utf-8')
+          c = c.replace('version: "1.0.16"', 'version: "1.0.17"', 1)
+          cfg.write_text(c, encoding='utf-8')
+      - shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add anthbot_reporting/app.py anthbot_reporting/dashboard.html anthbot_reporting/config.yaml
+          git diff --cached --quiet && exit 0
+          git commit -m "feat: show presence installation statistics in admin dashboard [presence-dashboard-applied]"
+          git push
