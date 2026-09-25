@@ -105,7 +105,7 @@ def _version_tuple(value: str | None) -> tuple[int, ...] | None:
         return None
     parts: list[int] = []
     for chunk in value.strip().split("."):
-        match = re.match(r"^(\\d+)", chunk)
+        match = re.match(r"^(\d+)", chunk)
         if match is None:
             break
         parts.append(int(match.group(1)))
