@@ -1,5 +1,5 @@
 name: ANTHBOT Reporting Server
-version: "1.0.21"
+version: "1.0.22"
 slug: anthbot_reporting
 description: ANTHBOT Map presence, opt-in telemetry, diagnostics, and admin dashboard backend
 url: https://github.com/Mqbretrofit/anthbot-reporting-server/tree/main/anthbot_reporting
