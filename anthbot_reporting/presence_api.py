@@ -5,6 +5,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 import json
 import os
+import re
 from pathlib import Path
 import sqlite3
 from uuid import UUID
@@ -94,27 +95,247 @@ def presence_heartbeat(payload: PresencePayload) -> dict[str, bool]:
     return {"ok": True}
 
 
+_PRESENCE_FALLBACK_MIN_VERSION = (2, 4, 9, 2)
+_PRESENCE_RECONCILE_WINDOW = timedelta(minutes=2)
+
+
+def _version_tuple(value: str | None) -> tuple[int, ...] | None:
+    """Return the leading numeric version components used for feature gating."""
+    if not isinstance(value, str):
+        return None
+    parts: list[int] = []
+    for chunk in value.strip().split("."):
+        match = re.match(r"^(\d+)", chunk)
+        if match is None:
+            break
+        parts.append(int(match.group(1)))
+    return tuple(parts) if parts else None
+
+
+def _supports_presence_fallback(version: str | None) -> bool:
+    parsed = _version_tuple(version)
+    if parsed is None:
+        return False
+    padded = parsed + (0,) * max(0, len(_PRESENCE_FALLBACK_MIN_VERSION) - len(parsed))
+    return padded[: len(_PRESENCE_FALLBACK_MIN_VERSION)] >= _PRESENCE_FALLBACK_MIN_VERSION
+
+
+def _parse_timestamp(value: str | None) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _telemetry_models(raw: object) -> set[str]:
+    try:
+        parsed = json.loads(raw) if isinstance(raw, str) else {}
+    except (TypeError, ValueError):
+        return set()
+    if not isinstance(parsed, dict):
+        return set()
+    return {
+        str(model).strip()
+        for model, count in parsed.items()
+        if isinstance(model, str)
+        and model.strip()
+        and isinstance(count, int)
+        and not isinstance(count, bool)
+        and count > 0
+    }
+
+
 def _presence_stats_data() -> dict:
+    """Return presence rows reconciled with same-server 2.4.9.2+ telemetry.
+
+    ANTHBOT Map 2.4.9.2 sends the minimal presence heartbeat independently from
+    the opt-in usage heartbeat, and the two payloads intentionally use separate
+    random installation IDs. If a minimal heartbeat is missed but the reporting
+    server did receive the opt-in heartbeat from the same integration load, keep
+    the Presence dashboard complete by using that telemetry row as a fallback.
+
+    To avoid double counting, a telemetry row is collapsed into a presence row
+    only when version + model set match and there is exactly one presence
+    heartbeat within a tight two-minute window. Older integration versions are
+    never synthesized because they did not implement the minimal heartbeat.
+    """
     init_presence_tables()
     now = _now_dt()
-    cut24 = (now - timedelta(hours=24)).isoformat()
-    cut7 = (now - timedelta(days=7)).isoformat()
-    cut30 = (now - timedelta(days=30)).isoformat()
+    cut24 = now - timedelta(hours=24)
+    cut7 = now - timedelta(days=7)
+    cut30 = now - timedelta(days=30)
+
     conn = _connect()
     try:
-        total = conn.execute("SELECT COUNT(*) FROM installation_presence").fetchone()[0]
-        a24 = conn.execute("SELECT COUNT(*) FROM installation_presence WHERE last_seen>=?", (cut24,)).fetchone()[0]
-        a7 = conn.execute("SELECT COUNT(*) FROM installation_presence WHERE last_seen>=?", (cut7,)).fetchone()[0]
-        a30 = conn.execute("SELECT COUNT(*) FROM installation_presence WHERE last_seen>=?", (cut30,)).fetchone()[0]
-        versions = [dict(r) for r in conn.execute("SELECT version name, COUNT(*) count FROM installation_presence GROUP BY version ORDER BY count DESC, name").fetchall()]
-        models = [dict(r) for r in conn.execute("SELECT model name, COUNT(DISTINCT install_id) count FROM installation_presence_models GROUP BY model ORDER BY count DESC, name").fetchall()]
-        items = [dict(r) for r in conn.execute("""SELECT p.install_id,p.version,p.first_seen,p.last_seen,GROUP_CONCAT(m.model,' | ') models
-            FROM installation_presence p LEFT JOIN installation_presence_models m ON m.install_id=p.install_id
-            GROUP BY p.install_id,p.version,p.first_seen,p.last_seen ORDER BY p.last_seen DESC LIMIT 500""").fetchall()]
+        presence_rows = [
+            dict(row)
+            for row in conn.execute(
+                "SELECT install_id, version, first_seen, last_seen "
+                "FROM installation_presence"
+            ).fetchall()
+        ]
+        presence_model_rows = [
+            dict(row)
+            for row in conn.execute(
+                "SELECT install_id, model FROM installation_presence_models"
+            ).fetchall()
+        ]
+        telemetry_rows = [
+            dict(row)
+            for row in conn.execute(
+                """
+                SELECT installation_id, integration_version, first_seen, last_seen,
+                       model_counts_json
+                FROM installations
+                WHERE integration_version IS NOT NULL
+                """
+            ).fetchall()
+        ]
     finally:
         conn.close()
-    return {"generated_at": now.isoformat(), "total": total, "active_24h": a24, "active_7d": a7,
-            "active_30d": a30, "by_version": versions, "by_model": models, "items": items}
+
+    models_by_presence: dict[str, set[str]] = defaultdict(set)
+    for row in presence_model_rows:
+        install_id = str(row.get("install_id") or "")
+        model = str(row.get("model") or "").strip()
+        if install_id and model:
+            models_by_presence[install_id].add(model)
+
+    merged: list[dict] = []
+    by_id: dict[str, dict] = {}
+    for row in presence_rows:
+        install_id = str(row.get("install_id") or "")
+        if not install_id:
+            continue
+        item = {
+            "install_id": install_id,
+            "version": str(row.get("version") or ""),
+            "first_seen": row.get("first_seen"),
+            "last_seen": row.get("last_seen"),
+            "_models": set(models_by_presence.get(install_id, set())),
+            "_source": "presence",
+        }
+        merged.append(item)
+        by_id[install_id] = item
+
+    matched_presence_ids: set[str] = set()
+    for row in telemetry_rows:
+        version = str(row.get("integration_version") or "").strip()
+        if not _supports_presence_fallback(version):
+            continue
+
+        telemetry_id = str(row.get("installation_id") or "")
+        telemetry_models = _telemetry_models(row.get("model_counts_json"))
+        if not telemetry_id or not telemetry_models:
+            continue
+
+        telemetry_last = _parse_timestamp(row.get("last_seen"))
+        exact = by_id.get(telemetry_id)
+        if exact is not None:
+            exact["_models"].update(telemetry_models)
+            exact["first_seen"] = min(
+                value for value in (exact.get("first_seen"), row.get("first_seen")) if value
+            )
+            exact["last_seen"] = max(
+                value for value in (exact.get("last_seen"), row.get("last_seen")) if value
+            )
+            matched_presence_ids.add(telemetry_id)
+            continue
+
+        candidates: list[dict] = []
+        if telemetry_last is not None:
+            for item in merged:
+                if item["_source"] != "presence":
+                    continue
+                if item["install_id"] in matched_presence_ids:
+                    continue
+                if item["version"] != version or item["_models"] != telemetry_models:
+                    continue
+                presence_last = _parse_timestamp(item.get("last_seen"))
+                if presence_last is None:
+                    continue
+                if abs(presence_last - telemetry_last) <= _PRESENCE_RECONCILE_WINDOW:
+                    candidates.append(item)
+
+        if len(candidates) == 1:
+            candidate = candidates[0]
+            matched_presence_ids.add(candidate["install_id"])
+            candidate["first_seen"] = min(
+                value
+                for value in (candidate.get("first_seen"), row.get("first_seen"))
+                if value
+            )
+            candidate["last_seen"] = max(
+                value
+                for value in (candidate.get("last_seen"), row.get("last_seen"))
+                if value
+            )
+            continue
+
+        # No unambiguous same-load presence heartbeat exists. The server did
+        # still receive this 2.4.9.2+ installation through its telemetry API,
+        # so expose it as a fallback instead of silently dropping it.
+        fallback = {
+            "install_id": telemetry_id,
+            "version": version,
+            "first_seen": row.get("first_seen"),
+            "last_seen": row.get("last_seen"),
+            "_models": telemetry_models,
+            "_source": "telemetry_fallback",
+        }
+        merged.append(fallback)
+        by_id[telemetry_id] = fallback
+
+    merged.sort(key=lambda item: str(item.get("last_seen") or ""), reverse=True)
+
+    version_counts = Counter(
+        str(item.get("version") or "Unknown") for item in merged
+    )
+    model_counts = Counter()
+    for item in merged:
+        for model in item["_models"]:
+            model_counts[model] += 1
+
+    def _is_active(item: dict, cutoff: datetime) -> bool:
+        last_seen = _parse_timestamp(item.get("last_seen"))
+        return last_seen is not None and last_seen >= cutoff
+
+    items = [
+        {
+            "install_id": item["install_id"],
+            "version": item["version"],
+            "first_seen": item["first_seen"],
+            "last_seen": item["last_seen"],
+            "models": " | ".join(sorted(item["_models"])) or None,
+        }
+        for item in merged[:500]
+    ]
+
+    return {
+        "generated_at": now.isoformat(),
+        "total": len(merged),
+        "active_24h": sum(1 for item in merged if _is_active(item, cut24)),
+        "active_7d": sum(1 for item in merged if _is_active(item, cut7)),
+        "active_30d": sum(1 for item in merged if _is_active(item, cut30)),
+        "by_version": [
+            {"name": name, "count": count}
+            for name, count in sorted(
+                version_counts.items(), key=lambda pair: (-pair[1], pair[0])
+            )
+        ],
+        "by_model": [
+            {"name": name, "count": count}
+            for name, count in sorted(
+                model_counts.items(), key=lambda pair: (-pair[1], pair[0])
+            )
+        ],
+        "items": items,
+    }
 
 
 @router.get("/api/anthbot/admin/presence-stats", dependencies=[Depends(require_admin)])
