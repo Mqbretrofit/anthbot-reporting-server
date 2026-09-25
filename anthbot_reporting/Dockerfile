@@ -5,7 +5,7 @@ ARG BUILD_ARCH=local
 
 LABEL \
     io.hass.name="ANTHBOT Reporting Server" \
-    io.hass.description="Opt-in telemetry and diagnostics backend for ANTHBOT Map" \
+    io.hass.description="ANTHBOT Map reporting backend" \
     io.hass.version="${BUILD_VERSION}" \
     io.hass.type="app" \
     io.hass.arch="${BUILD_ARCH}"
@@ -21,6 +21,7 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 
 COPY app.py ./app.py
 COPY asgi.py ./asgi.py
+COPY presence_api.py ./presence_api.py
 COPY entrypoint.py ./entrypoint.py
 COPY diagnostics_dedupe.py ./diagnostics_dedupe.py
 COPY migration_api.py ./migration_api.py
