@@ -10,7 +10,7 @@ import sqlite3
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app import require_admin
@@ -94,8 +94,7 @@ def presence_heartbeat(payload: PresencePayload) -> dict[str, bool]:
     return {"ok": True}
 
 
-@router.get("/api/anthbot/admin/presence-stats", dependencies=[Depends(require_admin)])
-def presence_stats() -> dict:
+def _presence_stats_data() -> dict:
     init_presence_tables()
     now = _now_dt()
     cut24 = (now - timedelta(hours=24)).isoformat()
@@ -118,6 +117,11 @@ def presence_stats() -> dict:
             "active_30d": a30, "by_version": versions, "by_model": models, "items": items}
 
 
+@router.get("/api/anthbot/admin/presence-stats", dependencies=[Depends(require_admin)])
+def presence_stats() -> dict:
+    return _presence_stats_data()
+
+
 def _robot_identity(report: dict) -> str | None:
     device = report.get("device") if isinstance(report.get("device"), dict) else {}
     value = device.get("serial_sha256") or device.get("serial_suffix")
@@ -130,8 +134,7 @@ def _robot_model(report: dict) -> str:
     return str(model).strip() if model else "Ismeretlen"
 
 
-@router.get("/api/anthbot/admin/error-stats", dependencies=[Depends(require_admin)])
-def error_stats() -> dict:
+def _error_stats_data() -> dict:
     """Aggregate existing opt-in diagnostics; this enables no new collection."""
     now = _now_dt()
     cut24 = now - timedelta(hours=24)
@@ -143,85 +146,67 @@ def error_stats() -> dict:
     finally:
         conn.close()
 
-    by_model = Counter()
-    by_error = Counter()
-    by_cloud = Counter()
-    by_status = Counter()
-    installations: set[str] = set()
-    robots: set[str] = set()
+    by_model = Counter(); by_error = Counter(); by_cloud = Counter(); by_status = Counter()
+    installations: set[str] = set(); robots: set[str] = set()
     model_error = defaultdict(lambda: {"count": 0, "installations": set(), "robots": set(), "description": None, "message": None, "last_seen": None})
     total_errors = cloud_events = e24 = e7 = e30 = 0
-
     for row in rows:
-        try:
-            report = json.loads(row["report_json"])
-        except (TypeError, ValueError):
-            continue
-        if not isinstance(report, dict):
-            continue
-        model = _robot_model(report)
-        robot_id = _robot_identity(report)
-        installation = str(row["installation_id"] or "")
+        try: report = json.loads(row["report_json"])
+        except (TypeError, ValueError): continue
+        if not isinstance(report, dict): continue
+        model = _robot_model(report); robot_id = _robot_identity(report); installation = str(row["installation_id"] or "")
         try:
             received = datetime.fromisoformat(str(row["received_at"]).replace("Z", "+00:00"))
-            if received.tzinfo is None:
-                received = received.replace(tzinfo=timezone.utc)
-        except (TypeError, ValueError):
-            received = None
-
+            if received.tzinfo is None: received = received.replace(tzinfo=timezone.utc)
+        except (TypeError, ValueError): received = None
         event = report.get("diagnostic_event") if isinstance(report.get("diagnostic_event"), dict) else None
         cloud = report.get("cloud_api_error") if isinstance(report.get("cloud_api_error"), dict) else None
         if cloud:
-            cloud_events += 1
-            by_cloud[str(cloud.get("category") or cloud.get("operation") or "unknown")] += 1
-
-        if not event:
-            continue
-        total_errors += 1
-        installations.add(installation)
-        if robot_id:
-            robots.add(robot_id)
+            cloud_events += 1; by_cloud[str(cloud.get("category") or cloud.get("operation") or "unknown")] += 1
+        if not event: continue
+        total_errors += 1; installations.add(installation)
+        if robot_id: robots.add(robot_id)
         by_model[model] += 1
         status = event.get("robot_sta") or event.get("mode")
-        if status is not None:
-            by_status[str(status)] += 1
-        code = event.get("err_code")
-        task_event = event.get("task_event") if isinstance(event.get("task_event"), dict) else {}
-        if code is None:
-            code = task_event.get("code") or event.get("cloud_task_event_code") or event.get("event_code")
-        code_name = str(code) if code is not None else "n/a"
-        description = event.get("err_description")
+        if status is not None: by_status[str(status)] += 1
+        code = event.get("err_code"); task_event = event.get("task_event") if isinstance(event.get("task_event"), dict) else {}
+        if code is None: code = task_event.get("code") or event.get("cloud_task_event_code") or event.get("event_code")
+        code_name = str(code) if code is not None else "n/a"; description = event.get("err_description")
         message = task_event.get("event_message") or task_event.get("message") or task_event.get("description")
         by_error[f"{code_name} · {description or message or 'hiba'}"] += 1
-        key = (model, code_name)
-        item = model_error[key]
-        item["count"] += 1
-        item["installations"].add(installation)
-        if robot_id:
-            item["robots"].add(robot_id)
-        item["description"] = item["description"] or description
-        item["message"] = item["message"] or message
-        if row["received_at"] and (item["last_seen"] is None or str(row["received_at"]) > item["last_seen"]):
-            item["last_seen"] = str(row["received_at"])
+        item = model_error[(model, code_name)]; item["count"] += 1; item["installations"].add(installation)
+        if robot_id: item["robots"].add(robot_id)
+        item["description"] = item["description"] or description; item["message"] = item["message"] or message
+        if row["received_at"] and (item["last_seen"] is None or str(row["received_at"]) > item["last_seen"]): item["last_seen"] = str(row["received_at"])
         if received:
             if received >= cut24: e24 += 1
             if received >= cut7: e7 += 1
             if received >= cut30: e30 += 1
-
     detail = []
     for (model, code), item in model_error.items():
-        detail.append({"model": model, "error_code": code, "description": item["description"], "message": item["message"],
-                       "count": item["count"], "affected_installations": len(item["installations"]),
-                       "affected_robots": len(item["robots"]), "last_seen": item["last_seen"]})
+        detail.append({"model": model, "error_code": code, "description": item["description"], "message": item["message"], "count": item["count"], "affected_installations": len(item["installations"]), "affected_robots": len(item["robots"]), "last_seen": item["last_seen"]})
     detail.sort(key=lambda x: (-x["count"], x["model"], x["error_code"]))
     named = lambda counter: [{"name": k, "count": v} for k, v in counter.most_common()]
-    return {"generated_at": now.isoformat(), "total_error_events": total_errors,
-            "affected_installations": len(installations), "affected_robots": len(robots),
-            "models_with_errors": len(by_model), "cloud_api_events": cloud_events,
-            "error_events_24h": e24, "error_events_7d": e7, "error_events_30d": e30,
-            "by_model": named(by_model), "by_error": named(by_error),
-            "by_cloud_category": named(by_cloud), "by_robot_status": named(by_status),
-            "model_errors": detail[:500]}
+    return {"generated_at": now.isoformat(), "total_error_events": total_errors, "affected_installations": len(installations), "affected_robots": len(robots), "models_with_errors": len(by_model), "cloud_api_events": cloud_events, "error_events_24h": e24, "error_events_7d": e7, "error_events_30d": e30, "by_model": named(by_model), "by_error": named(by_error), "by_cloud_category": named(by_cloud), "by_robot_status": named(by_status), "model_errors": detail[:500]}
+
+
+@router.get("/api/anthbot/admin/error-stats", dependencies=[Depends(require_admin)])
+def error_stats() -> dict:
+    return _error_stats_data()
+
+
+@router.get("/api/anthbot/admin/analysis-export.json", dependencies=[Depends(require_admin)])
+def analysis_export() -> Response:
+    """Download one analysis-ready JSON snapshot of the anonymous statistics."""
+    generated = _now_dt()
+    payload = {
+        "schema": "anthbot-reporting-analysis-export-v1",
+        "generated_at": generated.isoformat(),
+        "presence": _presence_stats_data(),
+        "error_statistics": _error_stats_data(),
+    }
+    filename = f"anthbot-reporting-analysis-{generated.strftime('%Y%m%d-%H%M%S')}.json"
+    return Response(content=json.dumps(payload, ensure_ascii=False, indent=2), media_type="application/json", headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store"})
 
 
 @router.get("/dashboard/presence", response_class=HTMLResponse, dependencies=[Depends(require_admin)])
