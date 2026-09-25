@@ -23,6 +23,7 @@ COPY app.py ./app.py
 COPY asgi.py ./asgi.py
 COPY presence_api.py ./presence_api.py
 COPY presence_dashboard.html ./presence_dashboard.html
+COPY error_stats_dashboard.html ./error_stats_dashboard.html
 COPY entrypoint.py ./entrypoint.py
 COPY diagnostics_dedupe.py ./diagnostics_dedupe.py
 COPY migration_api.py ./migration_api.py
