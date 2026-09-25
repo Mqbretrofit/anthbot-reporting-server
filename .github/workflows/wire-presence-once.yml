@@ -15,13 +15,13 @@ jobs:
           from pathlib import Path
           p=Path('anthbot_reporting/asgi.py')
           s=p.read_text()
-          imp='from presence_api import init_presence_tables, router as presence_router\n'
-          if imp not in s:
-              s=s.replace('from app import app as fastapi_app\n','from app import app as fastapi_app\n'+imp,1)
-          inc='fastapi_app.include_router(presence_router)\ninit_presence_tables()\n'
+          s=s.replace('from presence_api import init_presence_tables, router as presence_router\n','from presence_api import router as presence_router\n')
+          s=s.replace('init_presence_tables()\n','')
+          if 'from presence_api import router as presence_router\n' not in s:
+              s=s.replace('from app import app as fastapi_app\n','from app import app as fastapi_app\nfrom presence_api import router as presence_router\n',1)
           if 'include_router(presence_router)' not in s:
               anchor='fastapi_app.include_router(diagnostics_dashboard_router)\n'
-              s=s.replace(anchor,anchor+inc,1)
+              s=s.replace(anchor,anchor+'fastapi_app.include_router(presence_router)\n',1)
           p.write_text(s)
       - shell: bash
         run: |
@@ -29,5 +29,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add anthbot_reporting/asgi.py
           git diff --cached --quiet && exit 0
-          git commit -m "feat: wire minimal presence API [presence-wired]"
+          git commit -m "fix: lazy-init minimal presence API [presence-wired]"
           git push
