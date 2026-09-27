@@ -2970,10 +2970,10 @@ class VoiceStoreTests(unittest.TestCase):
             "/dashboard/store-first-purchase-preview",
         )
         self.assertEqual(allowed.status_code, 200)
-        self.assertIn("PRÓBAOLDAL · NEM ÉLES", allowed.text)
-        self.assertIn('id="first-offer-price"', allowed.text)
-        self.assertIn('id="customer-state"', allowed.text)
-        self.assertIn("/api/anthbot/admin/store/voice-packs", allowed.text)
+        self.assertIn("PRÓBAOLDAL · Első hang kedvezmény", allowed.text)
+        self.assertIn('id="preview-price"', allowed.text)
+        self.assertIn('id="preview-customer-state"', allowed.text)
+        self.assertIn("/api/anthbot/admin/store/first-purchase-preview-settings", allowed.text)
         self.assertNotIn("/api/anthbot/store/checkout", allowed.text)
         self.assertEqual(
             allowed.headers.get("x-robots-tag"),
@@ -2988,6 +2988,54 @@ class VoiceStoreTests(unittest.TestCase):
             "/dashboard/store-first-purchase-preview",
             admin.text,
         )
+        self.assertIn('id="voice-search"', allowed.text)
+        self.assertIn('id="filter-language"', allowed.text)
+        self.assertIn('id="custom-voice"', allowed.text)
+        self.assertIn('id="preview-enabled"', allowed.text)
+        self.assertIn('id="preview-price"', allowed.text)
+        self.assertIn("ELSŐ HANG AKCIÓ", allowed.text)
+
+        initial = self.client.get(
+            "/api/anthbot/admin/store/first-purchase-preview-settings",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(initial.status_code, 200)
+        self.assertTrue(initial.json()["preview_only"])
+        self.assertFalse(initial.json()["enabled"])
+        self.assertEqual(initial.json()["price_amount"], 499)
+
+        saved = self.client.patch(
+            "/api/anthbot/admin/store/first-purchase-preview-settings",
+            headers=self._admin_headers(),
+            json={"enabled": True, "price_amount": 449},
+        )
+        self.assertEqual(saved.status_code, 200)
+        self.assertTrue(saved.json()["preview_only"])
+        self.assertTrue(saved.json()["enabled"])
+        self.assertEqual(saved.json()["price_amount"], 449)
+        self.assertEqual(saved.json()["currency"], "eur")
+
+        reloaded = self.client.get(
+            "/api/anthbot/admin/store/first-purchase-preview-settings",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(reloaded.status_code, 200)
+        self.assertTrue(reloaded.json()["enabled"])
+        self.assertEqual(reloaded.json()["price_amount"], 449)
+
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        priced = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        self.assertEqual(priced.status_code, 200)
+        live_catalog = self.client.get("/api/anthbot/store/voice-packs")
+        live_pack = next(
+            item for item in live_catalog.json()["packs"] if item["id"] == pack_id
+        )
+        self.assertEqual(live_pack["price_amount"], 799)
 
 
     def test_store_account_uses_hashed_code_and_persistent_session(self) -> None:
