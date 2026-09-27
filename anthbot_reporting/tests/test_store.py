@@ -2970,7 +2970,7 @@ class VoiceStoreTests(unittest.TestCase):
             "/dashboard/store-first-purchase-preview",
         )
         self.assertEqual(allowed.status_code, 200)
-        self.assertIn("PRÓBAOLDAL · NEM ÉLES", allowed.text)
+        self.assertIn("PRÓBAOLDAL · Első hang kedvezmény", allowed.text)
         self.assertIn('id="first-offer-price"', allowed.text)
         self.assertIn('id="customer-state"', allowed.text)
         self.assertIn("/api/anthbot/admin/store/voice-packs", allowed.text)
