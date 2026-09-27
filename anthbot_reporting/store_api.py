@@ -572,6 +572,13 @@ class StorePricingPayload(BaseModel):
         return self
 
 
+class FirstPurchasePreviewSettingsPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = False
+    price_amount: int = Field(default=499, ge=1, le=100_000_000)
+
+
 class StoreVisibilityPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -780,6 +787,12 @@ def _init_store_tables() -> None:
             CREATE TABLE IF NOT EXISTS store_owner_clients (
                 client_id TEXT PRIMARY KEY,
                 created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS store_admin_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
 
@@ -1922,6 +1935,67 @@ def _store_catalog(request: Request) -> dict[str, Any]:
         "web_installer_available": _env_flag("ANTHBOT_WEB_VOICE_INSTALLER_ENABLED", False),
         "packs": packs,
     }
+
+
+_FIRST_PURCHASE_PREVIEW_SETTING_KEY = "first_purchase_offer_preview"
+
+
+def _first_purchase_preview_settings() -> dict[str, Any]:
+    """Return saved admin preview settings. These never affect live checkout."""
+    _init_store_tables()
+    defaults = {
+        "enabled": False,
+        "price_amount": 499,
+        "currency": _STANDARD_VOICE_PACK_CURRENCY,
+    }
+    with core._db() as conn:
+        row = conn.execute(
+            "SELECT value FROM store_admin_settings WHERE key = ?",
+            (_FIRST_PURCHASE_PREVIEW_SETTING_KEY,),
+        ).fetchone()
+    if row is None:
+        return defaults
+    try:
+        raw = json.loads(str(row["value"]))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return defaults
+    if not isinstance(raw, dict):
+        return defaults
+    try:
+        price_amount = int(raw.get("price_amount", defaults["price_amount"]))
+    except (TypeError, ValueError):
+        price_amount = defaults["price_amount"]
+    return {
+        "enabled": bool(raw.get("enabled", defaults["enabled"])),
+        "price_amount": max(1, min(price_amount, 100_000_000)),
+        "currency": _STANDARD_VOICE_PACK_CURRENCY,
+    }
+
+
+def _save_first_purchase_preview_settings(
+    payload: FirstPurchasePreviewSettingsPayload,
+) -> dict[str, Any]:
+    """Persist preview-only settings without changing the public store or Stripe."""
+    _init_store_tables()
+    value = {
+        "enabled": payload.enabled,
+        "price_amount": payload.price_amount,
+        "currency": _STANDARD_VOICE_PACK_CURRENCY,
+    }
+    encoded = json.dumps(value, separators=(",", ":"), sort_keys=True)
+    now = _iso()
+    with core._db() as conn:
+        conn.execute(
+            """
+            INSERT INTO store_admin_settings(key, value, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(key) DO UPDATE SET
+                value = excluded.value,
+                updated_at = excluded.updated_at
+            """,
+            (_FIRST_PURCHASE_PREVIEW_SETTING_KEY, encoded, now),
+        )
+    return value
 
 
 def _stripe_session_dict(value: Any) -> dict[str, Any]:
@@ -5141,6 +5215,31 @@ def store_success_page(request: Request) -> Response:
         _html_file("store_success.html"),
         headers={"X-Robots-Tag": "noindex, nofollow"},
     )
+
+
+@router.get(
+    "/api/anthbot/admin/store/first-purchase-preview-settings",
+    dependencies=[Depends(core.require_admin)],
+)
+def admin_first_purchase_preview_settings() -> dict[str, Any]:
+    return {
+        "preview_only": True,
+        **_first_purchase_preview_settings(),
+    }
+
+
+@router.patch(
+    "/api/anthbot/admin/store/first-purchase-preview-settings",
+    dependencies=[Depends(core.require_admin)],
+)
+def update_admin_first_purchase_preview_settings(
+    payload: FirstPurchasePreviewSettingsPayload,
+) -> dict[str, Any]:
+    return {
+        "updated": True,
+        "preview_only": True,
+        **_save_first_purchase_preview_settings(payload),
+    }
 
 
 @router.get("/dashboard/store-first-purchase-preview", response_class=HTMLResponse)
