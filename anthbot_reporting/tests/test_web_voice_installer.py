@@ -122,6 +122,8 @@ class WebVoiceInstallerTests(unittest.TestCase):
         self.assertEqual(page.headers.get("x-robots-tag"), "noindex, nofollow")
         self.assertIn("ANTHBOT hang telepítése Home Assistant nélkül", page.text)
         self.assertIn("anthbot_voice_store_client", self.client.cookies)
+        self.assertIn("/api/anthbot/web-installer/first-purchase-offer", page.text)
+        self.assertIn("device_id:document.getElementById", page.text)
 
     def _login_genie(self) -> dict:
         devices = [
@@ -267,6 +269,90 @@ class WebVoiceInstallerTests(unittest.TestCase):
         )
         self.assertEqual(install.status_code, 409)
         self.assertIn("Genie", install.json()["detail"])
+
+
+    def test_first_purchase_offer_uses_selected_genie_without_exposing_serial(self) -> None:
+        pack = self._upload_paid_pack()
+        self._open_installer()
+        login = self._login_genie()
+        account = self._login_store_account("offer@example.test")
+        device_id = login["auto_device_id"]
+
+        settings = self.client.patch(
+            "/api/anthbot/admin/store/first-purchase-preview-settings",
+            headers=self._admin_headers(),
+            json={"enabled": True, "live_enabled": True, "price_amount": 399},
+        )
+        self.assertEqual(settings.status_code, 200)
+
+        status = self.client.get(
+            "/api/anthbot/web-installer/first-purchase-offer",
+            params={"device_id": device_id},
+        )
+        self.assertEqual(status.status_code, 200)
+        self.assertTrue(status.json()["enabled"])
+        self.assertTrue(status.json()["eligible"])
+        self.assertEqual(status.json()["price_amount"], 399)
+
+        token = self.client.cookies.get("anthbot_voice_store_client")
+        client_id = store_api._client_id_from_token(token)
+        checkout_session = {
+            "id": "cs_test_web_first_offer",
+            "object": "checkout.session",
+            "url": "https://checkout.stripe.com/c/pay/web-first-offer",
+            "created": int(time.time()),
+            "client_reference_id": pack["id"],
+            "metadata": {
+                "pack_id": pack["id"],
+                "community_id": pack["community_id"],
+                "store_client_id": client_id,
+                "store_user_id": account["_user_id"],
+                "entitlement_scope": "web",
+            },
+            "payment_status": "unpaid",
+            "status": "open",
+            "amount_total": 399,
+            "currency": "eur",
+            "customer_details": None,
+            "customer": None,
+            "payment_intent": None,
+        }
+        with patch.object(
+            store_api,
+            "_create_checkout_session",
+            return_value=checkout_session,
+        ) as create_checkout:
+            checkout = self.client.post(
+                "/api/anthbot/web-installer/checkout",
+                json={"pack_id": pack["id"], "device_id": device_id},
+            )
+        self.assertEqual(checkout.status_code, 200)
+        self.assertTrue(checkout.json()["first_purchase_offer_applied"])
+        self.assertEqual(checkout.json()["price_amount"], 399)
+
+        claim = create_checkout.call_args.kwargs["first_purchase_offer_claim"]
+        self.assertIsNotNone(claim)
+        self.assertTrue(claim["promo_subject"].startswith("robot:abrk_"))
+        self.assertNotIn("25245HGD00050826", claim["promo_subject"])
+
+        with store_api.core._db() as conn:
+            stored = conn.execute(
+                """
+                SELECT promo_subject
+                FROM store_first_purchase_offer_claims
+                WHERE claim_id = ?
+                """,
+                (claim["claim_id"],),
+            ).fetchone()
+        self.assertIsNotNone(stored)
+        self.assertNotIn("25245HGD00050826", str(stored["promo_subject"]))
+
+        no_robot = self.client.get(
+            "/api/anthbot/web-installer/first-purchase-offer"
+        )
+        self.assertEqual(no_robot.status_code, 200)
+        self.assertFalse(no_robot.json()["eligible"])
+        self.assertTrue(no_robot.json()["requires_robot_or_map"])
 
     def test_paid_checkout_returns_to_installer_and_install_job_completes(self) -> None:
         pack = self._upload_paid_pack()
