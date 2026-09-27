@@ -3103,6 +3103,22 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIn("/api/anthbot/store/first-purchase-offer", live_store.text)
         self.assertIn("FIRST_VOICE_OFFER", live_store.text)
 
+        for page_name, html in (
+            ("live_home", live_home.text),
+            ("live_store", live_store.text),
+        ):
+            live_offer_match = re.search(
+                r"const FIRST_VOICE_OFFER=(\{.*?\});",
+                html,
+            )
+            self.assertIsNotNone(live_offer_match, page_name)
+            live_offer_translations = json.loads(live_offer_match.group(1))
+            self.assertEqual(
+                set(live_offer_translations),
+                expected_offer_languages,
+                page_name,
+            )
+
         pack = self._upload_pack()
         pack_id = pack["id"]
         priced = self.client.patch(
