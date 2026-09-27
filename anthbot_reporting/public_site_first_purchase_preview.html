@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="ANTHBOT Map develops the independent open-source ANTHBOT Map Home Assistant integration, map card, diagnostics, scheduling tools and optional digital products for supported ANTHBOT robotic lawn mowers.">
+<title>ANTHBOT Map | First Voice Offer Preview</title>
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#081017;--card:#111820;--card2:#141d27;--card3:#0c1218;
+  --text:#fff;--muted:rgba(255,255,255,.7);--faint:rgba(255,255,255,.48);
+  --line:rgba(255,255,255,.11);--line2:rgba(255,255,255,.18);
+  --green:#5ee083;--blue:#03a9f4;--red:#ff5252;--violet:#6f6bff;
+  --max:1200px;
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:
+  radial-gradient(circle at 14% 0,rgba(40,94,145,.34),transparent 29rem),
+  radial-gradient(circle at 90% 24%,rgba(94,224,131,.10),transparent 26rem),
+  var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+a{color:inherit}.wrap{max-width:var(--max);margin:auto;padding:0 22px}
+.bg-grid{position:fixed;inset:0;pointer-events:none;opacity:.12;background-image:
+ linear-gradient(rgba(94,224,131,.14) 1px,transparent 1px),
+ linear-gradient(90deg,rgba(94,224,131,.14) 1px,transparent 1px);background-size:46px 46px;
+ mask-image:linear-gradient(to bottom,#000,transparent 80%)}
+.nav{position:sticky;top:0;z-index:50;background:rgba(8,16,23,.76);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
+.navin{height:72px;display:flex;align-items:center;justify-content:space-between;gap:22px}
+.brand{display:flex;gap:11px;align-items:center;text-decoration:none;font-weight:850}
+.logo{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(145deg,#31bf62,#249c4d);box-shadow:0 0 30px rgba(94,224,131,.18)}
+.links{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.links a{text-decoration:none;color:var(--muted);font-size:14px}.links a:hover{color:#fff}
+
+.hero{padding:74px 0 46px}
+.hero-grid{display:grid;grid-template-columns:.95fr 1.05fr;gap:34px;align-items:center}
+.eyebrow{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line2);background:rgba(20,29,39,.72);border-radius:999px;padding:7px 12px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#dfe8ee}
+.dotlive{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 14px rgba(94,224,131,.85);animation:blink 1.6s ease-in-out infinite}
+.hero h1{font-size:clamp(2.7rem,6vw,4.9rem);line-height:1.02;margin:18px 0 18px}
+.grad{background:linear-gradient(135deg,#dfffea,var(--green));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{font-size:1.14rem;color:var(--muted);max-width:690px}
+.tags{display:flex;gap:9px;flex-wrap:wrap;margin-top:21px}.tag{font-size:13px;padding:7px 11px;border-radius:999px;border:1px solid var(--line2);background:rgba(20,29,39,.72);color:#d6e0e7}
+.quickflow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:18px}.quickstep{display:inline-flex;align-items:center;gap:5px;min-height:36px;padding:7px 11px;border-radius:12px;border:1px solid rgba(94,224,131,.24);background:linear-gradient(180deg,rgba(20,29,39,.9),rgba(12,18,24,.82));color:#e7f7ec;font-size:12px;box-shadow:0 8px 22px rgba(0,0,0,.14)}.quickstep b{font-weight:850}.quickarrow{color:var(--green);font-weight:900;opacity:.8}
+.cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 17px;border-radius:12px;border:1px solid var(--line2);background:var(--card2);text-decoration:none;font-weight:800;transition:.18s}
+.btn:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.34)}.btn.primary{background:linear-gradient(180deg,#34c759,#248a46);border:0;color:#fff;box-shadow:0 16px 34px rgba(36,138,70,.25)}
+.repo-meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:22px;color:var(--faint);font-size:13px}.repo-meta strong{color:#fff}
+
+.product-stage{position:relative;min-height:570px;display:grid;place-items:center}
+.robot-hero{position:absolute;width:210px;right:-22px;top:-16px;filter:drop-shadow(0 18px 28px rgba(0,0,0,.42));transform:rotate(-6deg);z-index:5;animation:floatRobot 6s ease-in-out infinite}
+.orbit{position:absolute;border:1px solid rgba(94,224,131,.16);border-radius:50%;width:560px;height:560px;animation:spin 26s linear infinite}.orbit.two{width:450px;height:450px;border-style:dashed;animation-direction:reverse;animation-duration:20s}
+.demo-card{width:min(100%,650px);position:relative;z-index:3;background:#111820;border:1px solid rgba(255,255,255,.13);border-radius:24px;box-shadow:0 32px 100px rgba(0,0,0,.48);overflow:hidden}
+.demo-top{padding:14px;background:#111820}
+.demo-title-row{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:12px}
+.demo-title strong{font-size:22px;display:block}.demo-title span{font-size:12px;color:var(--muted)}
+.cloud{display:flex;align-items:center;gap:8px;color:#aeb7c2;font-size:12px;font-weight:800}.cloud i{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 12px rgba(94,224,131,.8)}
+.map-wrap{height:360px;position:relative;overflow:hidden;background:#141d27}
+.map-wrap svg{width:100%;height:100%;display:block}
+.grass{fill:#223f30;stroke:#5ee083;stroke-width:2;opacity:.95}
+.zone-shape{fill:rgba(94,224,131,.09);stroke:rgba(94,224,131,.55);stroke-width:1.3}
+.nogo{fill:rgba(255,82,82,.12);stroke:rgba(255,82,82,.82);stroke-width:1.4}
+.live-path{fill:none;stroke:#ffeb3b;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 5px rgba(255,235,59,.35))}
+.coverage{fill:none;stroke:rgba(94,224,131,.28);stroke-width:13;stroke-linecap:round}
+.dock-icon{fill:#03a9f4;filter:drop-shadow(0 0 6px rgba(3,169,244,.5))}
+.robot-on-map{position:absolute;width:54px;height:54px;object-fit:contain;transform:translate(-50%,-50%);filter:drop-shadow(0 7px 12px rgba(0,0,0,.5));z-index:8;pointer-events:none}
+.map-status{position:absolute;right:16px;top:16px;display:flex;gap:10px;align-items:center;padding:9px 11px;border-radius:18px;border:1px solid rgba(255,255,255,.16);background:rgba(12,18,24,.78);backdrop-filter:blur(14px);z-index:10}
+.battery{width:50px;height:50px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:900;background:radial-gradient(circle at center,rgba(12,18,24,.97) 0 58%,transparent 59%),conic-gradient(var(--green) 0 281deg,rgba(255,255,255,.16) 281deg 360deg)}
+.statuscopy{min-width:116px}.statuscopy small{display:block;color:rgba(255,255,255,.6);font-size:10px;text-transform:uppercase}.statuscopy strong{display:block;font-size:14px}.nextmow{display:block;color:#63b8ff;font-size:11px;margin-top:2px}
+.map-actions{position:absolute;right:18px;top:94px;display:grid;gap:8px;z-index:10}.round{width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.16);display:grid;place-items:center;background:rgba(12,18,24,.78);backdrop-filter:blur(12px);font-weight:900}
+.badges{position:absolute;left:16px;top:16px;display:flex;gap:7px;flex-wrap:wrap;z-index:10}.badge{font-size:11px;padding:5px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(12,18,24,.76)}
+.command-dock{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);width:min(730px,calc(100% - 28px));padding:10px;border-radius:20px;border:1px solid rgba(255,255,255,.16);background:rgba(12,18,24,.82);backdrop-filter:blur(15px);z-index:10}
+.cmd-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.cmd{min-height:48px;border:1px solid rgba(255,255,255,.13);border-radius:14px;color:#fff;font-weight:800}.cmd.start{background:linear-gradient(180deg,rgba(52,199,89,.96),rgba(36,138,70,.96))}.cmd.stop{background:linear-gradient(180deg,rgba(255,82,82,.96),rgba(189,36,36,.96))}.cmd.dock{background:linear-gradient(180deg,rgba(3,169,244,.96),rgba(2,119,189,.96))}
+.progressline{height:3px;background:rgba(255,255,255,.08);position:absolute;left:0;right:0;bottom:0;z-index:12}.progressline i{display:block;height:100%;width:0;background:var(--green);animation:progress 10s linear infinite}
+
+.panel-tabs{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;padding:4px;background:#141d27}.panel-tabs button{min-height:42px;border:0;border-radius:12px;background:transparent;color:#fff;font:inherit;font-size:11px;padding:6px;cursor:pointer}.panel-tabs button.active{background:#5ee083;color:#07140c;font-weight:900}
+.panel-body{min-height:162px;padding:13px;background:#111820}
+.demo-pane{display:none}.demo-pane.active{display:block;animation:fadeIn .24s ease}
+.tile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.tile{min-height:64px;border-radius:15px;border:1px solid var(--line);background:#141d27;padding:10px}.tile strong{display:block;font-size:13px}.tile span{font-size:11px;color:var(--muted)}.tile.green{background:linear-gradient(180deg,rgba(52,199,89,.92),rgba(36,138,70,.92))}.tile.red{background:linear-gradient(180deg,rgba(255,82,82,.92),rgba(189,36,36,.92))}.tile.blue{background:linear-gradient(180deg,rgba(3,169,244,.92),rgba(2,119,189,.92))}
+.schedule-overview{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.schedule-card{padding:11px;border-radius:13px;border:1px solid rgba(255,255,255,.14);background:rgba(7,15,23,.32)}.schedule-card small{display:block;color:#aeb7c2;font-size:10px}.schedule-card strong{font-size:13px}.rule{margin-top:9px;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.045);display:flex;justify-content:space-between;gap:10px}.rule span{font-size:11px;color:#aeb7c2}
+.setting-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:11px;border-bottom:1px solid rgba(255,255,255,.08)}.setting-row:last-child{border-bottom:0}.toggle{width:42px;height:22px;border-radius:999px;background:#5ee083;position:relative}.toggle:after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;right:2px;top:2px}
+.history{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.history .tile{min-height:70px}
+.demo-note{font-size:11px;color:rgba(255,255,255,.5);padding:7px 12px;background:#0c1218;border-top:1px solid rgba(255,255,255,.08)}
+
+.section{padding:68px 0}.section h2{font-size:2.2rem;line-height:1.15;margin:0 0 12px}.lead{font-size:1.02rem}
+.stats{padding-top:10px}.statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.glass{background:linear-gradient(180deg,rgba(17,24,32,.88),rgba(12,18,24,.82));border:1px solid var(--line);box-shadow:0 22px 70px rgba(0,0,0,.26);backdrop-filter:blur(12px)}.stat{padding:17px;border-radius:17px}.stat small{display:block;color:var(--faint);font-size:11px;text-transform:uppercase;letter-spacing:.08em}.stat strong{display:block;margin-top:6px;font-size:17px}
+.feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:25px}.feature{padding:22px;border-radius:20px}.feature-icon{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;background:#141d27;border:1px solid var(--line2);font-size:22px;margin-bottom:13px}.feature h3{margin:5px 0 8px}.feature p{margin:0;color:var(--muted);font-size:14px}.pill{display:inline-flex;padding:4px 9px;border-radius:999px;border:1px solid var(--line2);color:#d5e0e6;font-size:11px}
+.deep-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:center}.bullet-list{display:grid;gap:11px;margin-top:22px}.bullet{padding:15px 16px;border-radius:16px}.bullet strong{display:block}.bullet span{font-size:14px;color:var(--muted)}
+.model-stage{position:relative;min-height:390px;border-radius:26px;padding:22px;overflow:hidden}.model-stage:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 55%,rgba(94,224,131,.11),transparent 42%),linear-gradient(180deg,rgba(20,29,39,.7),rgba(8,16,23,.82))}
+.models{position:relative;z-index:2;display:flex;justify-content:center;align-items:flex-end;gap:28px;height:270px}.models img{object-fit:contain;filter:drop-shadow(0 18px 30px rgba(0,0,0,.5))}.models img:first-child{width:210px}.models img:last-child{width:180px;opacity:.92}.model-caps{position:relative;z-index:2;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}.model-caps span{font-size:12px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line)}
+.open-source{padding:23px;border-radius:20px;display:grid;grid-template-columns:1fr auto;gap:20px;align-items:center}.open-source p{margin:6px 0 0;color:var(--muted)}
+.two{display:grid;grid-template-columns:1.1fr .9fr;gap:22px}.notice{padding:22px;border-radius:19px;color:#cad5dd}.notice p{color:var(--muted)}
+.policy-links{display:flex;gap:11px;flex-wrap:wrap}.center{text-align:center}.center .lead{margin-left:auto;margin-right:auto}.center .policy-links{justify-content:center}
+.footer{margin-top:36px;border-top:1px solid var(--line);padding:28px 0 44px;color:#94a2ad;font-size:13px}.foot{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px}.foot a{color:#c3ced5}
+
+@keyframes blink{0%,100%{opacity:.6}50%{opacity:1}}@keyframes floatRobot{0%,100%{transform:rotate(-6deg) translateY(0)}50%{transform:rotate(-2deg) translateY(-10px)}}@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}@keyframes progress{from{width:0}to{width:100%}}@keyframes fadeIn{from{opacity:.25;transform:translateY(3px)}to{opacity:1;transform:none}}
+@media(max-width:1050px){.hero-grid,.deep-grid,.two{grid-template-columns:1fr}.product-stage{min-height:610px}.robot-hero{right:6px}.statgrid,.feature-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:760px){
+.nav{position:sticky;top:0}
+.navin{height:auto;min-height:64px;padding-top:9px;padding-bottom:9px;display:grid;grid-template-columns:1fr auto;gap:9px 12px}
+.brand{min-width:0}.brand span:last-child{white-space:nowrap}
+.lang-wrap{justify-self:end}
+.links{display:flex;grid-column:1/-1;order:3;width:100%;gap:7px;flex-wrap:nowrap;overflow-x:auto;padding:3px 0 5px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.links::-webkit-scrollbar{display:none}
+.links a{flex:0 0 auto;padding:8px 11px;border:1px solid var(--line);border-radius:10px;background:rgba(20,29,39,.9);font-size:12px;font-weight:750;color:#dce6ec}
+.links a.store-link{background:linear-gradient(180deg,#34c759,#248a46);border-color:transparent;color:#fff;box-shadow:0 7px 18px rgba(36,138,70,.28)}
+.links a.community-link{border-color:rgba(99,184,255,.42);color:#d9efff}
+.links a.hungary-link{border-color:rgba(255,255,255,.24);color:#fff}
+.hero{padding-top:32px}.hero h1{font-size:clamp(2.35rem,11vw,4rem)}.hero p{font-size:1.02rem}.quickflow{gap:6px}.quickstep{font-size:11px;min-height:34px;padding:6px 9px}.quickarrow{font-size:12px}.product-stage{min-height:auto;padding-top:12px}.robot-hero{width:125px;right:-4px;top:-12px}.orbit{display:none}.map-wrap{height:325px}.panel-tabs{grid-template-columns:repeat(2,1fr)}.tile-grid,.schedule-overview,.history,.statgrid,.feature-grid{grid-template-columns:1fr}.cmd-grid{grid-template-columns:1fr}.command-dock{display:none}.map-actions{display:none}.models{gap:5px;height:230px}.models img:first-child{width:170px}.models img:last-child{width:145px}.open-source{grid-template-columns:1fr}}
+
+.lang-select{height:38px;min-width:128px;border-radius:11px;border:1px solid var(--line2);background:#141d27;color:#fff;padding:0 10px;font:inherit;font-size:13px;cursor:pointer}
+.lang-select:focus{outline:2px solid rgba(94,224,131,.48);outline-offset:2px}
+.lang-wrap{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.lang-label{color:var(--faint);font-size:12px}
+@media(max-width:760px){.lang-label{display:none}.lang-select{min-width:116px}}
+
+.first-voice-offer{display:none;position:relative;z-index:20;border-bottom:1px solid rgba(255,212,93,.3);background:linear-gradient(90deg,rgba(255,212,93,.12),rgba(255,139,85,.10),rgba(94,224,131,.08));box-shadow:0 12px 34px rgba(0,0,0,.16)}
+.first-voice-offer .wrap{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-top:14px;padding-bottom:14px}
+.offer-copy{display:flex;align-items:center;gap:14px;min-width:0}.offer-badge{display:inline-flex;align-items:center;border-radius:999px;padding:6px 10px;background:linear-gradient(135deg,#ffd45d,#ff8b55);color:#2b1b02;font-size:.72rem;font-weight:950;letter-spacing:.05em;white-space:nowrap}.offer-text strong{display:block;font-size:1.02rem}.offer-text span{display:block;color:var(--muted);font-size:.85rem}.offer-price{font-size:1.65rem;font-weight:950;color:#ffd45d;white-space:nowrap}.offer-price small{font-size:.8rem;color:var(--faint);font-weight:700;margin-right:7px;text-decoration:line-through}.offer-cta{white-space:nowrap}.offer-preview-chip{display:inline-flex;margin-left:8px;padding:3px 7px;border:1px solid rgba(255,255,255,.2);border-radius:999px;color:#fff;font-size:.65rem;font-weight:850;vertical-align:middle}
+@media(max-width:760px){.first-voice-offer .wrap{align-items:flex-start;flex-direction:column}.offer-copy{align-items:flex-start}.offer-cta{width:100%}.offer-cta .btn{width:100%}.offer-price{font-size:1.45rem}}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<nav class="nav"><div class="wrap navin"><a class="brand" href="/"><span class="logo">A</span><span>ANTHBOT Map</span></a><div class="links"><a href="#anthbot-map">ANTHBOT Map</a><a href="#features">Features</a><a href="#models">Models</a><a class="store-link" href="/store">🔊 Voice Store</a><a class="community-link" href="https://github.com/Mqbretrofit/ha-anthbot-map-v2/discussions" target="_blank" rel="noopener">💬 GitHub Discussions</a><a class="hungary-link" href="https://anthbothungary.hu/" target="_blank" rel="noopener sponsored">🇭🇺 ANTHBOT Hungary</a><a href="#support">Support</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a></div><div class="lang-wrap"><span class="lang-label">Language</span><select class="lang-select" id="site-language" aria-label="Language"><option value="hu">Magyar</option><option value="en">English</option><option value="de">Deutsch</option><option value="fr">Français</option><option value="es">Español</option><option value="it">Italiano</option><option value="pt">Português</option><option value="nl">Nederlands</option><option value="pl">Polski</option><option value="cs">Čeština</option><option value="sk">Slovenčina</option><option value="ro">Română</option><option value="da">Dansk</option><option value="sv">Svenska</option><option value="no">Norsk</option><option value="fi">Suomi</option><option value="zh-CN">简体中文</option><option value="zh-TW">繁體中文</option><option value="tr">Türkçe</option><option value="th">ไทย</option><option value="vi">Tiếng Việt</option><option value="ko">한국어</option><option value="km">ខ្មែរ</option></select></div></div></nav>
+
+<section class="first-voice-offer" id="first-voice-offer">
+  <div class="wrap">
+    <div class="offer-copy">
+      <span class="offer-badge" id="offer-badge">ELSŐ HANG AKCIÓ</span>
+      <div class="offer-text">
+        <strong id="offer-title">Az első fizetős hangcsomagod kedvezményes áron.<span class="offer-preview-chip">PRÓBA</span></strong>
+        <span id="offer-subtitle">Válassz egy Genie hangcsomagot a Hangboltban. A kedvezmény az első fizetős hangodra érvényes.</span>
+      </div>
+    </div>
+    <div class="offer-price"><small>€7.99</small><span id="offer-price">€4.99</span></div>
+    <div class="offer-cta"><a class="btn primary" href="/dashboard/store-first-purchase-preview" id="offer-link">Megnézem a Hangboltban</a></div>
+  </div>
+</section>
+
+<header class="hero"><div class="wrap hero-grid">
+<div>
+  <span class="eyebrow"><i class="dotlive"></i> Open-source Home Assistant project</span>
+  <h1>The real <span class="grad">ANTHBOT Map</span> experience — in Home Assistant.</h1>
+  <p>ANTHBOT Map develops the independent <strong>Anthbot Map</strong> integration and its bundled Lovelace map card. It connects Home Assistant to the ANTHBOT cloud and adds model-aware mower control, live map/path/zone rendering, native schedules, mowing history, diagnostics and Battery Saver tools.</p>
+  <div class="quickflow" aria-label="ANTHBOT Map card panels"><span class="quickstep"><b>Control</b></span><span class="quickstep"><b>Schedule</b></span><span class="quickstep"><b>Robot settings</b> · <span>Voice Pack Store</span></span><span class="quickstep"><b>Interface</b></span><span class="quickstep"><b>Status</b></span><span class="quickstep"><b>Maintenance</b></span><span class="quickstep"><b>Diagnostics</b></span></div>
+  <div class="tags"><span class="tag">Live WebSocket map</span><span class="tag">Native schedule write-back</span><span class="tag">Zones & No-Go areas</span><span class="tag">Mowing history</span><span class="tag">Battery Saver</span><span class="tag">23 UI languages</span></div>
+  <div class="cta"><a class="btn primary" href="https://my.home-assistant.io/redirect/hacs_repository/?owner=Mqbretrofit&amp;repository=ha-anthbot-map-v2&amp;category=integration" target="_blank" rel="noopener"><span>Install via</span>&nbsp;<strong>HACS</strong></a><a class="btn" href="https://github.com/Mqbretrofit/ha-anthbot-map-v2" target="_blank" rel="noopener">View ANTHBOT Map on GitHub</a><a class="btn" href="/store">🔊 Community Voice Pack Store</a><a class="btn" href="https://github.com/Mqbretrofit/ha-anthbot-map-v2/discussions" target="_blank" rel="noopener">💬 Community Discussions</a></div>
+  <div class="repo-meta"><span>Stable release <strong data-anthbot-map-version="prefixed">v2.4.8.2</strong></span><span>Install via <strong>HACS</strong></span><span>License <strong>MIT</strong></span></div>
+</div>
+
+<div class="product-stage">
+  <div class="orbit"></div><div class="orbit two"></div>
+  <img class="robot-hero" alt="ANTHBOT Genie mower image used by the Anthbot Map integration" src="/assets/genie-mower.png?v=1" fetchpriority="high" decoding="async">
+  <div class="demo-card" id="anthbot-demo">
+    <div class="demo-top">
+      <div class="demo-title-row"><div class="demo-title"><strong>Garden · Genie 1000</strong><span>Anthbot Map Card · Home Assistant</span></div><div class="cloud"><i></i> CLOUD LIVE</div></div>
+    </div>
+    <div class="map-wrap" id="live-map-demo">
+      <svg viewBox="0 0 640 360" aria-label="Animated Anthbot Map demonstration">
+        <defs>
+          <filter id="softGlow"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <path class="grass" d="M60 62 C120 32 192 45 233 81 C272 116 345 101 393 69 C451 31 548 53 578 115 C600 160 570 204 588 245 C605 286 570 321 514 326 L122 326 C73 321 42 286 54 238 C65 195 34 157 44 112 C49 89 52 74 60 62Z"/>
+        <path class="zone-shape" d="M78 82 C127 59 180 68 218 97 L209 183 L78 190 C66 151 64 114 78 82Z"/>
+        <path class="zone-shape" d="M239 100 C290 120 352 110 398 82 L476 88 L468 193 L234 195Z"/>
+        <path class="zone-shape" d="M82 208 L245 205 L246 305 L113 306 C81 299 65 269 82 208Z"/>
+        <path class="zone-shape" d="M265 210 L547 198 C560 240 550 283 511 305 L270 304Z"/>
+        <path class="nogo" d="M350 225 L415 220 L424 270 L360 280Z"/>
+        <path class="coverage" d="M90 86 L515 86 C531 86 540 96 540 106 C540 116 531 126 515 126 L100 126 C84 126 76 136 76 146 C76 156 84 166 100 166 L520 166 C536 166 544 176 544 186 C544 196 536 206 520 206 L100 206 C84 206 76 216 76 226 C76 236 84 246 100 246 L337 246 L337 232 C337 218 344 210 356 209 L416 205 C428 204 434 212 435 225 L437 246 L520 246 C536 246 544 256 544 266 C544 278 536 290 520 290 L110 290 C96 290 90 296 90 301 C90 307 98 312 112 312 L505 312"/>
+        <path class="live-path" id="demo-path" d="M90 86 L515 86 C531 86 540 96 540 106 C540 116 531 126 515 126 L100 126 C84 126 76 136 76 146 C76 156 84 166 100 166 L520 166 C536 166 544 176 544 186 C544 196 536 206 520 206 L100 206 C84 206 76 216 76 226 C76 236 84 246 100 246 L337 246 L337 232 C337 218 344 210 356 209 L416 205 C428 204 434 212 435 225 L437 246 L520 246 C536 246 544 256 544 266 C544 278 536 290 520 290 L110 290 C96 290 90 296 90 301 C90 307 98 312 112 312 L505 312"/>
+        <rect class="dock-icon" x="67" y="279" rx="5" width="27" height="18"/>
+      </svg>
+      <img class="robot-on-map" id="demo-robot" alt="Genie 1000 mower moving on the map demo" src="/assets/genie-mower.png?v=1" decoding="async">
+      <div class="badges"><span class="badge">Zone 1</span><span class="badge">Zone 2</span><span class="badge">No-Go</span><span class="badge">Live path</span></div>
+      <div class="map-status"><div class="battery">78%</div><div class="statuscopy"><small>Status</small><strong id="demo-status">Mowing</strong><span class="nextmow">Next mow · Mon 09:00</span></div></div>
+      <div class="map-actions"><div class="round">＋</div><div class="round">−</div><div class="round">↻</div><div class="round">⛶</div></div>
+      <div class="command-dock"><div class="cmd-grid"><button class="cmd start" type="button">▶ Start / Resume</button><button class="cmd stop" type="button">■ Stop</button><button class="cmd dock" type="button">⌂ Return to dock</button></div></div>
+      <div class="progressline"><i></i></div>
+    </div>
+    <div class="panel-tabs" role="tablist">
+      <button type="button" data-demo-tab="control">Control</button>
+      <button type="button" data-demo-tab="schedule">Schedule</button>
+      <button class="active" type="button" data-demo-tab="settings">Robot settings</button>
+      <button type="button" data-demo-tab="interface">Interface</button>
+      <button type="button" data-demo-tab="status">Status</button>
+      <button type="button" data-demo-tab="maintenance">Maintenance</button>
+      <button type="button" data-demo-tab="diagnostics">Diagnostics</button>
+    </div>
+    <div class="panel-body">
+      <div class="demo-pane" data-demo-pane="control"><div class="tile-grid"><div class="tile green"><strong>Full lawn</strong><span>Start full-area mowing</span></div><div class="tile"><strong>Manual zones</strong><span>Choose mapped mowing zones</span></div><div class="tile"><strong>Automatic zones</strong><span>Use supported auto-zone mode</span></div><div class="tile"><strong>Outer edge</strong><span>Edge mowing where supported</span></div><div class="tile"><strong>Dock surroundings</strong><span>Dock-area mowing where supported</span></div><div class="tile blue"><strong>Return to dock</strong><span>Model-aware command routing</span></div></div></div>
+      <div class="demo-pane" data-demo-pane="schedule"><div class="schedule-overview"><div class="schedule-card"><small>Next mow</small><strong style="color:#63b8ff">Monday · 09:00</strong></div><div class="schedule-card"><small>Temporary override</small><strong>No active override</strong></div><div class="schedule-card"><small>Last mower event</small><strong>Docked</strong></div></div><div class="rule"><div><strong>Front garden</strong><br><span>Mon, Thu · 09:00 · Manual zones · 45 mm</span></div><span>ANTHBOT app</span></div></div>
+      <div class="demo-pane active" data-demo-pane="settings"><div class="setting-row"><div><strong>Cutting height</strong><div class="small">30–70 mm where supported</div></div><strong>45 mm</strong></div><div class="setting-row"><div><strong>Voice Pack Store</strong><div class="small">Genie · Language</div></div><strong>Genie</strong></div><div class="setting-row"><div><strong>Battery Saver</strong><div class="small">Balanced profile · restart persistent</div></div><div class="toggle"></div></div><div class="setting-row"><div><strong>Rain handling</strong><div class="small">Model-aware settings and hold logic</div></div><div class="toggle"></div></div></div>
+      <div class="demo-pane" data-demo-pane="interface"><div class="setting-row"><div><strong>Interface language</strong><div class="small">23 selectable languages</div></div><strong>English</strong></div><div class="setting-row"><div><strong>Glass background</strong><div class="small">Card appearance option</div></div><div class="toggle"></div></div><div class="setting-row"><div><strong>Map calibration</strong><div class="small">Map, mower, path and decoded boundary</div></div><strong>Calibrated</strong></div></div>
+      <div class="demo-pane" data-demo-pane="status"><div class="tile-grid"><div class="tile"><strong>Battery</strong><span>78% · Charging state available</span></div><div class="tile"><strong>RTK / Network</strong><span>Cloud and connectivity data</span></div><div class="tile"><strong>Firmware</strong><span>Model-specific firmware information</span></div><div class="tile"><strong>Progress</strong><span id="demo-progress">62% · 418 m²</span></div><div class="tile"><strong>Map stream</strong><span>WebSocket snapshot + deltas</span></div><div class="tile"><strong>Recorder</strong><span>High-frequency geometry kept out of state</span></div></div></div>
+      <div class="demo-pane" data-demo-pane="maintenance"><div class="tile-grid"><div class="tile"><strong>Maintenance data</strong><span>Available model-specific maintenance counters</span></div><div class="tile"><strong>Shutdown Guard</strong><span>Recurring 55+1 minute supported charger guard</span></div><div class="tile"><strong>Battery profiles</strong><span>Threshold and charger-power handling</span></div></div></div>
+      <div class="demo-pane" data-demo-pane="diagnostics"><div class="history"><div class="tile"><strong>Previous mowing task</strong><span>Today · 1h 42m · 612 m² · Zone 1 + 2</span></div><div class="tile"><strong>Historical map & path</strong><span>Session map/path detail where available</span></div><div class="tile"><strong>Automatic diagnostics</strong><span>Optional, privacy-conscious support reports</span></div><div class="tile"><strong>Developer access</strong><span>Optional read-only diagnostics tools</span></div></div></div>
+    </div>
+    <div class="demo-note" data-anthbot-map-version-note>Interactive visual based on the actual Anthbot Map card structure and current v2.4.8.2 feature set. Demo data only.</div>
+  </div>
+</div>
+</div></header>
+
+<section class="section stats"><div class="wrap statgrid"><div class="stat glass"><small>Current stable release</small><strong data-anthbot-map-version="plain">2.4.8.2</strong></div><div class="stat glass"><small>Live map transport</small><strong>WebSocket snapshot + deltas</strong></div><div class="stat glass"><small>Interface languages</small><strong>23 selectable languages</strong></div><div class="stat glass"><small>Distribution</small><strong>HACS custom integration</strong></div></div></section>
+
+<main>
+<section id="anthbot-map" class="section"><div class="wrap deep-grid"><div><span class="eyebrow">What ANTHBOT Map actually does</span><h2>Built around the real mower workflow, not a generic dashboard.</h2><p class="lead">The site now mirrors the integration itself: the same dark Home Assistant card language, the same green active accent, the same map overlays and the same major panels found in the bundled <code>anthbot-map-card</code>.</p><div class="bullet-list"><div class="bullet glass"><strong>Live map without Recorder overload</strong><span>High-frequency path and pose updates use a dedicated WebSocket transport with full snapshots, incremental deltas, sequence handling and automatic resync.</span></div><div class="bullet glass"><strong>Native ANTHBOT schedule as source of truth</strong><span>The Schedule panel mirrors app rules and can create, edit and delete supported native weekly schedules, including zones, cutting height and optional weather logic.</span></div><div class="bullet glass"><strong>Map, zones, No-Go and history</strong><span>Displays lawn boundary, mapped zones, No-Go geometry, mower position, live path, mowing coverage and previous task detail where the model exposes it.</span></div></div></div>
+<div class="model-stage glass"><div class="models"><img alt="ANTHBOT Genie 1000 integration model image" src="/assets/genie-mower.png?v=1" loading="lazy" decoding="async"><img alt="ANTHBOT M-series integration model image" src="/assets/m-series-mower.png?v=1" loading="lazy" decoding="async"></div><div class="model-caps"><span>Genie 1000</span><span>M9 / M9 Pro</span><span>M5</span><span>N8</span><span>Pion / MGC</span></div></div></div></section>
+
+<section id="features" class="section"><div class="wrap"><h2>Current integration feature set</h2><p class="lead">This list is based on the current public Anthbot Map repository, not placeholder marketing copy.</p><div class="feature-grid">
+<div class="feature glass"><div class="feature-icon">⌖</div><span class="pill">Map</span><h3>Map, path & coverage</h3><p>Boundary, zones, No-Go areas, mower position, live mowing path, coverage, optional aerial/drone background, fullscreen, zoom, pan and rotation.</p></div>
+<div class="feature glass"><div class="feature-icon">▶</div><span class="pill">Control</span><h3>Model-aware mower commands</h3><p>Full lawn, zones, outer edge and dock surroundings where supported, plus pause, resume, stop and return-to-dock with separated model routing.</p></div>
+<div class="feature glass"><div class="feature-icon">◷</div><span class="pill">Schedule</span><h3>Native schedules & overrides</h3><p>ANTHBOT app schedules mirrored to Home Assistant, write-back editing, next-mow sensor, timed mow/park overrides and native mower events.</p></div>
+<div class="feature glass"><div class="feature-icon">☁</div><span class="pill">Automation</span><h3>Weather-aware scheduling</h3><p>Optional weather start guard, forecast checks, rain holds and bounded catch-up windows for supported scheduling workflows.</p></div>
+<div class="feature glass"><div class="feature-icon">▰</div><span class="pill">Energy</span><h3>Battery Saver</h3><p>Battery Saver profiles, charge thresholds, shared or separate RTK power behavior and restart-persistent state, plus the supported Shutdown Guard flow.</p></div>
+<div class="feature glass"><div class="feature-icon">↺</div><span class="pill">History</span><h3>Mowing history</h3><p>Previous mowing tasks can expose date, duration, area, progress, start reason, zones and historical map/path data where available.</p></div>
+<div class="feature glass"><div class="feature-icon">⚙</div><span class="pill">Diagnostics</span><h3>Diagnostics & developer tools</h3><p>Optional anonymous statistics, automatic diagnostics, task-event diagnostics and separately permissioned read-only Developer Agent tools.</p></div>
+<div class="feature glass"><div class="feature-icon">◎</div><span class="pill">Calibration</span><h3>Precise visual calibration</h3><p>Separate base-map, mower, mowing-path and decoded-boundary calibration for matching real garden imagery and mower geometry.</p></div>
+<div class="feature glass"><div class="feature-icon">文</div><span class="pill">UI</span><h3>23 interface languages</h3><p>The map card provides selectable interface languages while retaining Home Assistant-native entities and automation access.</p></div>
+</div></div></section>
+
+<section id="models" class="section"><div class="wrap"><h2>Model-specific support</h2><p class="lead">Anthbot Map does not force every mower through one generic protocol path.</p><div class="feature-grid">
+<div class="feature glass"><h3>Genie</h3><p>Directly hardware-tested. Genie-specific command, map/path and diagnostic behavior remains isolated from M-series routing.</p></div>
+<div class="feature glass"><h3>M9 Pro / M-series</h3><p>M9 Pro is directly hardware-tested with map, path, zones, history and current live-stream architecture. M9 and M5 share the M-series implementation, with model-specific handling where known.</p></div>
+<div class="feature glass"><h3>N8</h3><p>Dedicated N8 implementation with separate routing and regression coverage; direct current hardware validation remains pending in the public project documentation.</p></div>
+<div class="feature glass"><h3>Pion / MGC</h3><p>Dedicated Pion/MGC family handling for identifiers such as MGC500, MGC750 and MGC1000, including confirmed status normalization and native schedule behavior while unverified writes stay disabled.</p></div>
+</div></div></section>
+
+<section class="section"><div class="wrap open-source glass"><div><span class="eyebrow">Open source</span><h2 style="margin-top:10px">ANTHBOT Map itself is an open-source community project.</h2><p>The integration is published under the MIT license. Optional paid digital products, Community voice packs, sponsored feature work and priority development/support are separate from the open-source integration.</p></div><div class="cta" style="margin-top:0"><a class="btn primary" href="https://github.com/Mqbretrofit/ha-anthbot-map-v2" target="_blank" rel="noopener">GitHub repository</a><a class="btn" href="/store">Voice Pack Store</a></div></div></section>
+
+<section class="section"><div class="wrap two"><div><h2>Electronic delivery</h2><p class="lead">Paid digital products and services are delivered online. Depending on the purchase, delivery may be a licensed download, digital activation, hosted access, sponsored development work or another clearly described electronic service.</p><div class="bullet-list"><div class="bullet glass"><strong>No physical shipment</strong><span>Products described as digital are delivered electronically.</span></div><div class="bullet glass"><strong>Compatibility before purchase</strong><span>Supported model/software requirements are stated with the relevant product or service.</span></div></div></div><div class="notice glass"><strong>Independent project / trademark notice</strong><p>ANTHBOT is a trademark of its respective owner. ANTHBOT Map is an independent community project and is not an official ANTHBOT product unless explicitly stated otherwise. The public GitHub project describes the integration as unofficial and not affiliated with or endorsed by ANTHBOT.</p></div></div></section>
+
+<section id="support" class="section"><div class="wrap"><h2>Customer support</h2><p class="lead">For questions about a purchase, digital delivery, compatibility or a charge, contact ANTHBOT Map.</p><div class="feature-grid"><div class="feature glass"><h3>Support phone</h3><p>+36 30 620 9015</p></div><div class="feature glass"><h3>Technical project</h3><p>Anthbot Map issues and public development are tracked in the GitHub repository.</p></div><div class="feature glass"><h3>Support email</h3><p><a href="mailto:support@anthbotmap.com">support@anthbotmap.com</a></p></div></div></div></section>
+
+<section class="section center"><div class="wrap"><h2>Purchase policies</h2><p class="lead">Review the applicable terms before purchasing a digital product or service.</p><div class="policy-links"><a class="btn" href="/refunds">Refund Policy</a><a class="btn" href="/terms">Terms of Service</a><a class="btn" href="/privacy">Privacy Policy</a></div></div></section>
+</main>
+
+<footer class="footer"><div class="wrap">© 2026 ANTHBOT Map. All rights reserved.<div class="foot"><a href="/">Home</a><a href="https://github.com/Mqbretrofit/ha-anthbot-map-v2" target="_blank" rel="noopener">ANTHBOT Map GitHub</a><a href="/store">Voice Pack Store</a><a href="/refunds">Refunds</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a></div></div></footer>
+
+<script src="/public-site-i18n.js?v=1"></script>
+<script>
+(function(){
+  var currentVersion=null;
+  var versionRe=/^\d+(?:\.\d+){2,3}$/;
+  var inlineVersionRe=/v\d+(?:\.\d+){2,3}/g;
+
+  function applyVersion(version){
+    if(!versionRe.test(version))return;
+    currentVersion=version;
+    document.querySelectorAll("[data-anthbot-map-version]").forEach(function(el){
+      el.textContent=el.getAttribute("data-anthbot-map-version")==="prefixed"?"v"+version:version;
+    });
+    document.querySelectorAll("[data-anthbot-map-version-note]").forEach(function(el){
+      el.textContent=el.textContent.replace(inlineVersionRe,"v"+version);
+    });
+  }
+
+  fetch("/api/anthbot/map/latest-release",{headers:{"Accept":"application/json"},credentials:"same-origin"})
+    .then(function(res){if(!res.ok)throw new Error("HTTP "+res.status);return res.json();})
+    .then(function(data){if(data&&typeof data.version==="string")applyVersion(data.version);})
+    .catch(function(){});
+
+  var select=document.getElementById("site-language");
+  if(select)select.addEventListener("change",function(){
+    if(currentVersion)queueMicrotask(function(){applyVersion(currentVersion);});
+  });
+})();
+</script>
+<script>
+(function(){
+  var root=document.getElementById("anthbot-demo");
+  if(!root)return;
+
+  root.querySelectorAll("[data-demo-tab]").forEach(function(btn){
+    btn.addEventListener("click",function(){
+      root.querySelectorAll("[data-demo-tab]").forEach(function(b){b.classList.toggle("active",b===btn);});
+      root.querySelectorAll("[data-demo-pane]").forEach(function(p){p.classList.toggle("active",p.getAttribute("data-demo-pane")===btn.getAttribute("data-demo-tab"));});
+    });
+  });
+
+  var svg=root.querySelector("svg");
+  var path=root.querySelector("#demo-path");
+  var robot=root.querySelector("#demo-robot");
+  var progress=root.querySelector("#demo-progress");
+  var status=root.querySelector("#demo-status");
+  var start=performance.now();
+  var duration=22000;
+  var reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function frame(now){
+    var p=reduced?0.62:((now-start)%duration)/duration;
+    var len=path.getTotalLength();
+    var point=path.getPointAtLength(len*p);
+    var svgRect=svg.getBoundingClientRect();
+    var box=svg.viewBox.baseVal;
+    var x=(point.x-box.x)/box.width*svgRect.width;
+    var y=(point.y-box.y)/box.height*svgRect.height;
+    robot.style.left=x+"px";
+    robot.style.top=y+"px";
+    var behind=path.getPointAtLength(Math.max(0,len*p-3));
+    var ahead=path.getPointAtLength(Math.min(len,len*p+3));
+    var heading=Math.atan2(ahead.y-behind.y,ahead.x-behind.x)*180/Math.PI;
+    robot.style.transform="translate(-50%,-50%) rotate("+(heading-90)+"deg)";
+    var pct=Math.round(35+p*57);
+    var area=Math.round(235+p*430);
+    progress.textContent=pct+"% · "+area+" m²";
+    status.textContent=window.__siteT?window.__siteT("Mowing"):"Mowing";
+    if(!reduced)requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+
+<script>
+(async()=>{
+  const root=document.getElementById('first-voice-offer');
+  if(!root)return;
+  try{
+    const res=await fetch('/api/anthbot/admin/store/first-purchase-preview-settings',{cache:'no-store'});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok)throw new Error(data.detail||('HTTP '+res.status));
+    if(!data.enabled){
+      root.style.display='none';
+      return;
+    }
+    const amount=Number(data.price_amount||499);
+    const price=new Intl.NumberFormat('hu-HU',{style:'currency',currency:'EUR'}).format(amount/100);
+    document.getElementById('offer-price').textContent=price;
+    root.style.display='block';
+  }catch(_){
+    root.style.display='none';
+  }
+})();
+</script>
+
+</body>
+</html>
