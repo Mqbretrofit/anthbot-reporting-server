@@ -5,6 +5,7 @@ import hmac
 import io
 import json
 import os
+import re
 import smtplib
 from pathlib import Path
 import tarfile
