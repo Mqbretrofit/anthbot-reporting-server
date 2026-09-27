@@ -42,6 +42,7 @@ _OWNER_ACCESS_RE = re.compile(r"^abo1\.([A-Za-z0-9_-]+)\.([0-9a-f]{64})$")
 _ADMIN_GRANT_RE = re.compile(r"^abg1\.([A-Za-z0-9_-]+)\.([0-9a-f]{64})$")
 _PAIR_RE = re.compile(r"^abp_[A-Za-z0-9_-]{24,128}$")
 _CLIENT_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{32,512}$")
+_ROBOT_FINGERPRINT_RE = re.compile(r"^[0-9a-f]{64}$")
 _STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300
 _STORE_PAIR_TTL_SECONDS = 7 * 24 * 60 * 60
 _STORE_BROWSER_COOKIE = "anthbot_voice_store_client"
@@ -478,6 +479,7 @@ class CheckoutPayload(BaseModel):
 
     pack_id: str = Field(min_length=1, max_length=160)
     pair_code: str | None = Field(default=None, min_length=20, max_length=160)
+    skip_first_purchase_offer: bool = False
 
 
 class StoreClientCheckoutPayload(BaseModel):
@@ -504,6 +506,10 @@ class StoreClientPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     client_token: str = Field(min_length=32, max_length=512)
+    # Forward-compatible robot fingerprint. Current ANTHBOT Map versions omit
+    # it and continue to work with client_id fallback. A future Map version can
+    # send SHA-256("anthbot-map-robot-v1\\0" + normalized_serial).
+    robot_fingerprint: str | None = Field(default=None, min_length=64, max_length=64)
 
     @field_validator("client_token")
     @classmethod
@@ -511,6 +517,16 @@ class StoreClientPayload(BaseModel):
         normalized = value.strip()
         if not _CLIENT_TOKEN_RE.fullmatch(normalized):
             raise ValueError("invalid store client token")
+        return normalized
+
+    @field_validator("robot_fingerprint")
+    @classmethod
+    def _validate_robot_fingerprint(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip().lower()
+        if not _ROBOT_FINGERPRINT_RE.fullmatch(normalized):
+            raise ValueError("invalid robot fingerprint")
         return normalized
 
 
@@ -577,6 +593,7 @@ class FirstPurchasePreviewSettingsPayload(BaseModel):
 
     enabled: bool = False
     price_amount: int = Field(default=499, ge=1, le=100_000_000)
+    live_enabled: bool | None = None
 
 
 class StoreVisibilityPayload(BaseModel):
@@ -780,6 +797,7 @@ def _init_store_tables() -> None:
             CREATE TABLE IF NOT EXISTS store_client_pairings (
                 pair_code TEXT PRIMARY KEY,
                 client_id TEXT NOT NULL,
+                robot_key TEXT,
                 created_at TEXT NOT NULL,
                 expires_at INTEGER NOT NULL
             );
@@ -795,6 +813,19 @@ def _init_store_tables() -> None:
                 value TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS store_first_purchase_offer_claims (
+                claim_id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL UNIQUE,
+                promo_subject TEXT NOT NULL UNIQUE,
+                state TEXT NOT NULL,
+                stripe_session_id TEXT,
+                created_at TEXT NOT NULL,
+                expires_at INTEGER NOT NULL,
+                consumed_at TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_store_first_offer_claim_session
+                ON store_first_purchase_offer_claims(stripe_session_id);
 
             CREATE TABLE IF NOT EXISTS store_admin_voice_grants (
                 grant_id TEXT PRIMARY KEY,
@@ -919,6 +950,28 @@ def _init_store_tables() -> None:
                 "ALTER TABLE store_orders "
                 "ADD COLUMN installation_email_error TEXT"
             )
+        if "first_purchase_offer" not in columns:
+            conn.execute(
+                "ALTER TABLE store_orders "
+                "ADD COLUMN first_purchase_offer INTEGER NOT NULL DEFAULT 0"
+            )
+        if "promo_subject" not in columns:
+            conn.execute("ALTER TABLE store_orders ADD COLUMN promo_subject TEXT")
+        if "promo_claim_id" not in columns:
+            conn.execute("ALTER TABLE store_orders ADD COLUMN promo_claim_id TEXT")
+        if "regular_amount_total" not in columns:
+            conn.execute("ALTER TABLE store_orders ADD COLUMN regular_amount_total INTEGER")
+
+        pairing_columns = {
+            str(row["name"])
+            for row in conn.execute(
+                "PRAGMA table_info(store_client_pairings)"
+            ).fetchall()
+        }
+        if "robot_key" not in pairing_columns:
+            conn.execute(
+                "ALTER TABLE store_client_pairings ADD COLUMN robot_key TEXT"
+            )
         conn.executescript(
             """
             CREATE INDEX IF NOT EXISTS idx_store_orders_client_id
@@ -927,6 +980,8 @@ def _init_store_tables() -> None:
             ON store_orders(community_id);
             CREATE INDEX IF NOT EXISTS idx_store_orders_user_id
             ON store_orders(user_id);
+            CREATE INDEX IF NOT EXISTS idx_store_orders_promo_subject
+            ON store_orders(promo_subject);
             """
         )
 
@@ -1137,10 +1192,45 @@ def _set_browser_store_cookie(response: Response, token: str) -> None:
     )
 
 
-def _create_store_pairing(client_token: str) -> tuple[str, int]:
+def _robot_hint_from_serial(serial: str) -> str:
+    """Return the public, non-secret serial fingerprint future Map clients can reproduce."""
+    normalized = str(serial or "").strip().casefold()
+    if not normalized:
+        return ""
+    return hashlib.sha256(
+        b"anthbot-map-robot-v1\\0" + normalized.encode("utf-8")
+    ).hexdigest()
+
+
+def _robot_key_from_fingerprint(robot_fingerprint: str | None) -> str | None:
+    """Convert a client-visible fingerprint into a server-only stable robot key."""
+    normalized = str(robot_fingerprint or "").strip().lower()
+    if not _ROBOT_FINGERPRINT_RE.fullmatch(normalized):
+        return None
+    secret = _license_secret()
+    if not secret:
+        return None
+    digest = hmac.new(
+        secret.encode("utf-8"),
+        ("robot-key-v1\\0" + normalized).encode("ascii"),
+        hashlib.sha256,
+    ).hexdigest()
+    return f"abrk_{digest}"
+
+
+def _robot_key_from_serial(serial: str) -> str | None:
+    hint = _robot_hint_from_serial(serial)
+    return _robot_key_from_fingerprint(hint) if hint else None
+
+
+def _create_store_pairing(
+    client_token: str,
+    robot_fingerprint: str | None = None,
+) -> tuple[str, int]:
     """Create a temporary browser pairing code for one ANTHBOT Map install."""
     _init_store_tables()
     client_id = _client_id_from_token(client_token)
+    robot_key = _robot_key_from_fingerprint(robot_fingerprint)
     pair_code = f"abp_{secrets.token_urlsafe(32)}"
     expires_at = int(time.time()) + _STORE_PAIR_TTL_SECONDS
     now = core._iso()
@@ -1152,16 +1242,16 @@ def _create_store_pairing(client_token: str) -> tuple[str, int]:
         conn.execute(
             """
             INSERT INTO store_client_pairings (
-                pair_code, client_id, created_at, expires_at
-            ) VALUES (?, ?, ?, ?)
+                pair_code, client_id, robot_key, created_at, expires_at
+            ) VALUES (?, ?, ?, ?, ?)
             """,
-            (pair_code, client_id, now, expires_at),
+            (pair_code, client_id, robot_key, now, expires_at),
         )
     return pair_code, expires_at
 
 
-def _client_id_from_pairing(pair_code: str | None) -> str | None:
-    """Resolve a non-secret browser pairing code to one Map client."""
+def _pairing_details(pair_code: str | None) -> dict[str, str | None] | None:
+    """Resolve one pairing while preserving optional future robot identity."""
     if pair_code is None:
         return None
     normalized = pair_code.strip()
@@ -1172,7 +1262,7 @@ def _client_id_from_pairing(pair_code: str | None) -> str | None:
     with core._db() as conn:
         row = conn.execute(
             """
-            SELECT client_id, expires_at
+            SELECT client_id, robot_key, expires_at
             FROM store_client_pairings
             WHERE pair_code = ?
             """,
@@ -1180,7 +1270,16 @@ def _client_id_from_pairing(pair_code: str | None) -> str | None:
         ).fetchone()
     if row is None or int(row["expires_at"]) < int(time.time()):
         raise HTTPException(status_code=401, detail="voice store pairing expired")
-    return str(row["client_id"])
+    return {
+        "client_id": str(row["client_id"]),
+        "robot_key": str(row["robot_key"]) if row["robot_key"] else None,
+    }
+
+
+def _client_id_from_pairing(pair_code: str | None) -> str | None:
+    """Resolve a non-secret browser pairing code to one Map client."""
+    details = _pairing_details(pair_code)
+    return str(details["client_id"]) if details is not None else None
 
 
 def _is_owner_client(client_id: str) -> bool:
@@ -1945,6 +2044,7 @@ def _first_purchase_preview_settings() -> dict[str, Any]:
     _init_store_tables()
     defaults = {
         "enabled": False,
+        "live_enabled": False,
         "price_amount": 499,
         "currency": _STANDARD_VOICE_PACK_CURRENCY,
     }
@@ -1967,6 +2067,7 @@ def _first_purchase_preview_settings() -> dict[str, Any]:
         price_amount = defaults["price_amount"]
     return {
         "enabled": bool(raw.get("enabled", defaults["enabled"])),
+        "live_enabled": bool(raw.get("live_enabled", defaults["live_enabled"])),
         "price_amount": max(1, min(price_amount, 100_000_000)),
         "currency": _STANDARD_VOICE_PACK_CURRENCY,
     }
@@ -1977,8 +2078,14 @@ def _save_first_purchase_preview_settings(
 ) -> dict[str, Any]:
     """Persist preview-only settings without changing the public store or Stripe."""
     _init_store_tables()
+    current = _first_purchase_preview_settings()
     value = {
         "enabled": payload.enabled,
+        "live_enabled": (
+            current["live_enabled"]
+            if payload.live_enabled is None
+            else payload.live_enabled
+        ),
         "price_amount": payload.price_amount,
         "currency": _STANDARD_VOICE_PACK_CURRENCY,
     }
@@ -1996,6 +2103,162 @@ def _save_first_purchase_preview_settings(
             (_FIRST_PURCHASE_PREVIEW_SETTING_KEY, encoded, now),
         )
     return value
+
+
+def _first_purchase_offer_subject(
+    *,
+    client_id: str | None = None,
+    robot_key: str | None = None,
+) -> str | None:
+    if robot_key:
+        return f"robot:{robot_key}"
+    if client_id:
+        return f"client:{client_id}"
+    return None
+
+
+def _user_has_previous_paid_purchase(user_id: str) -> bool:
+    _init_store_tables()
+    with core._db() as conn:
+        row = conn.execute(
+            """
+            SELECT 1
+            FROM store_orders
+            WHERE user_id = ?
+              AND paid_at IS NOT NULL
+            LIMIT 1
+            """,
+            (user_id,),
+        ).fetchone()
+    return row is not None
+
+
+def _promo_subject_has_consumed_offer(promo_subject: str) -> bool:
+    _init_store_tables()
+    with core._db() as conn:
+        row = conn.execute(
+            """
+            SELECT 1
+            FROM store_orders
+            WHERE promo_subject = ?
+              AND first_purchase_offer = 1
+              AND paid_at IS NOT NULL
+            LIMIT 1
+            """,
+            (promo_subject,),
+        ).fetchone()
+        if row is not None:
+            return True
+        claim = conn.execute(
+            """
+            SELECT 1
+            FROM store_first_purchase_offer_claims
+            WHERE promo_subject = ?
+              AND state = 'consumed'
+            LIMIT 1
+            """,
+            (promo_subject,),
+        ).fetchone()
+    return claim is not None
+
+
+def _first_purchase_offer_status(
+    user_id: str | None,
+    promo_subject: str | None,
+) -> dict[str, Any]:
+    settings = _first_purchase_preview_settings()
+    enabled = bool(settings.get("live_enabled"))
+    result = {
+        "enabled": enabled,
+        "eligible": False,
+        "price_amount": int(settings["price_amount"]),
+        "currency": str(settings["currency"]),
+        "requires_account": user_id is None,
+        "requires_robot_or_map": promo_subject is None,
+    }
+    if not enabled or not user_id or not promo_subject:
+        return result
+    if _user_has_previous_paid_purchase(user_id):
+        return result
+    if _promo_subject_has_consumed_offer(promo_subject):
+        return result
+    result["eligible"] = True
+    return result
+
+
+def _reserve_first_purchase_offer(
+    user_id: str,
+    promo_subject: str | None,
+) -> dict[str, Any] | None:
+    status = _first_purchase_offer_status(user_id, promo_subject)
+    if not status["eligible"] or promo_subject is None:
+        return None
+
+    now_epoch = int(time.time())
+    claim_id = f"abfp_{secrets.token_urlsafe(20)}"
+    now = core._iso()
+    with core._db() as conn:
+        conn.execute(
+            """
+            DELETE FROM store_first_purchase_offer_claims
+            WHERE state = 'reserved' AND expires_at < ?
+            """,
+            (now_epoch,),
+        )
+        try:
+            conn.execute(
+                """
+                INSERT INTO store_first_purchase_offer_claims (
+                    claim_id, user_id, promo_subject, state,
+                    stripe_session_id, created_at, expires_at, consumed_at
+                ) VALUES (?, ?, ?, 'reserved', NULL, ?, ?, NULL)
+                """,
+                (
+                    claim_id,
+                    user_id,
+                    promo_subject,
+                    now,
+                    now_epoch + 15 * 60,
+                ),
+            )
+        except Exception:
+            return None
+    return {
+        "claim_id": claim_id,
+        "promo_subject": promo_subject,
+        "price_amount": int(status["price_amount"]),
+        "currency": str(status["currency"]),
+    }
+
+
+def _attach_first_purchase_offer_claim(
+    claim_id: str,
+    stripe_session_id: str,
+) -> None:
+    _init_store_tables()
+    with core._db() as conn:
+        conn.execute(
+            """
+            UPDATE store_first_purchase_offer_claims
+            SET stripe_session_id = ?, expires_at = ?
+            WHERE claim_id = ? AND state = 'reserved'
+            """,
+            (stripe_session_id, int(time.time()) + 24 * 60 * 60, claim_id),
+        )
+
+
+def _release_first_purchase_offer_claim(claim_id: str | None) -> None:
+    if not claim_id:
+        return
+    _init_store_tables()
+    with core._db() as conn:
+        conn.execute(
+            """
+            DELETE FROM store_first_purchase_offer_claims
+            WHERE claim_id = ? AND state = 'reserved'
+            """,
+            (claim_id,),
+        )
 
 
 def _stripe_session_dict(value: Any) -> dict[str, Any]:
@@ -2052,8 +2315,14 @@ def _create_checkout_session(
     entitlement_scope: str | None = None,
     success_url_override: str | None = None,
     cancel_url_override: str | None = None,
+    first_purchase_offer_claim: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    amount = _price_amount(record)
+    regular_amount = _price_amount(record)
+    amount = (
+        int(first_purchase_offer_claim["price_amount"])
+        if first_purchase_offer_claim is not None
+        else regular_amount
+    )
     currency = _currency(record)
     if amount <= 0:
         raise HTTPException(status_code=409, detail="voice pack price is not configured")
@@ -2087,6 +2356,11 @@ def _create_checkout_session(
         metadata["store_user_id"] = user_id
     if entitlement_scope in {"map", "web"}:
         metadata["entitlement_scope"] = entitlement_scope
+    if first_purchase_offer_claim is not None:
+        metadata["first_purchase_offer"] = "1"
+        metadata["promo_subject"] = str(first_purchase_offer_claim["promo_subject"])
+        metadata["promo_claim_id"] = str(first_purchase_offer_claim["claim_id"])
+        metadata["regular_amount_total"] = str(regular_amount)
 
     payment_metadata = {
         "pack_id": pack_id,
@@ -2098,6 +2372,11 @@ def _create_checkout_session(
         payment_metadata["store_user_id"] = user_id
     if entitlement_scope in {"map", "web"}:
         payment_metadata["entitlement_scope"] = entitlement_scope
+    if first_purchase_offer_claim is not None:
+        payment_metadata["first_purchase_offer"] = "1"
+        payment_metadata["promo_subject"] = str(first_purchase_offer_claim["promo_subject"])
+        payment_metadata["promo_claim_id"] = str(first_purchase_offer_claim["claim_id"])
+        payment_metadata["regular_amount_total"] = str(regular_amount)
 
     account = store_accounts.get_user(user_id) if user_id else None
     params: dict[str, Any] = {
@@ -2231,6 +2510,44 @@ def _session_user_id(session: dict[str, Any]) -> str | None:
     return normalized
 
 
+def _session_first_purchase_offer(session: dict[str, Any]) -> bool:
+    metadata = session.get("metadata")
+    if not isinstance(metadata, dict):
+        return False
+    return str(metadata.get("first_purchase_offer") or "").strip() == "1"
+
+
+def _session_promo_subject(session: dict[str, Any]) -> str | None:
+    metadata = session.get("metadata")
+    if not isinstance(metadata, dict):
+        return None
+    value = str(metadata.get("promo_subject") or "").strip()
+    if not value or len(value) > 160:
+        return None
+    if not (value.startswith("client:abvc_") or value.startswith("robot:abrk_")):
+        return None
+    return value
+
+
+def _session_promo_claim_id(session: dict[str, Any]) -> str | None:
+    metadata = session.get("metadata")
+    if not isinstance(metadata, dict):
+        return None
+    value = str(metadata.get("promo_claim_id") or "").strip()
+    return value[:96] if value.startswith("abfp_") else None
+
+
+def _session_regular_amount_total(session: dict[str, Any]) -> int | None:
+    metadata = session.get("metadata")
+    if not isinstance(metadata, dict):
+        return None
+    try:
+        value = int(metadata.get("regular_amount_total"))
+    except (TypeError, ValueError):
+        return None
+    return value if value > 0 else None
+
+
 def _session_entitlement_scope(session: dict[str, Any]) -> str | None:
     metadata = session.get("metadata")
     if not isinstance(metadata, dict):
@@ -2287,6 +2604,10 @@ def _upsert_order_from_session(session: dict[str, Any]) -> dict[str, Any]:
     client_id = _session_client_id(session)
     user_id = _session_user_id(session)
     entitlement_scope = _session_entitlement_scope(session)
+    first_purchase_offer = _session_first_purchase_offer(session)
+    promo_subject = _session_promo_subject(session)
+    promo_claim_id = _session_promo_claim_id(session)
+    regular_amount_total = _session_regular_amount_total(session)
     created_at = _iso_from_epoch(session.get("created"))
     now = core._iso()
 
@@ -2306,8 +2627,9 @@ def _upsert_order_from_session(session: dict[str, Any]) -> dict[str, Any]:
                 stripe_session_id, pack_id, community_id, status, payment_status,
                 amount_total, currency, customer_email, stripe_customer_id,
                 stripe_payment_intent_id, client_id, user_id, entitlement_scope,
-                created_at, updated_at, paid_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                first_purchase_offer, promo_subject, promo_claim_id,
+                regular_amount_total, created_at, updated_at, paid_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(stripe_session_id) DO UPDATE SET
                 pack_id=excluded.pack_id,
                 community_id=COALESCE(excluded.community_id, store_orders.community_id),
@@ -2323,6 +2645,22 @@ def _upsert_order_from_session(session: dict[str, Any]) -> dict[str, Any]:
                 entitlement_scope=COALESCE(
                     excluded.entitlement_scope,
                     store_orders.entitlement_scope
+                ),
+                first_purchase_offer=MAX(
+                    store_orders.first_purchase_offer,
+                    excluded.first_purchase_offer
+                ),
+                promo_subject=COALESCE(
+                    excluded.promo_subject,
+                    store_orders.promo_subject
+                ),
+                promo_claim_id=COALESCE(
+                    excluded.promo_claim_id,
+                    store_orders.promo_claim_id
+                ),
+                regular_amount_total=COALESCE(
+                    excluded.regular_amount_total,
+                    store_orders.regular_amount_total
                 ),
                 updated_at=excluded.updated_at,
                 paid_at=COALESCE(store_orders.paid_at, excluded.paid_at)
@@ -2341,6 +2679,10 @@ def _upsert_order_from_session(session: dict[str, Any]) -> dict[str, Any]:
                 client_id,
                 user_id,
                 entitlement_scope,
+                1 if first_purchase_offer else 0,
+                promo_subject,
+                promo_claim_id,
+                regular_amount_total,
                 created_at,
                 now,
                 paid_at,
@@ -2354,6 +2696,28 @@ def _upsert_order_from_session(session: dict[str, Any]) -> dict[str, Any]:
     if row is None:
         raise HTTPException(status_code=500, detail="could not persist store order")
     result = dict(row)
+
+    if promo_claim_id:
+        if payment_status == "paid":
+            with core._db() as conn:
+                conn.execute(
+                    """
+                    UPDATE store_first_purchase_offer_claims
+                    SET state = 'consumed',
+                        stripe_session_id = ?,
+                        consumed_at = ?,
+                        expires_at = ?
+                    WHERE claim_id = ?
+                    """,
+                    (
+                        session_id,
+                        now,
+                        2_147_483_647,
+                        promo_claim_id,
+                    ),
+                )
+        elif checkout_status == "expired":
+            _release_first_purchase_offer_claim(promo_claim_id)
     if user_id and customer_id:
         store_accounts.set_stripe_customer_id(user_id, customer_id)
     return result
@@ -3584,6 +3948,30 @@ async def public_anthbot_map_latest_release(response: Response) -> dict[str, Any
     }
 
 
+@router.get("/api/anthbot/store/first-purchase-offer")
+def public_first_purchase_offer(request: Request, pair: str | None = None) -> dict[str, Any]:
+    settings = _first_purchase_preview_settings()
+    user = store_accounts.current_user(request)
+    user_id = str(user["user_id"]) if user is not None else None
+    promo_subject = None
+    if pair:
+        details = _pairing_details(pair)
+        if details is not None:
+            promo_subject = _first_purchase_offer_subject(
+                client_id=str(details["client_id"]),
+                robot_key=(
+                    str(details["robot_key"])
+                    if details.get("robot_key")
+                    else None
+                ),
+            )
+    status = _first_purchase_offer_status(user_id, promo_subject)
+    return {
+        **status,
+        "generic_available": bool(settings.get("live_enabled")),
+    }
+
+
 @router.get("/api/anthbot/store/voice-packs")
 def store_voice_packs(request: Request) -> dict[str, Any]:
     catalog = _store_catalog(request)
@@ -3680,7 +4068,10 @@ def create_store_client_pair(
 ) -> dict[str, Any]:
     if not _store_enabled():
         raise HTTPException(status_code=503, detail="voice store is disabled")
-    pair_code, expires_at = _create_store_pairing(payload.client_token)
+    pair_code, expires_at = _create_store_pairing(
+        payload.client_token,
+        payload.robot_fingerprint,
+    )
     base = core._public_base_url(request)
     return {
         "paired": True,
@@ -3949,7 +4340,15 @@ async def create_store_checkout(
 
     user = store_accounts.require_user(request)
     user_id = str(user["user_id"])
-    pair_client_id = _client_id_from_pairing(payload.pair_code)
+    pairing = _pairing_details(payload.pair_code)
+    pair_client_id = (
+        str(pairing["client_id"]) if pairing is not None else None
+    )
+    pair_robot_key = (
+        str(pairing["robot_key"])
+        if pairing is not None and pairing.get("robot_key")
+        else None
+    )
     entitlement_scope = "map" if pair_client_id is not None else "web"
     if pair_client_id is not None:
         linked_user_id = store_accounts.user_id_for_client(pair_client_id)
@@ -3959,6 +4358,10 @@ async def create_store_checkout(
                 detail="Link this ANTHBOT Map to your Voice Store account before purchase",
             )
     client_id = pair_client_id or _browser_store_client_id(request)
+    promo_subject = _first_purchase_offer_subject(
+        client_id=pair_client_id,
+        robot_key=pair_robot_key,
+    )
 
     existing_order = _paid_order_for_user_pack(
         user_id,
@@ -3978,15 +4381,31 @@ async def create_store_checkout(
             "entitlement_scope": entitlement_scope,
         }
 
-    session = await asyncio.to_thread(
-        _create_checkout_session,
-        record,
-        request,
-        client_id=client_id,
-        user_id=user_id,
-        pair_code=payload.pair_code,
-        entitlement_scope=entitlement_scope,
+    offer_claim = (
+        None
+        if payload.skip_first_purchase_offer
+        else _reserve_first_purchase_offer(user_id, promo_subject)
     )
+    try:
+        session = await asyncio.to_thread(
+            _create_checkout_session,
+            record,
+            request,
+            client_id=client_id,
+            user_id=user_id,
+            pair_code=payload.pair_code,
+            entitlement_scope=entitlement_scope,
+            first_purchase_offer_claim=offer_claim,
+        )
+        if offer_claim is not None:
+            _attach_first_purchase_offer_claim(
+                str(offer_claim["claim_id"]),
+                str(session.get("id") or ""),
+            )
+    except Exception:
+        if offer_claim is not None:
+            _release_first_purchase_offer_claim(str(offer_claim["claim_id"]))
+        raise
     order = _upsert_order_from_session(session)
     checkout_url = session.get("url")
     if not isinstance(checkout_url, str) or not checkout_url.startswith("https://"):
@@ -3996,6 +4415,13 @@ async def create_store_checkout(
         "checkout_url": checkout_url,
         "session_id": order["stripe_session_id"],
         "entitlement_scope": entitlement_scope,
+        "first_purchase_offer_applied": bool(offer_claim),
+        "price_amount": (
+            int(offer_claim["price_amount"])
+            if offer_claim is not None
+            else _price_amount(record)
+        ),
+        "currency": _currency(record),
     }
 
 
