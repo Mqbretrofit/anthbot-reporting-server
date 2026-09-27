@@ -1983,7 +1983,7 @@ def _save_first_purchase_preview_settings(
         "currency": _STANDARD_VOICE_PACK_CURRENCY,
     }
     encoded = json.dumps(value, separators=(",", ":"), sort_keys=True)
-    now = _iso()
+    now = core._iso()
     with core._db() as conn:
         conn.execute(
             """
