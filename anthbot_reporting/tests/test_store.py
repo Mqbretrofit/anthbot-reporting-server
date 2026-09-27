@@ -3013,16 +3013,41 @@ class VoiceStoreTests(unittest.TestCase):
             "/dashboard/store-first-purchase-preview",
             homepage_preview.text,
         )
+        self.assertIn("FIRST_VOICE_OFFER", homepage_preview.text)
+        self.assertIn("offer-title-text", homepage_preview.text)
+        self.assertIn("offer-preview-chip", homepage_preview.text)
+        self.assertIn("queueMicrotask(renderOffer)", homepage_preview.text)
         self.assertEqual(
             homepage_preview.headers.get("x-robots-tag"),
             "noindex, nofollow",
         )
+
+        expected_offer_languages = {
+            "hu", "en", "de", "fr", "es", "it", "pt", "nl", "pl", "cs",
+            "sk", "ro", "da", "sv", "no", "fi", "zh-CN", "zh-TW", "tr",
+            "th", "vi", "ko", "km",
+        }
+        offer_match = re.search(
+            r"const FIRST_VOICE_OFFER=(\{.*?\});",
+            homepage_preview.text,
+        )
+        self.assertIsNotNone(offer_match)
+        offer_translations = json.loads(offer_match.group(1))
+        self.assertEqual(set(offer_translations), expected_offer_languages)
+        for language, copy in offer_translations.items():
+            with self.subTest(offer_language=language):
+                self.assertTrue(copy["badge"].strip())
+                self.assertTrue(copy["title"].strip())
+                self.assertTrue(copy["subtitle"].strip())
+                self.assertTrue(copy["cta"].strip())
+                self.assertTrue(copy["cardNote"].strip())
         self.assertIn('id="voice-search"', allowed.text)
         self.assertIn('id="filter-language"', allowed.text)
         self.assertIn('id="custom-voice"', allowed.text)
         self.assertIn('id="preview-enabled"', allowed.text)
         self.assertIn('id="preview-price"', allowed.text)
-        self.assertIn("ELSŐ HANG AKCIÓ", allowed.text)
+        self.assertIn("FIRST_VOICE_OFFER", allowed.text)
+        self.assertIn("firstVoiceOffer()", allowed.text)
         self.assertLess(
             allowed.text.index('id="preview-offer-banner"'),
             allowed.text.index('id="voice-compatibility-note"'),
