@@ -2988,6 +2988,35 @@ class VoiceStoreTests(unittest.TestCase):
             "/dashboard/store-first-purchase-preview",
             admin.text,
         )
+        self.assertIn(
+            "/dashboard/home-first-purchase-preview",
+            admin.text,
+        )
+
+        home_denied = self.client.get(
+            "/dashboard/home-first-purchase-preview",
+            follow_redirects=False,
+        )
+        self.assertEqual(home_denied.status_code, 200)
+
+        homepage_preview = self.client.get(
+            "/dashboard/home-first-purchase-preview",
+        )
+        self.assertEqual(homepage_preview.status_code, 200)
+        self.assertIn('id="first-voice-offer"', homepage_preview.text)
+        self.assertIn('id="offer-price"', homepage_preview.text)
+        self.assertIn(
+            "/api/anthbot/admin/store/first-purchase-preview-settings",
+            homepage_preview.text,
+        )
+        self.assertIn(
+            "/dashboard/store-first-purchase-preview",
+            homepage_preview.text,
+        )
+        self.assertEqual(
+            homepage_preview.headers.get("x-robots-tag"),
+            "noindex, nofollow",
+        )
         self.assertIn('id="voice-search"', allowed.text)
         self.assertIn('id="filter-language"', allowed.text)
         self.assertIn('id="custom-voice"', allowed.text)

@@ -33,6 +33,7 @@ COPY assets ./assets
 COPY store_accounts.py ./store_accounts.py
 COPY store.html ./store.html
 COPY public_site.html ./public_site.html
+COPY public_site_first_purchase_preview.html ./public_site_first_purchase_preview.html
 COPY public_site_i18n.js ./public_site_i18n.js
 COPY public_terms.html ./public_terms.html
 COPY public_refunds.html ./public_refunds.html

@@ -5242,6 +5242,17 @@ def update_admin_first_purchase_preview_settings(
     }
 
 
+@router.get("/dashboard/home-first-purchase-preview", response_class=HTMLResponse)
+def home_first_purchase_preview_page(request: Request):
+    """Admin-only preview of the first-purchase offer on the public homepage."""
+    if not core._request_is_admin(request):
+        return RedirectResponse(url="/dashboard", status_code=303)
+    return HTMLResponse(
+        _html_file("public_site_first_purchase_preview.html"),
+        headers={"X-Robots-Tag": "noindex, nofollow"},
+    )
+
+
 @router.get("/dashboard/store-first-purchase-preview", response_class=HTMLResponse)
 def store_first_purchase_preview_page(request: Request):
     """Admin-only, non-transactional preview of the proposed first-purchase offer."""

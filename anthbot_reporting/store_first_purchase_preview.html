@@ -50,7 +50,7 @@
 
 <div class="topbar"><nav class="navlinks" aria-label="Site navigation"><a class="home-link" href="/" data-i18n="homeNav"></a><a href="/refunds" data-i18n="refund"></a><a href="/terms" data-i18n="terms"></a><a href="/privacy" data-i18n="privacy"></a></nav><select id="site-language" class="lang-select" aria-label="Language"><option value="hu">Magyar</option><option value="en">English</option><option value="de">Deutsch</option><option value="fr">Français</option><option value="es">Español</option><option value="it">Italiano</option><option value="pt">Português</option><option value="nl">Nederlands</option><option value="pl">Polski</option><option value="cs">Čeština</option><option value="sk">Slovenčina</option><option value="ro">Română</option><option value="da">Dansk</option><option value="sv">Svenska</option><option value="no">Norsk</option><option value="fi">Suomi</option><option value="zh-CN">简体中文</option><option value="zh-TW">繁體中文</option><option value="tr">Türkçe</option><option value="th">ไทย</option><option value="vi">Tiếng Việt</option><option value="ko">한국어</option><option value="km">ខ្មែរ</option></select></div>
 <section class="hero"><div class="eyebrow" data-i18n="eyebrow">ANTHBOT Community</div><h1 data-i18n="title">Voice Store</h1><div class="lead" data-i18n="lead"></div><div class="notice" id="voice-compatibility-note" style="display:block;margin-top:14px"></div></section>
-<div class="price-banner"><div><strong data-i18n="readyTitle"></strong><span data-i18n="readyText"></span></div><div class="price-big">€7.99</div></div>
+<div class="price-banner" id="preview-offer-banner"><div><strong id="preview-offer-title">Első hang akció</strong><span id="preview-offer-text">Az első fizetős hangcsomagod kedvezményes áron.</span></div><div class="price-big" id="preview-offer-price"><span style="font-size:.95rem;color:rgba(255,255,255,.5);text-decoration:line-through;margin-right:8px">€7.99</span>€4.99</div></div>
 <div class="notice" id="notice" role="status" aria-live="polite"></div>
 <section class="account-panel" id="account-panel">
   <div class="account-head"><div><strong id="account-title"></strong><div class="account-sub" id="account-lead"></div></div><span class="account-chip" id="account-badge"></span></div>
@@ -633,6 +633,17 @@ function renderCurrent(){
     if(details.open)hydrateGroup(details);
   });
 }
+function updatePreviewOfferBanner(){
+  const banner=document.getElementById('preview-offer-banner');
+  if(!banner)return;
+  const enabled=Boolean(previewSettings.enabled);
+  const newCustomer=document.getElementById('preview-customer-state')?.value==='new';
+  banner.style.display=enabled&&newCustomer?'grid':'none';
+  const amount=Number(previewSettings.price_amount||499);
+  const formatted=money(amount,'eur');
+  const price=document.getElementById('preview-offer-price');
+  if(price)price.innerHTML='<span style="font-size:.95rem;color:rgba(255,255,255,.5);text-decoration:line-through;margin-right:8px">€7.99</span>'+esc(formatted);
+}
 async function loadPreviewSettings(){
   const res=await fetch('/api/anthbot/admin/store/first-purchase-preview-settings',{cache:'no-store'});
   const data=await res.json().catch(()=>({}));
@@ -640,6 +651,7 @@ async function loadPreviewSettings(){
   previewSettings={enabled:Boolean(data.enabled),price_amount:Number(data.price_amount||499),currency:data.currency||'eur'};
   document.getElementById('preview-enabled').checked=previewSettings.enabled;
   document.getElementById('preview-price').value=(previewSettings.price_amount/100).toFixed(2).replace('.',',');
+  updatePreviewOfferBanner();
 }
 async function savePreviewSettings(){
   const enabled=document.getElementById('preview-enabled').checked;
@@ -655,6 +667,7 @@ async function savePreviewSettings(){
     if(!res.ok)throw new Error(data.detail||('HTTP '+res.status));
     previewSettings={enabled:Boolean(data.enabled),price_amount:Number(data.price_amount),currency:data.currency||'eur'};
     status.textContent='Próbabeállítás elmentve. Az éles Hangbolt és Stripe továbbra is változatlan.';
+    updatePreviewOfferBanner();
     renderCurrent();
   }catch(err){status.textContent='Mentési hiba: '+err.message}
   finally{button.disabled=false}
@@ -682,12 +695,12 @@ document.getElementById('custom-form').addEventListener('submit',async e=>{
   status.textContent='Próbaoldal: egyedi hangkérés innen nem kerül elküldésre.';
 });
 document.getElementById('preview-save').addEventListener('click',savePreviewSettings);
-document.getElementById('preview-enabled').addEventListener('change',renderCurrent);
-document.getElementById('preview-customer-state').addEventListener('change',renderCurrent);
+document.getElementById('preview-enabled').addEventListener('change',()=>{previewSettings.enabled=document.getElementById('preview-enabled').checked;updatePreviewOfferBanner();renderCurrent()});
+document.getElementById('preview-customer-state').addEventListener('change',()=>{updatePreviewOfferBanner();renderCurrent()});
 document.getElementById('preview-price').addEventListener('input',()=>{
   const raw=String(document.getElementById('preview-price').value||'').trim().replace(',','.');
   const numeric=Number(raw);
-  if(Number.isFinite(numeric)&&numeric>0){previewSettings.price_amount=Math.round(numeric*100);renderCurrent()}
+  if(Number.isFinite(numeric)&&numeric>0){previewSettings.price_amount=Math.round(numeric*100);updatePreviewOfferBanner();renderCurrent()}
 });
 setupOrganizerEvents();applyLanguage(initialLanguage());boot();
 </script>
