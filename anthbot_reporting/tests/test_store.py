@@ -3046,6 +3046,7 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIn('id="filter-language"', allowed.text)
         self.assertIn('id="custom-voice"', allowed.text)
         self.assertIn('id="preview-enabled"', allowed.text)
+        self.assertIn('id="preview-live-enabled"', allowed.text)
         self.assertIn('id="preview-price"', allowed.text)
         self.assertIn("FIRST_VOICE_OFFER", allowed.text)
         self.assertIn("firstVoiceOffer()", allowed.text)
@@ -3061,16 +3062,18 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(initial.status_code, 200)
         self.assertTrue(initial.json()["preview_only"])
         self.assertFalse(initial.json()["enabled"])
+        self.assertFalse(initial.json()["live_enabled"])
         self.assertEqual(initial.json()["price_amount"], 499)
 
         saved = self.client.patch(
             "/api/anthbot/admin/store/first-purchase-preview-settings",
             headers=self._admin_headers(),
-            json={"enabled": True, "price_amount": 449},
+            json={"enabled": True, "live_enabled": True, "price_amount": 449},
         )
         self.assertEqual(saved.status_code, 200)
         self.assertTrue(saved.json()["preview_only"])
         self.assertTrue(saved.json()["enabled"])
+        self.assertTrue(saved.json()["live_enabled"])
         self.assertEqual(saved.json()["price_amount"], 449)
         self.assertEqual(saved.json()["currency"], "eur")
 
@@ -3080,7 +3083,25 @@ class VoiceStoreTests(unittest.TestCase):
         )
         self.assertEqual(reloaded.status_code, 200)
         self.assertTrue(reloaded.json()["enabled"])
+        self.assertTrue(reloaded.json()["live_enabled"])
         self.assertEqual(reloaded.json()["price_amount"], 449)
+
+        public_offer = self.client.get("/api/anthbot/store/first-purchase-offer")
+        self.assertEqual(public_offer.status_code, 200)
+        self.assertTrue(public_offer.json()["enabled"])
+        self.assertEqual(public_offer.json()["price_amount"], 449)
+
+        live_home = self.client.get("/")
+        self.assertEqual(live_home.status_code, 200)
+        self.assertIn('id="first-voice-offer"', live_home.text)
+        self.assertIn("/api/anthbot/store/first-purchase-offer", live_home.text)
+        self.assertIn("FIRST_VOICE_OFFER", live_home.text)
+
+        live_store = self.client.get("/store")
+        self.assertEqual(live_store.status_code, 200)
+        self.assertIn('id="live-offer-banner"', live_store.text)
+        self.assertIn("/api/anthbot/store/first-purchase-offer", live_store.text)
+        self.assertIn("FIRST_VOICE_OFFER", live_store.text)
 
         pack = self._upload_pack()
         pack_id = pack["id"]
@@ -3095,6 +3116,181 @@ class VoiceStoreTests(unittest.TestCase):
             item for item in live_catalog.json()["packs"] if item["id"] == pack_id
         )
         self.assertEqual(live_pack["price_amount"], 799)
+
+
+    def test_current_map_client_offer_is_single_use_across_email_accounts(self) -> None:
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        priced = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        self.assertEqual(priced.status_code, 200)
+        settings = self.client.patch(
+            "/api/anthbot/admin/store/first-purchase-preview-settings",
+            headers=self._admin_headers(),
+            json={"enabled": True, "live_enabled": True, "price_amount": 399},
+        )
+        self.assertEqual(settings.status_code, 200)
+
+        client_token = "M" * 48
+        paired = self.client.post(
+            "/api/anthbot/store/client/pair",
+            json={"client_token": client_token},
+        )
+        self.assertEqual(paired.status_code, 200)
+        match = re.search(r"[?&]pair=([^&]+)", paired.json()["store_url"])
+        self.assertIsNotNone(match)
+        pair_code = match.group(1)
+        details = store_api._pairing_details(pair_code)
+        self.assertIsNotNone(details)
+        self.assertIsNone(details["robot_key"])
+
+        first = self._login_store_account("first@example.test")
+        linked = self.client.post(
+            "/api/anthbot/store/account/link-map",
+            json={"pair_code": pair_code},
+        )
+        self.assertEqual(linked.status_code, 200)
+
+        created_sessions: list[dict] = []
+
+        def fake_checkout(record, request, **kwargs):
+            claim = kwargs.get("first_purchase_offer_claim")
+            index = len(created_sessions) + 1
+            metadata = {
+                "pack_id": pack_id,
+                "community_id": pack["community_id"],
+                "store_client_id": kwargs["client_id"],
+                "store_user_id": kwargs["user_id"],
+                "entitlement_scope": "map",
+            }
+            amount = 799
+            if claim is not None:
+                amount = int(claim["price_amount"])
+                metadata.update(
+                    {
+                        "first_purchase_offer": "1",
+                        "promo_subject": claim["promo_subject"],
+                        "promo_claim_id": claim["claim_id"],
+                        "regular_amount_total": "799",
+                    }
+                )
+            session = {
+                "id": f"cs_test_first_offer_{index}",
+                "object": "checkout.session",
+                "url": f"https://checkout.stripe.com/c/pay/first-offer-{index}",
+                "created": int(time.time()),
+                "client_reference_id": pack_id,
+                "metadata": metadata,
+                "payment_status": "unpaid",
+                "status": "open",
+                "amount_total": amount,
+                "currency": "eur",
+                "customer_details": None,
+                "customer": None,
+                "payment_intent": None,
+            }
+            created_sessions.append(session)
+            return session
+
+        with patch.object(
+            store_api,
+            "_create_checkout_session",
+            side_effect=fake_checkout,
+        ):
+            checkout = self.client.post(
+                "/api/anthbot/store/checkout",
+                json={"pack_id": pack_id, "pair_code": pair_code},
+            )
+        self.assertEqual(checkout.status_code, 200)
+        self.assertTrue(checkout.json()["first_purchase_offer_applied"])
+        self.assertEqual(checkout.json()["price_amount"], 399)
+        self.assertTrue(
+            created_sessions[0]["metadata"]["promo_subject"].startswith(
+                "client:abvc_"
+            )
+        )
+
+        paid = {
+            **created_sessions[0],
+            "payment_status": "paid",
+            "status": "complete",
+            "customer_details": {"email": "first@example.test"},
+            "customer": "cus_first_offer",
+            "payment_intent": "pi_first_offer",
+        }
+        persisted = store_api._upsert_order_from_session(paid)
+        self.assertEqual(persisted["payment_status"], "paid")
+        self.assertEqual(int(persisted["first_purchase_offer"]), 1)
+
+        self.client.post("/api/anthbot/store/account/logout", json={})
+        second = self._login_store_account("second@example.test")
+        self.assertNotEqual(first["_user_id"], second["_user_id"])
+        relinked = self.client.post(
+            "/api/anthbot/store/account/link-map",
+            json={"pair_code": pair_code},
+        )
+        self.assertEqual(relinked.status_code, 200)
+
+        with patch.object(
+            store_api,
+            "_create_checkout_session",
+            side_effect=fake_checkout,
+        ):
+            second_checkout = self.client.post(
+                "/api/anthbot/store/checkout",
+                json={"pack_id": pack_id, "pair_code": pair_code},
+            )
+        self.assertEqual(second_checkout.status_code, 200)
+        self.assertFalse(second_checkout.json()["first_purchase_offer_applied"])
+        self.assertEqual(second_checkout.json()["price_amount"], 799)
+
+    def test_future_map_robot_fingerprint_is_optional_and_stable(self) -> None:
+        hint = store_api._robot_hint_from_serial("25245HGD00050826")
+        self.assertRegex(hint, r"^[0-9a-f]{64}$")
+
+        old_client = self.client.post(
+            "/api/anthbot/store/client/pair",
+            json={"client_token": "A" * 48},
+        )
+        self.assertEqual(old_client.status_code, 200)
+
+        first = self.client.post(
+            "/api/anthbot/store/client/pair",
+            json={
+                "client_token": "B" * 48,
+                "robot_fingerprint": hint,
+            },
+        )
+        second = self.client.post(
+            "/api/anthbot/store/client/pair",
+            json={
+                "client_token": "C" * 48,
+                "robot_fingerprint": hint,
+            },
+        )
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+
+        first_code = re.search(
+            r"[?&]pair=([^&]+)", first.json()["store_url"]
+        ).group(1)
+        second_code = re.search(
+            r"[?&]pair=([^&]+)", second.json()["store_url"]
+        ).group(1)
+        first_details = store_api._pairing_details(first_code)
+        second_details = store_api._pairing_details(second_code)
+        self.assertNotEqual(
+            first_details["client_id"],
+            second_details["client_id"],
+        )
+        self.assertTrue(str(first_details["robot_key"]).startswith("abrk_"))
+        self.assertEqual(
+            first_details["robot_key"],
+            second_details["robot_key"],
+        )
 
 
     def test_store_account_uses_hashed_code_and_persistent_session(self) -> None:
