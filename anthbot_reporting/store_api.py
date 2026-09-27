@@ -5143,6 +5143,17 @@ def store_success_page(request: Request) -> Response:
     )
 
 
+@router.get("/dashboard/store-first-purchase-preview", response_class=HTMLResponse)
+def store_first_purchase_preview_page(request: Request):
+    """Admin-only, non-transactional preview of the proposed first-purchase offer."""
+    if not core._request_is_admin(request):
+        return RedirectResponse(url="/dashboard", status_code=303)
+    return HTMLResponse(
+        _html_file("store_first_purchase_preview.html"),
+        headers={"X-Robots-Tag": "noindex, nofollow"},
+    )
+
+
 @router.get("/dashboard/store", response_class=HTMLResponse)
 def store_admin_page(request: Request):
     if not core._request_is_admin(request):

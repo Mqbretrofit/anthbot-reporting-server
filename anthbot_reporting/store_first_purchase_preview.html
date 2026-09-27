@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Első hang akció · próba | ANTHBOT Hangbolt</title>
+<style>
+:root{color-scheme:dark;--bg:#081017;--panel:#111820;--panel2:#141d27;--line:rgba(255,255,255,.12);--text:#fff;--muted:rgba(255,255,255,.7);--green:#5ee083;--sale:#ffd45d;--sale2:#ff8b55;--danger:#ff8090;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 15% 0,rgba(40,94,145,.34),transparent 30rem),radial-gradient(circle at 90% 35%,rgba(255,139,85,.12),transparent 30rem),var(--bg);color:var(--text);min-height:100vh}
+.shell{max-width:1180px;margin:auto;padding:24px 20px 56px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:11px;padding:10px 13px;background:#15243a;color:#fff;text-decoration:none;font:inherit;font-weight:750}.btn:disabled{opacity:.5;cursor:not-allowed}
+.preview-flag{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(255,128,144,.35);background:rgba(255,128,144,.08);color:#ffd1d7;padding:6px 10px;border-radius:999px;font-weight:850;font-size:.78rem;letter-spacing:.05em}
+.hero{padding:30px 0 18px}.hero h1{margin:.45rem 0 .75rem;font-size:clamp(2rem,5vw,4rem);line-height:1}.hero p{margin:0;color:var(--muted);max-width:840px;line-height:1.6}
+.controls{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;padding:17px;margin:16px 0 22px;border:1px solid var(--line);border-radius:17px;background:rgba(17,24,32,.92)}.field{display:grid;gap:6px}.field label{font-size:.8rem;color:var(--muted);font-weight:750}.field input,.field select{height:44px;border:1px solid var(--line);border-radius:11px;background:#0a131f;color:#fff;padding:0 11px;font:inherit}.note{font-size:.78rem;color:var(--muted);line-height:1.45}
+.sale-hero{position:relative;overflow:hidden;border:1px solid rgba(255,212,93,.36);border-radius:22px;background:linear-gradient(135deg,rgba(255,212,93,.12),rgba(255,139,85,.09));padding:24px;margin-bottom:24px;box-shadow:0 20px 60px rgba(0,0,0,.25)}.sale-kicker{font-size:clamp(1.55rem,4vw,3rem);font-weight:950;letter-spacing:.04em;color:#fff;text-shadow:0 2px 18px rgba(255,212,93,.16)}.sale-sub{margin-top:6px;color:#ffe7a7;font-size:1rem}.sale-price{display:flex;align-items:baseline;gap:13px;flex-wrap:wrap;margin-top:15px}.sale-old{text-decoration:line-through;color:rgba(255,255,255,.55);font-size:1.25rem}.sale-new{font-size:2.35rem;font-weight:950;color:var(--sale)}.sale-small{color:var(--muted);font-size:.82rem;margin-top:8px}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.card{position:relative;background:linear-gradient(180deg,rgba(20,29,39,.98),rgba(12,18,24,.98));border:1px solid var(--line);border-radius:19px;padding:20px;box-shadow:0 18px 48px rgba(0,0,0,.24);min-height:250px;display:flex;flex-direction:column}.sale-card{border-color:rgba(255,212,93,.32)}.ribbon{position:absolute;top:14px;right:14px;border-radius:999px;padding:6px 9px;background:linear-gradient(135deg,var(--sale),var(--sale2));color:#261803;font-size:.72rem;font-weight:950;letter-spacing:.04em}.lang{font-size:1.15rem;font-weight:800;padding-right:95px}.variant{color:var(--muted);margin-top:4px}.meta{margin-top:14px;color:var(--muted);font-size:.78rem}.pricebox{margin-top:auto;padding-top:24px}.old-price{text-decoration:line-through;color:rgba(255,255,255,.5);font-size:1rem}.new-price{font-size:1.75rem;font-weight:950;color:var(--sale);margin-top:2px}.normal-price{font-size:1.55rem;font-weight:900}.purchase-note{margin:9px 0 12px;color:var(--muted);font-size:.78rem;line-height:1.4}.fake-buy{width:100%;min-height:44px;border:0;border-radius:12px;background:linear-gradient(135deg,#31bf62,#248a46);color:#fff;font:inherit;font-weight:800}.empty{padding:24px;border:1px solid var(--line);border-radius:16px;color:var(--muted)}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.controls{grid-template-columns:1fr 1fr}}@media(max-width:620px){.grid,.controls{grid-template-columns:1fr}.shell{padding-left:14px;padding-right:14px}.sale-price{gap:9px}}
+</style>
+</head>
+<body>
+<main class="shell">
+  <div class="top">
+    <span class="preview-flag">● PRÓBAOLDAL · NEM ÉLES</span>
+    <div class="actions">
+      <a class="btn" href="/dashboard/store">Vissza a Hangbolt adminhoz</a>
+      <a class="btn" href="/store" target="_blank" rel="noopener">Éles Hangbolt megnyitása</a>
+    </div>
+  </div>
+
+  <section class="hero">
+    <h1>Első hang kedvezmény · látványterv</h1>
+    <p>Ez az oldal csak előnézet. Nem ment beállítást, nem módosít árat, és nem indít Stripe fizetést. A kártyák a jelenlegi Hangbolt csomagjaiból épülnek fel.</p>
+  </section>
+
+  <section class="controls">
+    <div class="field">
+      <label for="customer-state">Próba vásárlói állapot</label>
+      <select id="customer-state">
+        <option value="new">Új vásárló · még nincs fizetett hangja</option>
+        <option value="returning">Visszatérő vásárló · már vett hangot</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="first-offer-price">Első hang próbaára · EUR</label>
+      <input id="first-offer-price" inputmode="decimal" value="4,99" aria-label="Első hang próbaára">
+    </div>
+    <div class="note">A mező csak a látványtervet módosítja.<br>Semmi nem kerül mentésre.</div>
+  </section>
+
+  <section class="sale-hero" id="sale-hero"></section>
+  <section class="grid" id="packs"><div class="empty">Hangcsomagok betöltése…</div></section>
+</main>
+<script>
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+const money=(amount,currency='eur')=>{try{return new Intl.NumberFormat('hu-HU',{style:'currency',currency:String(currency||'eur').toUpperCase()}).format(Number(amount||0)/100)}catch(_){return (Number(amount||0)/100).toFixed(2)+' '+String(currency||'EUR').toUpperCase()}};
+let packs=[];
+function promoAmount(){
+  const raw=String(document.getElementById('first-offer-price').value||'').trim().replace(',','.');
+  const value=Number(raw);
+  if(!Number.isFinite(value)||value<=0)return 499;
+  return Math.max(1,Math.round(value*100));
+}
+function eligible(){return document.getElementById('customer-state').value==='new'}
+function renderHero(){
+  const host=document.getElementById('sale-hero');
+  if(eligible()){
+    const normal=packs.find(p=>p.access==='paid');
+    const normalAmount=normal?Number(normal.price_amount||799):799;
+    host.innerHTML='<div class="sale-kicker">ELSŐ HANG AKCIÓ</div><div class="sale-sub">Az első fizetős hangcsomagod kedvezményes áron.</div><div class="sale-price"><span class="sale-old">'+esc(money(normalAmount,'eur'))+'</span><span class="sale-new">'+esc(money(promoAmount(),'eur'))+'</span></div><div class="sale-small">A végleges rendszerben a szerver ellenőrzi majd, hogy a bejelentkezett Hangbolt-fióknak volt-e már fizetett vásárlása.</div>';
+  }else{
+    host.innerHTML='<div class="sale-kicker">Normál Hangbolt nézet</div><div class="sale-sub">Ez a próbaállapot azt mutatja, amit az a vásárló látna, aki már vásárolt fizetős hangot.</div><div class="sale-small">Nincs első-hang kedvezmény; minden csomag a saját normál árán jelenik meg.</div>';
+  }
+}
+function render(){
+  renderHero();
+  const host=document.getElementById('packs');
+  const paid=packs.filter(p=>p&&p.access==='paid'&&!p.store_hidden);
+  if(!paid.length){host.innerHTML='<div class="empty">Nincs megjeleníthető fizetős hangcsomag.</div>';return}
+  host.innerHTML=paid.map(p=>{
+    const normal=Number(p.price_amount||799);
+    const sale=eligible();
+    const price=sale
+      ? '<div class="old-price">'+esc(money(normal,p.currency||'eur'))+'</div><div class="new-price">'+esc(money(promoAmount(),p.currency||'eur'))+'</div>'
+      : '<div class="normal-price">'+esc(money(normal,p.currency||'eur'))+'</div>';
+    const ribbon=sale?'<div class="ribbon">ELSŐ HANG AKCIÓ</div>':'';
+    const note=sale?'Első fizetős vásárlásra érvényes próbaár.':'A vásárló már felhasználta az első-hang kedvezményt.';
+    return '<article class="card '+(sale?'sale-card':'')+'">'+ribbon+'<div class="lang">'+esc(p.language||p.english_name||'ANTHBOT')+'</div><div class="variant">'+esc(p.variant_name||p.community_id||p.id||'Community voice')+'</div><div class="meta">v'+esc(p.version||'—')+' · '+esc((p.currency||'eur').toUpperCase())+'</div><div class="pricebox">'+price+'<div class="purchase-note">'+esc(note)+'</div><button class="fake-buy" type="button" disabled>Vásárlás · próba</button></div></article>';
+  }).join('');
+}
+async function load(){
+  const host=document.getElementById('packs');
+  try{
+    const r=await fetch('/api/anthbot/admin/store/voice-packs',{credentials:'same-origin'});
+    if(r.status===401){location.href='/dashboard';return}
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.detail||('HTTP '+r.status));
+    packs=Array.isArray(d.items)?d.items:[];
+    render();
+  }catch(e){
+    host.innerHTML='<div class="empty">Betöltési hiba: '+esc(e.message)+'</div>';
+  }
+}
+document.getElementById('customer-state').addEventListener('change',render);
+document.getElementById('first-offer-price').addEventListener('input',render);
+load();
+</script>
+</body>
+</html>

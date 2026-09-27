@@ -39,6 +39,7 @@ COPY public_refunds.html ./public_refunds.html
 COPY public_privacy.html ./public_privacy.html
 COPY store_success.html ./store_success.html
 COPY store_admin.html ./store_admin.html
+COPY store_first_purchase_preview.html ./store_first_purchase_preview.html
 COPY voice_installer.html ./voice_installer.html
 COPY web_voice_installer.py ./web_voice_installer.py
 COPY web_voice_installer_anthbot.py ./web_voice_installer_anthbot.py
