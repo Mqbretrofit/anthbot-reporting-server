@@ -14,6 +14,7 @@ from pathlib import Path
 import re
 import secrets
 import smtplib
+import sqlite3
 import ssl
 import time
 import tarfile
@@ -2221,7 +2222,9 @@ def _reserve_first_purchase_offer(
                     now_epoch + 15 * 60,
                 ),
             )
-        except Exception:
+        except sqlite3.IntegrityError:
+            # Another live checkout already reserved the one-time offer for
+            # this account or this Map/robot identity.
             return None
     return {
         "claim_id": claim_id,
