@@ -3376,6 +3376,10 @@ class VoiceStoreTests(unittest.TestCase):
             first_details["robot_key"],
             second_details["robot_key"],
         )
+        self.assertEqual(
+            first_details["robot_key"],
+            store_api._robot_key_from_serial("25245HGD00050826"),
+        )
 
 
     def test_store_account_uses_hashed_code_and_persistent_session(self) -> None:
