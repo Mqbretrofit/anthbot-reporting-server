@@ -3956,15 +3956,18 @@ def public_first_purchase_offer(request: Request, pair: str | None = None) -> di
     promo_subject = None
     if pair:
         details = _pairing_details(pair)
-        if details is not None:
-            promo_subject = _first_purchase_offer_subject(
-                client_id=str(details["client_id"]),
-                robot_key=(
-                    str(details["robot_key"])
-                    if details.get("robot_key")
-                    else None
-                ),
-            )
+        if details is not None and user_id is not None:
+            pair_client_id = str(details["client_id"])
+            linked_user_id = store_accounts.user_id_for_client(pair_client_id)
+            if linked_user_id == user_id:
+                promo_subject = _first_purchase_offer_subject(
+                    client_id=pair_client_id,
+                    robot_key=(
+                        str(details["robot_key"])
+                        if details.get("robot_key")
+                        else None
+                    ),
+                )
     status = _first_purchase_offer_status(user_id, promo_subject)
     return {
         **status,
