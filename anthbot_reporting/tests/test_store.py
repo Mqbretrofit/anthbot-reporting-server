@@ -3247,6 +3247,91 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertFalse(second_checkout.json()["first_purchase_offer_applied"])
         self.assertEqual(second_checkout.json()["price_amount"], 799)
 
+    def test_paired_map_offer_sets_actual_stripe_unit_amount(self) -> None:
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        priced = self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        self.assertEqual(priced.status_code, 200)
+        live = self.client.patch(
+            "/api/anthbot/admin/store/first-purchase-preview-settings",
+            headers=self._admin_headers(),
+            json={"enabled": True, "live_enabled": True, "price_amount": 399},
+        )
+        self.assertEqual(live.status_code, 200)
+
+        pair_response = self.client.post(
+            "/api/anthbot/store/client/pair",
+            json={"client_token": "S" * 48},
+        )
+        pair_code = re.search(
+            r"[?&]pair=([^&]+)", pair_response.json()["store_url"]
+        ).group(1)
+        account = self._login_store_account("stripe-offer@example.test")
+        linked = self.client.post(
+            "/api/anthbot/store/account/link-map",
+            json={"pair_code": pair_code},
+        )
+        self.assertEqual(linked.status_code, 200)
+
+        def fake_stripe_create(**kwargs):
+            amount = kwargs["line_items"][0]["price_data"]["unit_amount"]
+            payload = {
+                "id": "cs_test_real_offer_amount",
+                "object": "checkout.session",
+                "url": "https://checkout.stripe.com/c/pay/real-offer",
+                "created": int(time.time()),
+                "client_reference_id": kwargs["client_reference_id"],
+                "metadata": kwargs["metadata"],
+                "payment_status": "unpaid",
+                "status": "open",
+                "amount_total": amount,
+                "currency": kwargs["line_items"][0]["price_data"]["currency"],
+                "customer_details": None,
+                "customer": None,
+                "payment_intent": None,
+            }
+            return store_api.stripe.checkout.Session.construct_from(
+                payload,
+                "sk_test_example",
+            )
+
+        with patch.object(
+            store_api.stripe.checkout.Session,
+            "create",
+            side_effect=fake_stripe_create,
+        ) as create:
+            checkout = self.client.post(
+                "/api/anthbot/store/checkout",
+                json={"pack_id": pack_id, "pair_code": pair_code},
+            )
+
+        self.assertEqual(checkout.status_code, 200)
+        self.assertTrue(checkout.json()["first_purchase_offer_applied"])
+        self.assertEqual(checkout.json()["price_amount"], 399)
+        kwargs = create.call_args.kwargs
+        self.assertEqual(
+            kwargs["line_items"][0]["price_data"]["unit_amount"],
+            399,
+        )
+        self.assertEqual(kwargs["metadata"]["first_purchase_offer"], "1")
+        self.assertEqual(kwargs["metadata"]["regular_amount_total"], "799")
+        self.assertTrue(
+            kwargs["metadata"]["promo_subject"].startswith("client:abvc_")
+        )
+        self.assertTrue(kwargs["metadata"]["promo_claim_id"].startswith("abfp_"))
+        self.assertEqual(
+            kwargs["payment_intent_data"]["metadata"]["first_purchase_offer"],
+            "1",
+        )
+        self.assertEqual(
+            kwargs["metadata"]["store_user_id"],
+            account["_user_id"],
+        )
+
     def test_future_map_robot_fingerprint_is_optional_and_stable(self) -> None:
         hint = store_api._robot_hint_from_serial("25245HGD00050826")
         self.assertRegex(hint, r"^[0-9a-f]{64}$")
