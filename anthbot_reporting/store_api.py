@@ -37,6 +37,7 @@ STORE_SCHEMA = "anthbot-community-voice-store-v1"
 _CURRENCY_RE = re.compile(r"^[a-zA-Z]{3}$")
 _SESSION_RE = re.compile(r"^cs_[A-Za-z0-9_]+$")
 _LICENSE_RE = re.compile(r"^abv1\.([A-Za-z0-9_-]+)\.([0-9a-f]{64})$")
+_DOWNLOAD_ACCESS_RE = re.compile(r"^abdl1\.([A-Za-z0-9_-]+)\.([0-9a-f]{64})$")
 _OWNER_ACCESS_RE = re.compile(r"^abo1\.([A-Za-z0-9_-]+)\.([0-9a-f]{64})$")
 _ADMIN_GRANT_RE = re.compile(r"^abg1\.([A-Za-z0-9_-]+)\.([0-9a-f]{64})$")
 _PAIR_RE = re.compile(r"^abp_[A-Za-z0-9_-]{24,128}$")
@@ -46,6 +47,7 @@ _STORE_PAIR_TTL_SECONDS = 7 * 24 * 60 * 60
 _STORE_BROWSER_COOKIE = "anthbot_voice_store_client"
 _STORE_BROWSER_COOKIE_MAX_AGE = 365 * 24 * 60 * 60
 _STRIPE_REFUND_RECONCILE_SECONDS = 5 * 60
+_VOICE_DOWNLOAD_TTL_SECONDS = 5 * 60
 _STANDARD_VOICE_PACK_PRICE_AMOUNT = 799
 _STANDARD_VOICE_PACK_CURRENCY = "eur"
 _CUSTOM_VOICE_STARTING_PRICE_AMOUNT = 2499
@@ -1215,6 +1217,210 @@ def _stable_voice_id(pack: dict[str, Any]) -> str:
     return (
         str(pack.get("community_id", "")).strip()
         or str(pack.get("id", "")).strip()
+    )
+
+
+def _download_access_token(
+    pack: dict[str, Any],
+    *,
+    entitlement: Literal["purchase", "grant", "owner"],
+    subject: str,
+    client_id: str = "",
+    expires_at: int | None = None,
+) -> str:
+    """Issue a short-lived signed URL token for one paid voice pack."""
+    secret = _license_secret()
+    if not secret:
+        raise HTTPException(
+            status_code=503,
+            detail="voice store license secret is not configured",
+        )
+    voice_id = _stable_voice_id(pack)
+    normalized_subject = str(subject or "").strip()
+    normalized_client = str(client_id or "").strip()
+    if not normalized_subject or not voice_id:
+        raise HTTPException(status_code=401, detail="invalid voice download access")
+
+    expiry = int(
+        expires_at
+        if expires_at is not None
+        else time.time() + _VOICE_DOWNLOAD_TTL_SECONDS
+    )
+    payload = {
+        "c": normalized_client,
+        "e": expiry,
+        "k": entitlement,
+        "s": normalized_subject,
+        "v": voice_id,
+    }
+    encoded = (
+        base64.urlsafe_b64encode(
+            json.dumps(
+                payload,
+                separators=(",", ":"),
+                sort_keys=True,
+            ).encode("utf-8")
+        )
+        .decode("ascii")
+        .rstrip("=")
+    )
+    signature = hmac.new(
+        secret.encode("utf-8"),
+        f"download|{encoded}".encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return f"abdl1.{encoded}.{signature}"
+
+
+def _download_access_claim(
+    token: str,
+    pack: dict[str, Any],
+) -> dict[str, Any]:
+    """Validate a short-lived token and re-check the underlying entitlement."""
+    match = _DOWNLOAD_ACCESS_RE.fullmatch(str(token or "").strip())
+    if not match:
+        raise HTTPException(status_code=401, detail="invalid voice download access")
+
+    encoded, supplied_signature = match.groups()
+    secret = _license_secret()
+    if not secret:
+        raise HTTPException(
+            status_code=503,
+            detail="voice store license secret is not configured",
+        )
+    expected_signature = hmac.new(
+        secret.encode("utf-8"),
+        f"download|{encoded}".encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    if not secrets.compare_digest(supplied_signature, expected_signature):
+        raise HTTPException(status_code=401, detail="invalid voice download access")
+
+    padding = "=" * ((4 - len(encoded) % 4) % 4)
+    try:
+        payload = json.loads(
+            base64.urlsafe_b64decode((encoded + padding).encode("ascii")).decode(
+                "utf-8"
+            )
+        )
+    except (ValueError, UnicodeDecodeError, json.JSONDecodeError):
+        raise HTTPException(status_code=401, detail="invalid voice download access")
+
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=401, detail="invalid voice download access")
+    try:
+        expires_at = int(payload.get("e"))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=401, detail="invalid voice download access")
+    if expires_at < int(time.time()):
+        raise HTTPException(status_code=401, detail="voice download link expired")
+
+    voice_id = str(payload.get("v") or "").strip()
+    if not voice_id or not secrets.compare_digest(voice_id, _stable_voice_id(pack)):
+        raise HTTPException(
+            status_code=403,
+            detail="download token does not cover this voice pack",
+        )
+
+    entitlement = str(payload.get("k") or "").strip()
+    subject = str(payload.get("s") or "").strip()
+    client_id = str(payload.get("c") or "").strip()
+
+    if entitlement == "purchase":
+        order = _order_by_session(subject)
+        if order is not None:
+            order = _reconcile_paid_order_with_stripe(order)
+        if (
+            order is None
+            or str(order.get("payment_status", "")).casefold() != "paid"
+            or not _order_covers_pack(order, pack)
+        ):
+            raise HTTPException(status_code=401, detail="voice purchase is not active")
+
+        if client_id:
+            linked_user_id = store_accounts.user_id_for_client(client_id)
+            order_user_id = str(order.get("user_id") or "").strip()
+            order_client_id = str(order.get("client_id") or "").strip()
+            scope = str(order.get("entitlement_scope") or "").strip().casefold()
+            if linked_user_id:
+                if not order_user_id or not secrets.compare_digest(
+                    str(linked_user_id), order_user_id
+                ):
+                    raise HTTPException(
+                        status_code=401,
+                        detail="voice download client is no longer entitled",
+                    )
+            elif (
+                not order_client_id
+                or not secrets.compare_digest(order_client_id, client_id)
+                or scope not in {"", "map"}
+            ):
+                raise HTTPException(
+                    status_code=401,
+                    detail="voice download client is no longer entitled",
+                )
+
+    elif entitlement == "grant":
+        grant = _admin_voice_grant_by_id(subject)
+        if (
+            grant is None
+            or not secrets.compare_digest(
+                str(grant.get("voice_id") or "").strip(),
+                _stable_voice_id(pack),
+            )
+        ):
+            raise HTTPException(
+                status_code=401,
+                detail="granted voice access is not active",
+            )
+        if client_id:
+            linked_user_id = store_accounts.user_id_for_client(client_id)
+            grant_user_id = str(grant.get("user_id") or "").strip()
+            if (
+                not linked_user_id
+                or not grant_user_id
+                or not secrets.compare_digest(str(linked_user_id), grant_user_id)
+            ):
+                raise HTTPException(
+                    status_code=401,
+                    detail="voice download client is no longer entitled",
+                )
+
+    elif entitlement == "owner":
+        if (
+            not client_id
+            or not secrets.compare_digest(subject, client_id)
+            or not _is_owner_client(client_id)
+        ):
+            raise HTTPException(
+                status_code=401,
+                detail="owner voice access is not active",
+            )
+    else:
+        raise HTTPException(status_code=401, detail="invalid voice download access")
+
+    return payload
+
+
+def _short_lived_voice_url(
+    request: Request,
+    pack: dict[str, Any],
+    *,
+    entitlement: Literal["purchase", "grant", "owner"],
+    subject: str,
+    client_id: str = "",
+) -> str:
+    token = _download_access_token(
+        pack,
+        entitlement=entitlement,
+        subject=subject,
+        client_id=client_id,
+    )
+    pack_id = str(pack.get("id") or "").strip()
+    base = core._public_base_url(request)
+    return (
+        f"{base}/api/anthbot/store/voice-packs/{quote(pack_id)}/download"
+        f"?token={quote(token)}"
     )
 
 
@@ -3459,11 +3665,13 @@ def store_client_entitlements(
             pack_id = str(pack.get("id", "")).strip()
             if not pack_id:
                 continue
-            owner_token = _owner_access_for_pack(client_id, pack)
             public = _public_paid_pack(pack, request)
-            public["music_url"] = (
-                f"{base}/api/anthbot/store/voice-packs/{quote(pack_id)}/owner-download"
-                f"?owner={quote(owner_token)}"
+            public["music_url"] = _short_lived_voice_url(
+                request,
+                pack,
+                entitlement="owner",
+                subject=client_id,
+                client_id=client_id,
             )
             public["entitlement"] = "owner"
             public["owner_access"] = True
@@ -3539,11 +3747,13 @@ def store_client_entitlements(
         if not current_pack_id or stable_voice_id in seen_voice_ids:
             continue
 
-        license_key = _license_for_order(order)
         public = _public_paid_pack(pack, request)
-        public["music_url"] = (
-            f"{base}/api/anthbot/store/voice-packs/{quote(current_pack_id)}/download"
-            f"?license={quote(license_key)}"
+        public["music_url"] = _short_lived_voice_url(
+            request,
+            pack,
+            entitlement="purchase",
+            subject=str(order.get("stripe_session_id") or ""),
+            client_id=client_id,
         )
         public["entitlement"] = "purchased"
         packs.append(public)
@@ -3563,11 +3773,13 @@ def store_client_entitlements(
         if not current_pack_id or not stable_voice_id or stable_voice_id in seen_voice_ids:
             continue
 
-        grant_token = _admin_grant_access_for_pack(grant, pack)
         public = _public_paid_pack(pack, request)
-        public["music_url"] = (
-            f"{base}/api/anthbot/store/voice-packs/{quote(current_pack_id)}/grant-download"
-            f"?grant={quote(grant_token)}"
+        public["music_url"] = _short_lived_voice_url(
+            request,
+            pack,
+            entitlement="grant",
+            subject=str(grant.get("grant_id") or ""),
+            client_id=client_id,
         )
         public["entitlement"] = "admin_grant"
         public["admin_grant"] = True
@@ -3968,12 +4180,12 @@ def store_entitlements(
     if not _is_paid(pack):
         raise HTTPException(status_code=409, detail="licensed voice pack is no longer paid")
 
-    pack_id = str(pack.get("id", ""))
-    base = core._public_base_url(request)
     public = _public_paid_pack(pack, request)
-    public["music_url"] = (
-        f"{base}/api/anthbot/store/voice-packs/{quote(pack_id)}/download"
-        f"?license={quote(payload.license_key)}"
+    public["music_url"] = _short_lived_voice_url(
+        request,
+        pack,
+        entitlement="purchase",
+        subject=str(order.get("stripe_session_id") or ""),
     )
     return {
         "licensed": True,
@@ -4055,17 +4267,25 @@ def voice_pack_preview(pack_id: str, sample: int) -> Response:
 @router.get("/api/anthbot/store/voice-packs/{pack_id}/download")
 def download_paid_voice_pack(
     pack_id: str,
-    license: str,
+    token: str | None = None,
 ) -> FileResponse:
-    order = _order_from_license(license)
+    """Serve a paid pack only through a short-lived signed download URL."""
+    if not token:
+        raise HTTPException(
+            status_code=401,
+            detail="voice download link is missing or expired; refresh entitlements",
+        )
     pack = _find_uploaded_pack(pack_id)
-    if not _order_covers_pack(order, pack):
-        raise HTTPException(status_code=403, detail="license does not cover this voice pack")
-
+    _download_access_claim(token, pack)
     if not _is_paid(pack):
         raise HTTPException(status_code=404, detail="paid voice pack not found")
-    filename = str(pack.get("filename", ""))
-    if Path(filename).name != filename or not core._VOICE_PACK_SAFE_PART.fullmatch(filename):
+
+    filename = str(pack.get("filename", "")).strip()
+    if (
+        not filename
+        or Path(filename).name != filename
+        or not core._VOICE_PACK_SAFE_PART.fullmatch(filename)
+    ):
         raise HTTPException(status_code=404, detail="paid voice pack not found")
     path = core._voice_pack_dir() / filename
     if not path.is_file():
@@ -4073,7 +4293,10 @@ def download_paid_voice_pack(
     return FileResponse(
         path,
         media_type="application/octet-stream",
-        headers={"Cache-Control": "private, max-age=86400"},
+        headers={
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
     )
 
 
@@ -4082,26 +4305,10 @@ def download_granted_voice_pack(
     pack_id: str,
     grant: str,
 ) -> FileResponse:
-    """Serve one paid voice through a revocable admin-granted entitlement."""
-    pack = _find_uploaded_pack(pack_id)
-    _admin_grant_from_token(grant, pack)
-    if not _is_paid(pack):
-        raise HTTPException(status_code=404, detail="paid voice pack not found")
-
-    filename = str(pack.get("filename", "")).strip()
-    if (
-        not filename
-        or Path(filename).name != filename
-        or not core._VOICE_PACK_SAFE_PART.fullmatch(filename)
-    ):
-        raise HTTPException(status_code=404, detail="paid voice pack not found")
-    path = core._voice_pack_dir() / filename
-    if not path.is_file():
-        raise HTTPException(status_code=404, detail="paid voice pack not found")
-    return FileResponse(
-        path,
-        media_type="application/octet-stream",
-        headers={"Cache-Control": "private, no-store"},
+    """Reject legacy permanent grant URLs; callers must refresh entitlements."""
+    raise HTTPException(
+        status_code=401,
+        detail="legacy voice download link expired; refresh entitlements",
     )
 
 
@@ -4110,26 +4317,10 @@ def download_owner_voice_pack(
     pack_id: str,
     owner: str,
 ) -> FileResponse:
-    """Serve a paid voice to a Map client explicitly granted owner access."""
-    pack = _find_uploaded_pack(pack_id)
-    _owner_access_client_for_pack(owner, pack)
-    if not _is_paid(pack):
-        raise HTTPException(status_code=404, detail="paid voice pack not found")
-
-    filename = str(pack.get("filename", "")).strip()
-    if (
-        not filename
-        or Path(filename).name != filename
-        or not core._VOICE_PACK_SAFE_PART.fullmatch(filename)
-    ):
-        raise HTTPException(status_code=404, detail="paid voice pack not found")
-    path = core._voice_pack_dir() / filename
-    if not path.is_file():
-        raise HTTPException(status_code=404, detail="paid voice pack not found")
-    return FileResponse(
-        path,
-        media_type="application/octet-stream",
-        headers={"Cache-Control": "private, no-store"},
+    """Reject legacy permanent owner URLs; callers must refresh entitlements."""
+    raise HTTPException(
+        status_code=401,
+        detail="legacy voice download link expired; refresh entitlements",
     )
 
 
