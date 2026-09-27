@@ -3170,6 +3170,14 @@ class VoiceStoreTests(unittest.TestCase):
         )
         self.assertEqual(linked.status_code, 200)
 
+        offer_status = self.client.get(
+            "/api/anthbot/store/first-purchase-offer",
+            params={"pair": pair_code},
+        )
+        self.assertEqual(offer_status.status_code, 200)
+        self.assertTrue(offer_status.json()["eligible"])
+        self.assertEqual(offer_status.json()["price_amount"], 399)
+
         created_sessions: list[dict] = []
 
         def fake_checkout(record, request, **kwargs):
@@ -3262,6 +3270,13 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(second_checkout.status_code, 200)
         self.assertFalse(second_checkout.json()["first_purchase_offer_applied"])
         self.assertEqual(second_checkout.json()["price_amount"], 799)
+
+        second_status = self.client.get(
+            "/api/anthbot/store/first-purchase-offer",
+            params={"pair": pair_code},
+        )
+        self.assertEqual(second_status.status_code, 200)
+        self.assertFalse(second_status.json()["eligible"])
 
     def test_paired_map_offer_sets_actual_stripe_unit_amount(self) -> None:
         pack = self._upload_pack()
