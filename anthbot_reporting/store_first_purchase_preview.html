@@ -24,7 +24,7 @@
 
 .preview-admin{position:sticky;top:0;z-index:80;margin:0 0 12px;padding:12px 14px;border:1px solid rgba(255,210,122,.38);border-radius:14px;background:rgba(28,24,12,.96);box-shadow:0 12px 35px rgba(0,0,0,.34);backdrop-filter:blur(12px)}
 .preview-admin-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}.preview-admin-title{font-weight:900;color:#ffe6a6}.preview-admin-note{font-size:.76rem;color:#d7c99d}
-.preview-controls{display:grid;grid-template-columns:auto minmax(150px,220px) minmax(220px,1fr) auto auto;gap:9px;align-items:center}.preview-toggle{display:flex;align-items:center;gap:8px;font-weight:800;white-space:nowrap}.preview-toggle input{width:18px;height:18px}.preview-input,.preview-select{height:42px;border:1px solid var(--line2);border-radius:10px;background:#0a131f;color:#fff;padding:0 10px;font:inherit}.preview-save{height:42px;border:0;border-radius:10px;padding:0 14px;background:linear-gradient(135deg,#31bf62,#248a46);color:#fff;font:inherit;font-weight:800;cursor:pointer}.preview-back{height:42px;display:inline-flex;align-items:center;text-decoration:none;border:1px solid var(--line2);border-radius:10px;padding:0 13px;color:#fff;background:#15243a;font-weight:750;white-space:nowrap}.preview-status{grid-column:1/-1;font-size:.78rem;color:#c9ffed;min-height:1.2em}
+.preview-controls{display:grid;grid-template-columns:auto auto minmax(150px,220px) minmax(220px,1fr) auto auto;gap:9px;align-items:center}.preview-toggle{display:flex;align-items:center;gap:8px;font-weight:800;white-space:nowrap}.preview-toggle input{width:18px;height:18px}.preview-live{color:#ffb5be}.preview-live input{accent-color:#d9475a}.preview-input,.preview-select{height:42px;border:1px solid var(--line2);border-radius:10px;background:#0a131f;color:#fff;padding:0 10px;font:inherit}.preview-save{height:42px;border:0;border-radius:10px;padding:0 14px;background:linear-gradient(135deg,#31bf62,#248a46);color:#fff;font:inherit;font-weight:800;cursor:pointer}.preview-back{height:42px;display:inline-flex;align-items:center;text-decoration:none;border:1px solid var(--line2);border-radius:10px;padding:0 13px;color:#fff;background:#15243a;font-weight:750;white-space:nowrap}.preview-status{grid-column:1/-1;font-size:.78rem;color:#c9ffed;min-height:1.2em}
 .sale-ribbon{display:inline-flex;align-items:center;margin-left:7px;border-radius:999px;padding:4px 8px;background:linear-gradient(135deg,#ffd45d,#ff8b55);color:#2b1b02;font-size:.7rem;font-weight:950;letter-spacing:.04em;vertical-align:middle}.sale-price-wrap{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.sale-price-old{text-decoration:line-through;color:rgba(255,255,255,.5);font-size:1rem;font-weight:650}.sale-price-new{color:#ffd45d;font-size:1.55rem;font-weight:950}.sale-preview-note{color:#ffe4a1;font-size:.75rem;margin:-4px 0 12px}
 @media(max-width:850px){.preview-controls{grid-template-columns:1fr 1fr}.preview-toggle,.preview-status{grid-column:1/-1}}@media(max-width:540px){.preview-controls{grid-template-columns:1fr}.preview-toggle,.preview-status{grid-column:auto}.preview-save,.preview-back{width:100%;justify-content:center}}
 </style>
@@ -33,10 +33,11 @@
 <main class="shell">
 <section class="preview-admin" id="preview-admin">
   <div class="preview-admin-head">
-    <div><div class="preview-admin-title">PRÓBAOLDAL · Első hang kedvezmény</div><div class="preview-admin-note">Kinézetre az éles Hangbolt. A beállítás itt menthető, de a publikus árakat és a Stripe-ot még nem módosítja.</div></div>
+    <div><div class="preview-admin-title">PRÓBAOLDAL · Első hang kedvezmény</div><div class="preview-admin-note">A próbanézetet külön kapcsolhatod. Az „ÉLES AKCIÓ” kapcsoló bekapcsolása után a publikus főoldal, Hangbolt és Stripe is használja a beállított első-hang árat.</div></div>
   </div>
   <div class="preview-controls">
-    <label class="preview-toggle"><input id="preview-enabled" type="checkbox"> Első hang akció</label>
+    <label class="preview-toggle"><input id="preview-enabled" type="checkbox"> Próbanézet akció</label>
+    <label class="preview-toggle preview-live"><input id="preview-live-enabled" type="checkbox"> ÉLES AKCIÓ</label>
     <input class="preview-input" id="preview-price" inputmode="decimal" value="4,99" aria-label="Első hang akciós ára EUR">
     <select class="preview-select" id="preview-customer-state" aria-label="Próba vásárlói állapot">
       <option value="new">Új vásárló · még nem vett hangot</option>
@@ -424,7 +425,7 @@ function showQueryNotice(){
 const INSTALLER_LABEL={hu:'Telepítés Home Assistant nélkül',en:'Install without Home Assistant',de:'Ohne Home Assistant installieren',fr:'Installer sans Home Assistant',es:'Instalar sin Home Assistant',it:'Installa senza Home Assistant',pt:'Instalar sem Home Assistant',nl:'Installeren zonder Home Assistant',pl:'Zainstaluj bez Home Assistant',cs:'Nainstalovat bez Home Assistant',sk:'Nainštalovať bez Home Assistant',ro:'Instalează fără Home Assistant',da:'Installer uden Home Assistant',sv:'Installera utan Home Assistant',no:'Installer uten Home Assistant',fi:'Asenna ilman Home Assistantia','zh-CN':'无需 Home Assistant 安装','zh-TW':'無需 Home Assistant 安裝',tr:'Home Assistant olmadan yükle',th:'ติดตั้งโดยไม่ใช้ Home Assistant',vi:'Cài đặt không cần Home Assistant',ko:'Home Assistant 없이 설치',km:'ដំឡើងដោយមិនប្រើ Home Assistant'};
 function installerLabel(){return INSTALLER_LABEL[currentLang]||INSTALLER_LABEL.en}
 let packsCache=null,errorCache=null,installerAvailable=false;
-let previewSettings={enabled:false,price_amount:499,currency:'eur'};
+let previewSettings={enabled:false,live_enabled:false,price_amount:499,currency:'eur'};
 let previewAudio=null,previewButton=null,renderedGroups=[];
 
 function packLanguage(p){return String(p.language||p.language_code||'Voice pack')}
@@ -658,13 +659,16 @@ async function loadPreviewSettings(){
   const res=await fetch('/api/anthbot/admin/store/first-purchase-preview-settings',{cache:'no-store'});
   const data=await res.json().catch(()=>({}));
   if(!res.ok)throw new Error(data.detail||('HTTP '+res.status));
-  previewSettings={enabled:Boolean(data.enabled),price_amount:Number(data.price_amount||499),currency:data.currency||'eur'};
+  previewSettings={enabled:Boolean(data.enabled),live_enabled:Boolean(data.live_enabled),price_amount:Number(data.price_amount||499),currency:data.currency||'eur'};
   document.getElementById('preview-enabled').checked=previewSettings.enabled;
+  document.getElementById('preview-live-enabled').checked=previewSettings.live_enabled;
   document.getElementById('preview-price').value=(previewSettings.price_amount/100).toFixed(2).replace('.',',');
   updatePreviewOfferBanner();
 }
 async function savePreviewSettings(){
   const enabled=document.getElementById('preview-enabled').checked;
+  const live_enabled=document.getElementById('preview-live-enabled').checked;
+  if(live_enabled&&!previewSettings.live_enabled&&!confirm('Az ÉLES AKCIÓ bekapcsolása után a publikus főoldal, Hangbolt és a jogosult Stripe checkout is az akciós árat használja. Biztosan bekapcsolod?'))return;
   const raw=String(document.getElementById('preview-price').value||'').trim().replace(',','.');
   const numeric=Number(raw);
   const status=document.getElementById('preview-status');
@@ -672,11 +676,11 @@ async function savePreviewSettings(){
   const price_amount=Math.round(numeric*100);
   const button=document.getElementById('preview-save');button.disabled=true;status.textContent='Mentés…';
   try{
-    const res=await fetch('/api/anthbot/admin/store/first-purchase-preview-settings',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled,price_amount})});
+    const res=await fetch('/api/anthbot/admin/store/first-purchase-preview-settings',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled,live_enabled,price_amount})});
     const data=await res.json().catch(()=>({}));
     if(!res.ok)throw new Error(data.detail||('HTTP '+res.status));
-    previewSettings={enabled:Boolean(data.enabled),price_amount:Number(data.price_amount),currency:data.currency||'eur'};
-    status.textContent='Próbabeállítás elmentve. Az éles Hangbolt és Stripe továbbra is változatlan.';
+    previewSettings={enabled:Boolean(data.enabled),live_enabled:Boolean(data.live_enabled),price_amount:Number(data.price_amount),currency:data.currency||'eur'};
+    status.textContent=previewSettings.live_enabled?'MENTVE · Az akció ÉLES a főoldalon, Hangboltban és Stripe checkoutban.':'Mentve · Az éles akció ki van kapcsolva.';
     updatePreviewOfferBanner();
     renderCurrent();
   }catch(err){status.textContent='Mentési hiba: '+err.message}
@@ -706,6 +710,7 @@ document.getElementById('custom-form').addEventListener('submit',async e=>{
 });
 document.getElementById('preview-save').addEventListener('click',savePreviewSettings);
 document.getElementById('preview-enabled').addEventListener('change',()=>{previewSettings.enabled=document.getElementById('preview-enabled').checked;updatePreviewOfferBanner();renderCurrent()});
+document.getElementById('preview-live-enabled').addEventListener('change',()=>{previewSettings.live_enabled=document.getElementById('preview-live-enabled').checked});
 document.getElementById('preview-customer-state').addEventListener('change',()=>{updatePreviewOfferBanner();renderCurrent()});
 document.getElementById('preview-price').addEventListener('input',()=>{
   const raw=String(document.getElementById('preview-price').value||'').trim().replace(',','.');
