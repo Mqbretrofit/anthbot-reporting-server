@@ -1723,13 +1723,36 @@ class VoiceStoreTests(unittest.TestCase):
         entitled_pack = body["packs"][0]
         self.assertEqual(entitled_pack["id"], pack_id)
         self.assertEqual(entitled_pack["entitlement"], "purchased")
-        self.assertIn("license=", entitled_pack["music_url"])
+        self.assertIn("token=abdl1.", entitled_pack["music_url"])
+        self.assertNotIn("license=", entitled_pack["music_url"])
 
         downloaded = self.client.get(
             entitled_pack["music_url"].removeprefix("https://testserver")
         )
         self.assertEqual(downloaded.status_code, 200)
         self.assertEqual(downloaded.content, b"paid-community-pack")
+        self.assertEqual(downloaded.headers.get("cache-control"), "private, no-store")
+
+        expired_token = store_api._download_access_token(
+            store_api._find_uploaded_pack(pack_id),
+            entitlement="purchase",
+            subject=str(stored["stripe_session_id"]),
+            client_id=client_id,
+            expires_at=int(time.time()) - 1,
+        )
+        expired = self.client.get(
+            f"/api/anthbot/store/voice-packs/{pack_id}/download"
+            f"?token={expired_token}"
+        )
+        self.assertEqual(expired.status_code, 401)
+        self.assertIn("expired", expired.json()["detail"])
+
+        legacy_license = store_api._license_for_order(stored)
+        legacy_download = self.client.get(
+            f"/api/anthbot/store/voice-packs/{pack_id}/download"
+            f"?license={legacy_license}"
+        )
+        self.assertEqual(legacy_download.status_code, 401)
 
         with patch.object(store_api, "_create_checkout_session") as duplicate_create:
             duplicate = self.client.post(
@@ -2226,7 +2249,7 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(owner_pack["id"], pack_id)
         self.assertEqual(owner_pack["entitlement"], "owner")
         self.assertTrue(owner_pack["owner_access"])
-        self.assertIn("/owner-download?owner=abo1.", owner_pack["music_url"])
+        self.assertIn("/download?token=abdl1.", owner_pack["music_url"])
 
         owner_download_path = owner_pack["music_url"].removeprefix(
             "https://testserver"
@@ -2629,7 +2652,7 @@ class VoiceStoreTests(unittest.TestCase):
         )
         self.assertEqual(entitled["entitlement"], "admin_grant")
         self.assertTrue(entitled["admin_grant"])
-        self.assertIn("/grant-download?grant=", entitled["music_url"])
+        self.assertIn("/download?token=abdl1.", entitled["music_url"])
 
         download_path = entitled["music_url"].removeprefix("https://testserver")
         download = self.client.get(download_path)

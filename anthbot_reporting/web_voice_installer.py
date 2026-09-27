@@ -365,18 +365,19 @@ def _resolve_pack(
                     status_code=402,
                     detail="This voice pack has not been unlocked for this Voice Store account.",
                 )
-            base = core._public_base_url(request)
             if order is not None:
-                license_key = store_api._license_for_order(order)
-                music_url = (
-                    f"{base}/api/anthbot/store/voice-packs/{quote(pack_id)}/download"
-                    f"?license={quote(license_key)}"
+                music_url = store_api._short_lived_voice_url(
+                    request,
+                    raw,
+                    entitlement="purchase",
+                    subject=str(order.get("stripe_session_id") or ""),
                 )
             else:
-                grant_token = store_api._admin_grant_access_for_pack(grant, raw)
-                music_url = (
-                    f"{base}/api/anthbot/store/voice-packs/{quote(pack_id)}/grant-download"
-                    f"?grant={quote(grant_token)}"
+                music_url = store_api._short_lived_voice_url(
+                    request,
+                    raw,
+                    entitlement="grant",
+                    subject=str(grant.get("grant_id") or ""),
                 )
         else:
             music_url = str(core._public_voice_pack(raw, request).get("music_url") or "")

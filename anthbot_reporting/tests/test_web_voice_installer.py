@@ -347,7 +347,8 @@ class WebVoiceInstallerTests(unittest.TestCase):
         def fake_install_voice(*, access_token, serial, pack, update) -> None:
             self.assertEqual(access_token, "temporary-anthbot-token")
             self.assertEqual(serial, "25245HGD00050826")
-            self.assertIn("license=", pack["music_url"])
+            self.assertIn("token=abdl1.", pack["music_url"])
+            self.assertNotIn("license=", pack["music_url"])
             self.assertEqual(pack["music_md5"], owned["music_md5"])
             update(
                 progress=55,
