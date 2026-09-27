@@ -2243,7 +2243,7 @@ def _attach_first_purchase_offer_claim(
             SET stripe_session_id = ?, expires_at = ?
             WHERE claim_id = ? AND state = 'reserved'
             """,
-            (stripe_session_id, int(time.time()) + 24 * 60 * 60, claim_id),
+            (stripe_session_id, int(time.time()) + 35 * 60, claim_id),
         )
 
 
@@ -2405,6 +2405,12 @@ def _create_checkout_session(
             "metadata": payment_metadata,
         },
     }
+    if first_purchase_offer_claim is not None:
+        # Keep the one-time promo reservation aligned with a short-lived
+        # Checkout Session so an abandoned discounted session cannot block the
+        # customer for a full day.
+        params["expires_at"] = int(time.time()) + 30 * 60
+
     if account is not None:
         stripe_customer_id = str(account.get("stripe_customer_id") or "").strip()
         account_email = str(account.get("email") or "").strip()
