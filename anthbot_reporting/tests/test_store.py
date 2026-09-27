@@ -3023,6 +3023,10 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIn('id="preview-enabled"', allowed.text)
         self.assertIn('id="preview-price"', allowed.text)
         self.assertIn("ELSŐ HANG AKCIÓ", allowed.text)
+        self.assertLess(
+            allowed.text.index('id="preview-offer-banner"'),
+            allowed.text.index('id="voice-compatibility-note"'),
+        )
 
         initial = self.client.get(
             "/api/anthbot/admin/store/first-purchase-preview-settings",
