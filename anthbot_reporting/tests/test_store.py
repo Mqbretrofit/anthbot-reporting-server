@@ -2973,7 +2973,7 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertIn("PRÓBAOLDAL · Első hang kedvezmény", allowed.text)
         self.assertIn('id="preview-price"', allowed.text)
         self.assertIn('id="preview-customer-state"', allowed.text)
-        self.assertIn("/api/anthbot/admin/store/voice-packs", allowed.text)
+        self.assertIn("/api/anthbot/admin/store/first-purchase-preview-settings", allowed.text)
         self.assertNotIn("/api/anthbot/store/checkout", allowed.text)
         self.assertEqual(
             allowed.headers.get("x-robots-tag"),
