@@ -2958,9 +2958,16 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(denied.status_code, 303)
         self.assertEqual(denied.headers["location"], "/dashboard")
 
+        login = self.client.post(
+            "/dashboard/login",
+            content="token=test-admin-token",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            follow_redirects=False,
+        )
+        self.assertEqual(login.status_code, 303)
+
         allowed = self.client.get(
             "/dashboard/store-first-purchase-preview",
-            headers=self._admin_headers(),
         )
         self.assertEqual(allowed.status_code, 200)
         self.assertIn("PRÓBAOLDAL · NEM ÉLES", allowed.text)
@@ -2975,7 +2982,6 @@ class VoiceStoreTests(unittest.TestCase):
 
         admin = self.client.get(
             "/dashboard/store",
-            headers=self._admin_headers(),
         )
         self.assertEqual(admin.status_code, 200)
         self.assertIn(
