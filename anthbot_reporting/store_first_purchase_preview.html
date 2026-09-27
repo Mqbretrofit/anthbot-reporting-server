@@ -425,7 +425,7 @@ function showQueryNotice(){
 const INSTALLER_LABEL={hu:'Telepítés Home Assistant nélkül',en:'Install without Home Assistant',de:'Ohne Home Assistant installieren',fr:'Installer sans Home Assistant',es:'Instalar sin Home Assistant',it:'Installa senza Home Assistant',pt:'Instalar sem Home Assistant',nl:'Installeren zonder Home Assistant',pl:'Zainstaluj bez Home Assistant',cs:'Nainstalovat bez Home Assistant',sk:'Nainštalovať bez Home Assistant',ro:'Instalează fără Home Assistant',da:'Installer uden Home Assistant',sv:'Installera utan Home Assistant',no:'Installer uten Home Assistant',fi:'Asenna ilman Home Assistantia','zh-CN':'无需 Home Assistant 安装','zh-TW':'無需 Home Assistant 安裝',tr:'Home Assistant olmadan yükle',th:'ติดตั้งโดยไม่ใช้ Home Assistant',vi:'Cài đặt không cần Home Assistant',ko:'Home Assistant 없이 설치',km:'ដំឡើងដោយមិនប្រើ Home Assistant'};
 function installerLabel(){return INSTALLER_LABEL[currentLang]||INSTALLER_LABEL.en}
 let packsCache=null,errorCache=null,installerAvailable=false;
-let previewSettings={enabled:false,price_amount:499,currency:'eur'};
+let previewSettings={enabled:false,live_enabled:false,price_amount:499,currency:'eur'};
 let previewAudio=null,previewButton=null,renderedGroups=[];
 
 function packLanguage(p){return String(p.language||p.language_code||'Voice pack')}
@@ -668,6 +668,7 @@ async function loadPreviewSettings(){
 async function savePreviewSettings(){
   const enabled=document.getElementById('preview-enabled').checked;
   const live_enabled=document.getElementById('preview-live-enabled').checked;
+  if(live_enabled&&!previewSettings.live_enabled&&!confirm('Az ÉLES AKCIÓ bekapcsolása után a publikus főoldal, Hangbolt és a jogosult Stripe checkout is az akciós árat használja. Biztosan bekapcsolod?'))return;
   const raw=String(document.getElementById('preview-price').value||'').trim().replace(',','.');
   const numeric=Number(raw);
   const status=document.getElementById('preview-status');
