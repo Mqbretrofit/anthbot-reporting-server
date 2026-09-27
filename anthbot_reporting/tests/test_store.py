@@ -2950,6 +2950,40 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(invalid.status_code, 400)
 
 
+    def test_first_purchase_offer_preview_is_admin_only_and_non_transactional(self) -> None:
+        denied = self.client.get(
+            "/dashboard/store-first-purchase-preview",
+            follow_redirects=False,
+        )
+        self.assertEqual(denied.status_code, 303)
+        self.assertEqual(denied.headers["location"], "/dashboard")
+
+        allowed = self.client.get(
+            "/dashboard/store-first-purchase-preview",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(allowed.status_code, 200)
+        self.assertIn("PRÓBAOLDAL · NEM ÉLES", allowed.text)
+        self.assertIn('id="first-offer-price"', allowed.text)
+        self.assertIn('id="customer-state"', allowed.text)
+        self.assertIn("/api/anthbot/admin/store/voice-packs", allowed.text)
+        self.assertNotIn("/api/anthbot/store/checkout", allowed.text)
+        self.assertEqual(
+            allowed.headers.get("x-robots-tag"),
+            "noindex, nofollow",
+        )
+
+        admin = self.client.get(
+            "/dashboard/store",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(admin.status_code, 200)
+        self.assertIn(
+            "/dashboard/store-first-purchase-preview",
+            admin.text,
+        )
+
+
     def test_store_account_uses_hashed_code_and_persistent_session(self) -> None:
         captured: dict[str, str] = {}
 
