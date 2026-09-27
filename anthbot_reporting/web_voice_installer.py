@@ -64,11 +64,12 @@ class LoginPayload(BaseModel):
 class CheckoutPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
     pack_id: str = Field(min_length=1, max_length=160)
+    device_id: str | None = Field(default=None, min_length=8, max_length=128)
 
-    @field_validator("pack_id")
+    @field_validator("pack_id", "device_id")
     @classmethod
-    def _strip_pack_id(cls, value: str) -> str:
-        return value.strip()
+    def _strip_checkout_value(cls, value: str | None) -> str | None:
+        return value.strip() if isinstance(value, str) else value
 
 
 class InstallPayload(BaseModel):
@@ -590,6 +591,31 @@ def installer_logout(request: Request) -> Response:
     return response
 
 
+@router.get("/api/anthbot/web-installer/first-purchase-offer")
+def installer_first_purchase_offer(
+    request: Request,
+    device_id: str | None = None,
+) -> Response:
+    account = store_accounts.current_user(request)
+    user_id = str(account["user_id"]) if account is not None else None
+    promo_subject = None
+    if device_id:
+        _, session = _require_session(request)
+        device = _find_device(session, device_id)
+        robot_key = store_api._robot_key_from_serial(
+            str(device.get("serial") or "")
+        )
+        promo_subject = store_api._first_purchase_offer_subject(
+            robot_key=robot_key,
+        )
+    return _json(
+        store_api._first_purchase_offer_status(
+            user_id,
+            promo_subject,
+        )
+    )
+
+
 @router.post("/api/anthbot/web-installer/checkout")
 async def installer_checkout(payload: CheckoutPayload, request: Request) -> Response:
     if not _enabled():
@@ -615,6 +641,17 @@ async def installer_checkout(payload: CheckoutPayload, request: Request) -> Resp
             }
         )
     user_id = str(account["user_id"])
+    promo_subject = None
+    if payload.device_id:
+        _, installer_session = _require_session(request)
+        device = _find_device(installer_session, payload.device_id)
+        robot_key = store_api._robot_key_from_serial(
+            str(device.get("serial") or "")
+        )
+        promo_subject = store_api._first_purchase_offer_subject(
+            robot_key=robot_key,
+        )
+
     existing = store_api._paid_order_for_user_pack(
         user_id,
         record,
@@ -636,17 +673,34 @@ async def installer_checkout(payload: CheckoutPayload, request: Request) -> Resp
     )
     cancel_url = f"{base}/voice-installer?cancelled=1&pack={quote(payload.pack_id)}"
 
-    checkout = await asyncio.to_thread(
-        store_api._create_checkout_session,
-        record,
-        request,
-        client_id=client_id,
-        user_id=user_id,
-        pair_code=None,
-        entitlement_scope="web",
-        success_url_override=success_url,
-        cancel_url_override=cancel_url,
+    offer_claim = store_api._reserve_first_purchase_offer(
+        user_id,
+        promo_subject,
     )
+    try:
+        checkout = await asyncio.to_thread(
+            store_api._create_checkout_session,
+            record,
+            request,
+            client_id=client_id,
+            user_id=user_id,
+            pair_code=None,
+            entitlement_scope="web",
+            success_url_override=success_url,
+            cancel_url_override=cancel_url,
+            first_purchase_offer_claim=offer_claim,
+        )
+        if offer_claim is not None:
+            store_api._attach_first_purchase_offer_claim(
+                str(offer_claim["claim_id"]),
+                str(checkout.get("id") or ""),
+            )
+    except Exception:
+        if offer_claim is not None:
+            store_api._release_first_purchase_offer_claim(
+                str(offer_claim["claim_id"])
+            )
+        raise
     order = store_api._upsert_order_from_session(checkout)
     checkout_url = checkout.get("url")
     if not isinstance(checkout_url, str) or not checkout_url.startswith("https://"):
@@ -657,6 +711,13 @@ async def installer_checkout(payload: CheckoutPayload, request: Request) -> Resp
             "pack_id": payload.pack_id,
             "checkout_url": checkout_url,
             "session_id": order["stripe_session_id"],
+            "first_purchase_offer_applied": bool(offer_claim),
+            "price_amount": (
+                int(offer_claim["price_amount"])
+                if offer_claim is not None
+                else store_api._price_amount(record)
+            ),
+            "currency": store_api._currency(record),
         }
     )
 
