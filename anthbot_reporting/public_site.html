@@ -113,11 +113,29 @@ a{color:inherit}.wrap{max-width:var(--max);margin:auto;padding:0 22px}
 .lang-wrap{display:flex;align-items:center;gap:8px;flex:0 0 auto}
 .lang-label{color:var(--faint);font-size:12px}
 @media(max-width:760px){.lang-label{display:none}.lang-select{min-width:116px}}
+
+.first-voice-offer{display:none;position:relative;z-index:20;border-bottom:1px solid rgba(255,212,93,.3);background:linear-gradient(90deg,rgba(255,212,93,.12),rgba(255,139,85,.10),rgba(94,224,131,.08));box-shadow:0 12px 34px rgba(0,0,0,.16)}
+.first-voice-offer .wrap{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-top:14px;padding-bottom:14px}
+.offer-copy{display:flex;align-items:center;gap:14px;min-width:0}.offer-badge{display:inline-flex;align-items:center;border-radius:999px;padding:6px 10px;background:linear-gradient(135deg,#ffd45d,#ff8b55);color:#2b1b02;font-size:.72rem;font-weight:950;letter-spacing:.05em;white-space:nowrap}.offer-text strong{display:block;font-size:1.02rem}.offer-text span{display:block;color:var(--muted);font-size:.85rem}.offer-price{font-size:1.65rem;font-weight:950;color:#ffd45d;white-space:nowrap}.offer-price small{font-size:.8rem;color:var(--faint);font-weight:700;margin-right:7px;text-decoration:line-through}.offer-cta{white-space:nowrap}
+@media(max-width:760px){.first-voice-offer .wrap{align-items:flex-start;flex-direction:column}.offer-copy{align-items:flex-start}.offer-cta{width:100%}.offer-cta .btn{width:100%}.offer-price{font-size:1.45rem}}
 </style>
 </head>
 <body>
 <div class="bg-grid"></div>
 <nav class="nav"><div class="wrap navin"><a class="brand" href="/"><span class="logo">A</span><span>ANTHBOT Map</span></a><div class="links"><a href="#anthbot-map">ANTHBOT Map</a><a href="#features">Features</a><a href="#models">Models</a><a class="store-link" href="/store">🔊 Voice Store</a><a class="community-link" href="https://github.com/Mqbretrofit/ha-anthbot-map-v2/discussions" target="_blank" rel="noopener">💬 GitHub Discussions</a><a class="hungary-link" href="https://anthbothungary.hu/" target="_blank" rel="noopener sponsored">🇭🇺 ANTHBOT Hungary</a><a href="#support">Support</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a></div><div class="lang-wrap"><span class="lang-label">Language</span><select class="lang-select" id="site-language" aria-label="Language"><option value="hu">Magyar</option><option value="en">English</option><option value="de">Deutsch</option><option value="fr">Français</option><option value="es">Español</option><option value="it">Italiano</option><option value="pt">Português</option><option value="nl">Nederlands</option><option value="pl">Polski</option><option value="cs">Čeština</option><option value="sk">Slovenčina</option><option value="ro">Română</option><option value="da">Dansk</option><option value="sv">Svenska</option><option value="no">Norsk</option><option value="fi">Suomi</option><option value="zh-CN">简体中文</option><option value="zh-TW">繁體中文</option><option value="tr">Türkçe</option><option value="th">ไทย</option><option value="vi">Tiếng Việt</option><option value="ko">한국어</option><option value="km">ខ្មែរ</option></select></div></div></nav>
+<section class="first-voice-offer" id="first-voice-offer">
+  <div class="wrap">
+    <div class="offer-copy">
+      <span class="offer-badge" id="offer-badge">FIRST VOICE OFFER</span>
+      <div class="offer-text">
+        <strong id="offer-title-text">Your first paid voice pack at a special price.</strong>
+        <span id="offer-subtitle">Choose a Genie voice pack in the Voice Store. The discount applies to your first paid voice pack.</span>
+      </div>
+    </div>
+    <div class="offer-price"><small id="offer-normal-price">€7.99</small><span id="offer-price">€4.99</span></div>
+    <div class="offer-cta"><a class="btn primary" href="/store" id="offer-link">Open Voice Store</a></div>
+  </div>
+</section>
 
 <header class="hero"><div class="wrap hero-grid">
 <div>
@@ -291,5 +309,46 @@ a{color:inherit}.wrap{max-width:var(--max);margin:auto;padding:0 22px}
   requestAnimationFrame(frame);
 })();
 </script>
+
+<script>
+const FIRST_VOICE_OFFER={"hu":{"badge":"ELSŐ HANG AKCIÓ","title":"Az első fizetős hangcsomagod kedvezményes áron.","subtitle":"Válassz egy Genie hangcsomagot a Hangboltban. A kedvezmény az első fizetős hangodra érvényes.","cta":"Megnézem a Hangboltban","cardNote":"Kedvezményes ár az első fizetős hangodra.","preview":"PRÓBA"},"en":{"badge":"FIRST VOICE OFFER","title":"Your first paid voice pack at a special price.","subtitle":"Choose a Genie voice pack in the Voice Store. The discount applies to your first paid voice pack.","cta":"Open Voice Store","cardNote":"Special price for your first paid voice pack.","preview":"PREVIEW"},"de":{"badge":"ANGEBOT FÜR DIE ERSTE STIMME","title":"Dein erstes kostenpflichtiges Sprachpaket zum Aktionspreis.","subtitle":"Wähle im Voice Store ein Genie-Sprachpaket. Der Rabatt gilt für dein erstes kostenpflichtiges Sprachpaket.","cta":"Voice Store öffnen","cardNote":"Aktionspreis für dein erstes kostenpflichtiges Sprachpaket.","preview":"VORSCHAU"},"fr":{"badge":"OFFRE PREMIÈRE VOIX","title":"Votre premier pack vocal payant à prix réduit.","subtitle":"Choisissez un pack vocal Genie dans la boutique. La remise s’applique à votre premier pack vocal payant.","cta":"Ouvrir la boutique vocale","cardNote":"Prix réduit pour votre premier pack vocal payant.","preview":"APERÇU"},"es":{"badge":"OFERTA PRIMERA VOZ","title":"Tu primer paquete de voz de pago a precio promocional.","subtitle":"Elige un paquete de voz Genie en la tienda. El descuento se aplica a tu primer paquete de voz de pago.","cta":"Abrir tienda de voces","cardNote":"Precio promocional para tu primer paquete de voz de pago.","preview":"VISTA PREVIA"},"it":{"badge":"OFFERTA PRIMA VOCE","title":"Il tuo primo pacchetto vocale a pagamento a prezzo promozionale.","subtitle":"Scegli un pacchetto vocale Genie nel negozio. Lo sconto si applica al tuo primo pacchetto vocale a pagamento.","cta":"Apri il negozio voci","cardNote":"Prezzo promozionale per il tuo primo pacchetto vocale a pagamento.","preview":"ANTEPRIMA"},"pt":{"badge":"OFERTA PRIMEIRA VOZ","title":"O seu primeiro pacote de voz pago a preço promocional.","subtitle":"Escolha um pacote de voz Genie na Loja de Vozes. O desconto aplica-se ao seu primeiro pacote de voz pago.","cta":"Abrir Loja de Vozes","cardNote":"Preço promocional para o seu primeiro pacote de voz pago.","preview":"PRÉ-VISUALIZAÇÃO"},"nl":{"badge":"EERSTE STEM-ACTIE","title":"Je eerste betaalde stempakket voor een actieprijs.","subtitle":"Kies een Genie-stempakket in de Stemwinkel. De korting geldt voor je eerste betaalde stempakket.","cta":"Stemwinkel openen","cardNote":"Actieprijs voor je eerste betaalde stempakket.","preview":"VOORBEELD"},"pl":{"badge":"PROMOCJA NA PIERWSZY GŁOS","title":"Pierwszy płatny pakiet głosowy w cenie promocyjnej.","subtitle":"Wybierz pakiet głosowy Genie w sklepie. Rabat dotyczy pierwszego płatnego pakietu głosowego.","cta":"Otwórz sklep z głosami","cardNote":"Cena promocyjna na pierwszy płatny pakiet głosowy.","preview":"PODGLĄD"},"cs":{"badge":"AKCE NA PRVNÍ HLAS","title":"První placený hlasový balíček za akční cenu.","subtitle":"Vyberte hlasový balíček Genie v obchodě. Sleva platí na váš první placený hlasový balíček.","cta":"Otevřít obchod s hlasy","cardNote":"Akční cena na váš první placený hlasový balíček.","preview":"NÁHLED"},"sk":{"badge":"AKCIA NA PRVÝ HLAS","title":"Prvý platený hlasový balík za akciovú cenu.","subtitle":"Vyberte si hlasový balík Genie v obchode. Zľava platí na váš prvý platený hlasový balík.","cta":"Otvoriť obchod s hlasmi","cardNote":"Akciová cena na váš prvý platený hlasový balík.","preview":"NÁHĽAD"},"ro":{"badge":"OFERTĂ PRIMA VOCE","title":"Primul tău pachet vocal plătit la preț promoțional.","subtitle":"Alege un pachet vocal Genie din magazin. Reducerea se aplică primului tău pachet vocal plătit.","cta":"Deschide magazinul de voci","cardNote":"Preț promoțional pentru primul tău pachet vocal plătit.","preview":"PREVIZUALIZARE"},"da":{"badge":"TILBUD PÅ FØRSTE STEMME","title":"Din første betalte stemmepakke til kampagnepris.","subtitle":"Vælg en Genie-stemmepakke i Voice Store. Rabatten gælder din første betalte stemmepakke.","cta":"Åbn Voice Store","cardNote":"Kampagnepris på din første betalte stemmepakke.","preview":"FORHÅNDSVISNING"},"sv":{"badge":"ERBJUDANDE PÅ FÖRSTA RÖSTEN","title":"Ditt första betalda röstpaket till kampanjpris.","subtitle":"Välj ett Genie-röstpaket i Voice Store. Rabatten gäller ditt första betalda röstpaket.","cta":"Öppna Voice Store","cardNote":"Kampanjpris på ditt första betalda röstpaket.","preview":"FÖRHANDSVISNING"},"no":{"badge":"TILBUD PÅ FØRSTE STEMME","title":"Din første betalte stemmepakke til kampanjepris.","subtitle":"Velg en Genie-stemmepakke i Voice Store. Rabatten gjelder din første betalte stemmepakke.","cta":"Åpne Voice Store","cardNote":"Kampanjepris på din første betalte stemmepakke.","preview":"FORHÅNDSVISNING"},"fi":{"badge":"ENSIMMÄISEN ÄÄNEN TARJOUS","title":"Ensimmäinen maksullinen äänipakettisi tarjoushintaan.","subtitle":"Valitse Genie-äänipaketti Voice Storesta. Alennus koskee ensimmäistä maksullista äänipakettiasi.","cta":"Avaa Voice Store","cardNote":"Tarjoushinta ensimmäiselle maksulliselle äänipaketillesi.","preview":"ESIKATSELU"},"zh-CN":{"badge":"首个语音优惠","title":"首个付费语音包享受优惠价。","subtitle":"在语音商店中选择一个 Genie 语音包。优惠仅适用于你的首个付费语音包。","cta":"打开语音商店","cardNote":"首个付费语音包优惠价。","preview":"预览"},"zh-TW":{"badge":"首個語音優惠","title":"首個付費語音包享優惠價。","subtitle":"在語音商店中選擇一個 Genie 語音包。優惠僅適用於你的首個付費語音包。","cta":"開啟語音商店","cardNote":"首個付費語音包優惠價。","preview":"預覽"},"tr":{"badge":"İLK SES KAMPANYASI","title":"İlk ücretli ses paketin kampanyalı fiyatla.","subtitle":"Ses Mağazası'ndan bir Genie ses paketi seç. İndirim ilk ücretli ses paketin için geçerlidir.","cta":"Ses Mağazasını aç","cardNote":"İlk ücretli ses paketin için kampanyalı fiyat.","preview":"ÖNİZLEME"},"th":{"badge":"โปรโมชันเสียงแรก","title":"แพ็กเสียงแบบชำระเงินแพ็กแรกของคุณในราคาพิเศษ","subtitle":"เลือกแพ็กเสียง Genie ในร้านเสียง ส่วนลดใช้กับแพ็กเสียงแบบชำระเงินแพ็กแรกของคุณ","cta":"เปิดร้านเสียง","cardNote":"ราคาพิเศษสำหรับแพ็กเสียงแบบชำระเงินแพ็กแรกของคุณ","preview":"ตัวอย่าง"},"vi":{"badge":"ƯU ĐÃI GIỌNG ĐẦU TIÊN","title":"Gói giọng nói trả phí đầu tiên của bạn với giá ưu đãi.","subtitle":"Chọn một gói giọng Genie trong Cửa hàng Giọng nói. Ưu đãi áp dụng cho gói giọng trả phí đầu tiên của bạn.","cta":"Mở Cửa hàng Giọng nói","cardNote":"Giá ưu đãi cho gói giọng trả phí đầu tiên của bạn.","preview":"XEM TRƯỚC"},"ko":{"badge":"첫 음성 할인","title":"첫 유료 음성 팩을 할인된 가격으로 구매하세요.","subtitle":"음성 스토어에서 Genie 음성 팩을 선택하세요. 할인은 첫 유료 음성 팩에 적용됩니다.","cta":"음성 스토어 열기","cardNote":"첫 유료 음성 팩 할인 가격.","preview":"미리보기"},"km":{"badge":"ប្រូម៉ូសិនសំឡេងដំបូង","title":"កញ្ចប់សំឡេងបង់ប្រាក់ដំបូងរបស់អ្នកក្នុងតម្លៃពិសេស។","subtitle":"ជ្រើសរើសកញ្ចប់សំឡេង Genie នៅក្នុងហាងសំឡេង។ ការបញ្ចុះតម្លៃអនុវត្តចំពោះកញ្ចប់សំឡេងបង់ប្រាក់ដំបូងរបស់អ្នក។","cta":"បើកហាងសំឡេង","cardNote":"តម្លៃពិសេសសម្រាប់កញ្ចប់សំឡេងបង់ប្រាក់ដំបូងរបស់អ្នក។","preview":"មើលជាមុន"}};
+(function(){
+  const root=document.getElementById('first-voice-offer');
+  if(!root)return;
+  const supported=["hu","en","de","fr","es","it","pt","nl","pl","cs","sk","ro","da","sv","no","fi","zh-CN","zh-TW","tr","th","vi","ko","km"];
+  const locales={hu:'hu-HU',en:'en-GB',de:'de-DE',fr:'fr-FR',es:'es-ES',it:'it-IT',pt:'pt-PT',nl:'nl-NL',pl:'pl-PL',cs:'cs-CZ',sk:'sk-SK',ro:'ro-RO',da:'da-DK',sv:'sv-SE',no:'nb-NO',fi:'fi-FI','zh-CN':'zh-CN','zh-TW':'zh-TW',tr:'tr-TR',th:'th-TH',vi:'vi-VN',ko:'ko-KR',km:'km-KH'};
+  let offerAmount=499;
+  function language(){
+    const select=document.getElementById('site-language');
+    return select&&supported.includes(select.value)?select.value:'en';
+  }
+  function money(amount,lang){
+    try{return new Intl.NumberFormat(locales[lang]||'en-GB',{style:'currency',currency:'EUR'}).format(Number(amount||0)/100)}
+    catch(_){return (Number(amount||0)/100).toFixed(2)+' EUR'}
+  }
+  function renderOffer(){
+    const lang=language(),copy=FIRST_VOICE_OFFER[lang]||FIRST_VOICE_OFFER.en;
+    document.getElementById('offer-badge').textContent=copy.badge;
+    document.getElementById('offer-title-text').textContent=copy.title;
+    document.getElementById('offer-subtitle').textContent=copy.subtitle;
+    document.getElementById('offer-link').textContent=copy.cta;
+    document.getElementById('offer-normal-price').textContent=money(799,lang);
+    document.getElementById('offer-price').textContent=money(offerAmount,lang);
+  }
+  const select=document.getElementById('site-language');
+  if(select)select.addEventListener('change',()=>queueMicrotask(renderOffer));
+  (async()=>{
+    try{
+      const res=await fetch('/api/anthbot/store/first-purchase-offer',{cache:'no-store',credentials:'same-origin'});
+      const data=await res.json().catch(()=>({}));
+      if(!res.ok||!data.enabled){root.style.display='none';return}
+      offerAmount=Number(data.price_amount||499);
+      renderOffer();
+      root.style.display='block';
+    }catch(_){root.style.display='none'}
+  })();
+})();
+</script>
+
 </body>
 </html>
