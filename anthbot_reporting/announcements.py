@@ -86,7 +86,9 @@ class AnnouncementWrite(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     announcement_id: str | None = Field(default=None, max_length=80)
-    category: Literal["news", "release", "maintenance", "outage", "voice"] = "news"
+    category: Literal[
+        "news", "release", "maintenance", "outage", "voice", "personal"
+    ] = "news"
     priority: Literal["normal", "important", "critical"] = "normal"
     show_popup: bool = False
     published: bool = False

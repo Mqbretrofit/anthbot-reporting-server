@@ -101,6 +101,15 @@ class AnnouncementTests(unittest.TestCase):
         self.assertEqual(body["language"], "en")
         self.assertEqual(body["items"][0]["title"], "Beta news")
 
+    def test_personal_message_category_is_published(self) -> None:
+        response = self.save(category="personal", target_models=[], min_version=None)
+        self.assertEqual(response.status_code, 200, response.text)
+        body = self.client.get(
+            "/api/anthbot/announcements",
+            params={"version": "2.4.9.5-beta3", "language": "hu"},
+        ).json()
+        self.assertEqual(body["items"][0]["category"], "personal")
+
     def test_message_can_target_one_or_more_exact_installations(self) -> None:
         first = "11111111-1111-4111-8111-111111111111"
         second = "22222222-2222-4222-8222-222222222222"
@@ -226,6 +235,8 @@ class AnnouncementTests(unittest.TestCase):
         self.assertIn("Üzenetek és újdonságok", response.text)
         self.assertIn("/api/anthbot/admin/announcement-targets", response.text)
         self.assertIn('id="target_installations"', response.text)
+        self.assertIn('value="personal">Személyes üzenet', response.text)
+        self.assertIn('data-select-all-target="model"', response.text)
 
 
 if __name__ == "__main__":
