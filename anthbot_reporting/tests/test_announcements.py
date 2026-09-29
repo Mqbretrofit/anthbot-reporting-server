@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import sqlite3
 import tempfile
 import unittest
 
@@ -13,7 +14,8 @@ import entrypoint
 class AnnouncementTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tempdir = tempfile.TemporaryDirectory()
-        os.environ["ANTHBOT_DB_PATH"] = str(Path(self.tempdir.name) / "reporting.sqlite3")
+        self.db_path = Path(self.tempdir.name) / "reporting.sqlite3"
+        os.environ["ANTHBOT_DB_PATH"] = str(self.db_path)
         os.environ["ANTHBOT_ADMIN_TOKEN"] = "test-admin-token"
         self.client_ctx = TestClient(entrypoint.app, base_url="https://testserver")
         self.client = self.client_ctx.__enter__()
@@ -38,6 +40,7 @@ class AnnouncementTests(unittest.TestCase):
             "min_version": "2.4.9.5-beta1",
             "max_version": None,
             "target_models": ["M9 Pro"],
+            "target_installations": [],
             "translations": {
                 "hu": {
                     "title": "Béta újdonság",
@@ -98,6 +101,88 @@ class AnnouncementTests(unittest.TestCase):
         self.assertEqual(body["language"], "en")
         self.assertEqual(body["items"][0]["title"], "Beta news")
 
+    def test_message_can_target_one_or_more_exact_installations(self) -> None:
+        first = "11111111-1111-4111-8111-111111111111"
+        second = "22222222-2222-4222-8222-222222222222"
+        self.assertEqual(
+            self.save(target_models=[], target_installations=[first, second]).status_code,
+            200,
+        )
+        hidden = self.client.get(
+            "/api/anthbot/announcements",
+            params={
+                "version": "2.4.9.5-beta2",
+                "language": "hu",
+                "installation_id": "33333333-3333-4333-8333-333333333333",
+            },
+        ).json()
+        self.assertEqual(hidden["items"], [])
+        visible = self.client.get(
+            "/api/anthbot/announcements",
+            params={
+                "version": "2.4.9.5-beta2",
+                "language": "hu",
+                "installation_id": second,
+            },
+        ).json()
+        self.assertEqual(visible["items"][0]["id"], "beta-news")
+
+    def test_target_choices_are_built_from_current_presence_rows(self) -> None:
+        first = "11111111-1111-4111-8111-111111111111"
+        second = "22222222-2222-4222-8222-222222222222"
+        for install_id, model in ((first, "M9 Pro"), (second, "Genie 1000"), (second, "M9 Pro")):
+            response = self.client.post(
+                "/api/anthbot/presence",
+                json={"install_id": install_id, "version": "2.4.9.5-beta2", "model": model},
+            )
+            self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(
+            self.client.get("/api/anthbot/admin/announcement-targets").status_code,
+            401,
+        )
+        response = self.client.get(
+            "/api/anthbot/admin/announcement-targets", headers=self.admin_headers
+        )
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(len(body["installations"]), 2)
+        models = {item["name"]: item["installation_count"] for item in body["models"]}
+        self.assertEqual(models, {"M9 Pro": 2, "Genie 1000": 1})
+
+    def test_invalid_target_installation_is_rejected(self) -> None:
+        response = self.save(target_installations=["not-a-uuid"])
+        self.assertEqual(response.status_code, 422)
+
+    def test_existing_announcement_table_is_migrated_without_data_loss(self) -> None:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                """
+                CREATE TABLE announcements (
+                    announcement_id TEXT PRIMARY KEY,
+                    category TEXT NOT NULL,
+                    priority TEXT NOT NULL,
+                    show_popup INTEGER NOT NULL DEFAULT 0,
+                    published INTEGER NOT NULL DEFAULT 0,
+                    published_at TEXT,
+                    expires_at TEXT,
+                    min_version TEXT,
+                    max_version TEXT,
+                    target_models_json TEXT NOT NULL,
+                    translations_json TEXT NOT NULL,
+                    link_url TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """
+            )
+        response = self.save()
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["target_installations"], [])
+        with sqlite3.connect(self.db_path) as conn:
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(announcements)")}
+        self.assertIn("target_installations_json", columns)
+
     def test_blank_required_translation_text_is_rejected(self) -> None:
         payload = self.payload()
         payload["translations"]["en"]["title"] = "   "
@@ -139,6 +224,8 @@ class AnnouncementTests(unittest.TestCase):
         response = self.client.get("/dashboard/announcements")
         self.assertEqual(response.status_code, 200)
         self.assertIn("Üzenetek és újdonságok", response.text)
+        self.assertIn("/api/anthbot/admin/announcement-targets", response.text)
+        self.assertIn('id="target_installations"', response.text)
 
 
 if __name__ == "__main__":

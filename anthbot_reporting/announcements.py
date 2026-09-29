@@ -8,12 +8,14 @@ import re
 import secrets
 from typing import Any, Literal
 from urllib.parse import urlsplit
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
 from app import _dashboard_file, _db, _iso, _request_is_admin, _utcnow, require_admin
+from presence_api import init_presence_tables
 
 router = APIRouter()
 
@@ -41,6 +43,7 @@ def init_announcement_tables() -> None:
                 min_version TEXT,
                 max_version TEXT,
                 target_models_json TEXT NOT NULL,
+                target_installations_json TEXT NOT NULL DEFAULT '[]',
                 translations_json TEXT NOT NULL,
                 link_url TEXT,
                 created_at TEXT NOT NULL,
@@ -50,6 +53,15 @@ def init_announcement_tables() -> None:
                 ON announcements(published, published_at, expires_at);
             """
         )
+        columns = {
+            str(row["name"])
+            for row in conn.execute("PRAGMA table_info(announcements)").fetchall()
+        }
+        if "target_installations_json" not in columns:
+            conn.execute(
+                "ALTER TABLE announcements ADD COLUMN "
+                "target_installations_json TEXT NOT NULL DEFAULT '[]'"
+            )
 
 
 class AnnouncementTranslation(BaseModel):
@@ -83,6 +95,7 @@ class AnnouncementWrite(BaseModel):
     min_version: str | None = Field(default=None, max_length=64)
     max_version: str | None = Field(default=None, max_length=64)
     target_models: list[str] = Field(default_factory=list, max_length=100)
+    target_installations: list[str] = Field(default_factory=list, max_length=500)
     translations: dict[str, AnnouncementTranslation]
     link_url: str | None = Field(default=None, max_length=2048)
 
@@ -116,6 +129,19 @@ class AnnouncementWrite(BaseModel):
                 raise ValueError("target model names must be at most 128 characters")
             if model.casefold() not in {item.casefold() for item in cleaned}:
                 cleaned.append(model)
+        return cleaned
+
+    @field_validator("target_installations")
+    @classmethod
+    def _clean_installations(cls, value: list[str]) -> list[str]:
+        cleaned: list[str] = []
+        for raw in value:
+            try:
+                install_id = str(UUID(str(raw).strip()))
+            except (ValueError, TypeError, AttributeError) as err:
+                raise ValueError("target installation IDs must be UUID values") from err
+            if install_id not in cleaned:
+                cleaned.append(install_id)
         return cleaned
 
     @field_validator("translations")
@@ -188,6 +214,10 @@ def _row_payload(row: Any) -> dict[str, Any]:
         target_models = json.loads(row["target_models_json"])
     except (TypeError, ValueError):
         target_models = []
+    try:
+        target_installations = json.loads(row["target_installations_json"])
+    except (TypeError, ValueError, IndexError):
+        target_installations = []
     return {
         "announcement_id": row["announcement_id"],
         "category": row["category"],
@@ -199,6 +229,9 @@ def _row_payload(row: Any) -> dict[str, Any]:
         "min_version": row["min_version"],
         "max_version": row["max_version"],
         "target_models": target_models if isinstance(target_models, list) else [],
+        "target_installations": (
+            target_installations if isinstance(target_installations, list) else []
+        ),
         "translations": translations if isinstance(translations, dict) else {},
         "link_url": row["link_url"],
         "created_at": row["created_at"],
@@ -229,7 +262,8 @@ def _localized_translation(translations: dict[str, Any], language: str) -> dict[
 
 
 def _matches_target(
-    item: dict[str, Any], *, version: str | None, models: set[str], now: datetime
+    item: dict[str, Any], *, version: str | None, models: set[str],
+    installation_id: str | None, now: datetime
 ) -> bool:
     if not item["published"]:
         return False
@@ -248,6 +282,14 @@ def _matches_target(
     if maximum and (client_version is None or _compare_versions(client_version, maximum) > 0):
         return False
 
+    target_installations = {
+        str(value).strip().lower()
+        for value in item.get("target_installations", [])
+        if str(value).strip()
+    }
+    if target_installations and str(installation_id or "").strip().lower() not in target_installations:
+        return False
+
     targets = {
         str(model).strip().casefold()
         for model in item.get("target_models", [])
@@ -262,6 +304,7 @@ def public_announcements(
     version: str | None = Query(default=None, max_length=64),
     language: str | None = Query(default="en", max_length=32),
     models: str | None = Query(default=None, max_length=4096),
+    installation_id: str | None = Query(default=None, max_length=64),
 ) -> dict[str, Any]:
     init_announcement_tables()
     normalized_language = _normalize_language(language)
@@ -279,7 +322,13 @@ def public_announcements(
     items: list[dict[str, Any]] = []
     for row in rows:
         item = _row_payload(row)
-        if not _matches_target(item, version=version, models=requested_models, now=now):
+        if not _matches_target(
+            item,
+            version=version,
+            models=requested_models,
+            installation_id=installation_id,
+            now=now,
+        ):
             continue
         translation = _localized_translation(item["translations"], normalized_language)
         if translation is None:
@@ -320,6 +369,68 @@ def admin_announcements() -> dict[str, Any]:
     return {"items": [_row_payload(row) for row in rows]}
 
 
+@router.get(
+    "/api/anthbot/admin/announcement-targets",
+    dependencies=[Depends(require_admin)],
+)
+def announcement_targets() -> dict[str, Any]:
+    """Return live target choices from the privacy-minimal presence database."""
+    init_presence_tables()
+    with _db() as conn:
+        installation_rows = conn.execute(
+            """
+            SELECT install_id, version, first_seen, last_seen
+            FROM installation_presence
+            ORDER BY last_seen DESC
+            LIMIT 1000
+            """
+        ).fetchall()
+        model_rows = conn.execute(
+            """
+            SELECT install_id, model, last_seen
+            FROM installation_presence_models
+            ORDER BY last_seen DESC, model ASC
+            """
+        ).fetchall()
+
+    models_by_installation: dict[str, list[str]] = {}
+    model_installations: dict[str, set[str]] = {}
+    model_last_seen: dict[str, str] = {}
+    for row in model_rows:
+        install_id = str(row["install_id"])
+        model = str(row["model"]).strip()
+        if not model:
+            continue
+        models_by_installation.setdefault(install_id, []).append(model)
+        model_installations.setdefault(model, set()).add(install_id)
+        model_last_seen[model] = max(
+            model_last_seen.get(model, ""), str(row["last_seen"] or "")
+        )
+
+    installations = [
+        {
+            "installation_id": str(row["install_id"]),
+            "version": str(row["version"] or ""),
+            "models": sorted(set(models_by_installation.get(str(row["install_id"]), []))),
+            "first_seen": row["first_seen"],
+            "last_seen": row["last_seen"],
+        }
+        for row in installation_rows
+    ]
+    models = [
+        {
+            "name": name,
+            "installation_count": len(model_installations[name]),
+            "last_seen": model_last_seen.get(name),
+        }
+        for name in sorted(
+            model_installations,
+            key=lambda value: (-len(model_installations[value]), value.casefold()),
+        )
+    ]
+    return {"models": models, "installations": installations}
+
+
 @router.post(
     "/api/anthbot/admin/announcements", dependencies=[Depends(require_admin)]
 )
@@ -345,9 +456,9 @@ def save_announcement(payload: AnnouncementWrite) -> dict[str, Any]:
             INSERT INTO announcements (
                 announcement_id, category, priority, show_popup, published,
                 published_at, expires_at, min_version, max_version,
-                target_models_json, translations_json, link_url, created_at,
-                updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                target_models_json, target_installations_json,
+                translations_json, link_url, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(announcement_id) DO UPDATE SET
                 category=excluded.category,
                 priority=excluded.priority,
@@ -358,6 +469,7 @@ def save_announcement(payload: AnnouncementWrite) -> dict[str, Any]:
                 min_version=excluded.min_version,
                 max_version=excluded.max_version,
                 target_models_json=excluded.target_models_json,
+                target_installations_json=excluded.target_installations_json,
                 translations_json=excluded.translations_json,
                 link_url=excluded.link_url,
                 updated_at=excluded.updated_at
@@ -373,6 +485,7 @@ def save_announcement(payload: AnnouncementWrite) -> dict[str, Any]:
                 payload.min_version,
                 payload.max_version,
                 json.dumps(payload.target_models, ensure_ascii=False, separators=(",", ":")),
+                json.dumps(payload.target_installations, ensure_ascii=False, separators=(",", ":")),
                 json.dumps(translations, ensure_ascii=False, separators=(",", ":")),
                 payload.link_url,
                 created_at,
