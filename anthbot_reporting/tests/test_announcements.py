@@ -237,6 +237,8 @@ class AnnouncementTests(unittest.TestCase):
         self.assertIn('id="target_installations"', response.text)
         self.assertIn('value="personal">Személyes üzenet', response.text)
         self.assertIn('data-select-all-target="model"', response.text)
+        self.assertIn("function apiError(payload,status)", response.text)
+        self.assertNotIn("throw new Error((await res.json()", response.text)
 
 
 if __name__ == "__main__":
