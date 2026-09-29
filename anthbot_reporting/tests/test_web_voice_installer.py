@@ -351,8 +351,8 @@ class WebVoiceInstallerTests(unittest.TestCase):
             "/api/anthbot/web-installer/first-purchase-offer"
         )
         self.assertEqual(no_robot.status_code, 200)
-        self.assertFalse(no_robot.json()["eligible"])
-        self.assertTrue(no_robot.json()["requires_robot_or_map"])
+        self.assertTrue(no_robot.json()["eligible"])
+        self.assertFalse(no_robot.json()["requires_robot_or_map"])
 
     def test_paid_checkout_returns_to_installer_and_install_job_completes(self) -> None:
         pack = self._upload_paid_pack()
