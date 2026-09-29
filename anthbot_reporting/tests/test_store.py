@@ -3134,6 +3134,52 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(live_pack["price_amount"], 799)
 
 
+    def test_first_purchase_offer_applies_to_registered_web_customer(self) -> None:
+        pack = self._upload_pack()
+        pack_id = pack["id"]
+        self.client.patch(
+            f"/api/anthbot/admin/store/voice-packs/{pack_id}",
+            headers=self._admin_headers(),
+            json={"access": "paid", "price_amount": 799, "currency": "eur"},
+        )
+        self.client.patch(
+            "/api/anthbot/admin/store/first-purchase-preview-settings",
+            headers=self._admin_headers(),
+            json={"enabled": True, "live_enabled": True, "price_amount": 399},
+        )
+        account = self._login_store_account("web-customer@example.test")
+        status = self.client.get("/api/anthbot/store/first-purchase-offer")
+        self.assertTrue(status.json()["eligible"])
+        self.assertFalse(status.json()["requires_robot_or_map"])
+
+        claims = []
+
+        def fake_checkout(record, request, **kwargs):
+            claims.append(kwargs["first_purchase_offer_claim"])
+            return {
+                "id": f"cs_test_web_offer_{len(claims)}",
+                "url": "https://checkout.stripe.com/c/pay/web-offer",
+                "created": int(time.time()),
+                "client_reference_id": pack_id,
+                "metadata": {"pack_id": pack_id, "store_user_id": kwargs["user_id"]},
+                "payment_status": "unpaid",
+                "status": "open",
+                "amount_total": 399 if claims[-1] else 799,
+                "currency": "eur",
+                "customer_details": None,
+                "customer": None,
+                "payment_intent": None,
+            }
+
+        with patch.object(store_api, "_create_checkout_session", side_effect=fake_checkout):
+            checkout = self.client.post(
+                "/api/anthbot/store/checkout", json={"pack_id": pack_id}
+            )
+        self.assertEqual(checkout.status_code, 200)
+        self.assertEqual(checkout.json()["price_amount"], 399)
+        self.assertTrue(checkout.json()["first_purchase_offer_applied"])
+        self.assertEqual(claims[0]["promo_subject"], f'user:{account["_user_id"]}')
+
     def test_current_map_client_offer_is_single_use_across_email_accounts(self) -> None:
         pack = self._upload_pack()
         pack_id = pack["id"]
