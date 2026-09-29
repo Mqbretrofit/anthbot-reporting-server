@@ -10,11 +10,13 @@ from developer_agent_api import (
 )
 from developer_agent_dashboard import router as developer_agent_dashboard_router
 from diagnostics_dashboard import router as diagnostics_dashboard_router
+from announcements import router as announcements_router
 
 fastapi_app.include_router(developer_agent_router)
 fastapi_app.include_router(developer_agent_dashboard_router)
 fastapi_app.include_router(diagnostics_dashboard_router)
 fastapi_app.include_router(presence_router)
+fastapi_app.include_router(announcements_router)
 
 _FRAME_ANCESTORS = (
     "'self' "
