@@ -355,60 +355,337 @@ def _robot_model(report: dict) -> str:
     return str(model).strip() if model else "Ismeretlen"
 
 
+def _robot_display_identity(report: dict) -> str:
+    """Return a privacy-safe label for one mower in the admin statistics."""
+    device = report.get("device") if isinstance(report.get("device"), dict) else {}
+    model = _robot_model(report)
+    suffix = device.get("serial_suffix")
+    if suffix not in (None, ""):
+        clean = str(suffix).strip()[-4:]
+        if clean:
+            return f"{model} · …{clean}"
+    serial_hash = device.get("serial_sha256")
+    if serial_hash not in (None, ""):
+        return f"{model} · {str(serial_hash).strip()[:12]}"
+    return model
+
+
+_NORMAL_STATUS_MESSAGES = {
+    "the robot is going to the designated area to mow",
+    "starting to recharge",
+    "task resumes",
+    "full map mowing starts",
+    "charging begins",
+}
+
+_ERROR_MESSAGE_HINTS = (
+    "stuck",
+    "recharge failed",
+    "relocation failed",
+    "emergency stop",
+    "suspended in air",
+    "unreachable mowing area",
+    "outside the map",
+    "camera is dirty",
+    "protection mode",
+    "mowing has been interrupted",
+    "blade disc is jammed",
+    "attach grass bag",
+    "put the device on the mobile charging station",
+)
+
+_GENERIC_ERROR_TEXT = {"hiba", "error", "unknown", "n/a", "none", "-"}
+
+
+def _task_event_parts(event: dict) -> tuple[dict, str | None]:
+    task_event = event.get("task_event")
+    if not isinstance(task_event, dict):
+        task_event = {}
+    message = (
+        task_event.get("event_message")
+        or task_event.get("message")
+        or task_event.get("msg")
+        or task_event.get("content")
+        or task_event.get("description")
+    )
+    if message in (None, ""):
+        return task_event, None
+    return task_event, str(message).strip() or None
+
+
+def _event_code(event: dict) -> object:
+    task_event, _ = _task_event_parts(event)
+    code = event.get("err_code")
+    if code is None:
+        code = task_event.get("code")
+    if code is None:
+        code = event.get("cloud_task_event_code")
+    if code is None:
+        code = event.get("event_code")
+    return code
+
+
+def _nonzero_error_code(value: object) -> bool:
+    if value in (None, "", False, 0, "0"):
+        return False
+    text = str(value).strip().lower()
+    return text not in {"", "0", "none", "null", "false", "n/a"}
+
+
+def _classify_diagnostic_event(row_trigger: object, event: dict) -> str:
+    """Classify a stored diagnostic event as error, status, or unclassified.
+
+    Older reports can contain a stale non-zero err_code while a normal task
+    event is being reported.  For that reason the current task-event message
+    and report trigger take precedence over the raw numeric code.
+    """
+    task_event, message = _task_event_parts(event)
+    message_key = (message or "").strip().casefold()
+    description = str(event.get("err_description") or "").strip()
+    description_key = description.casefold()
+    trigger = str(event.get("trigger") or row_trigger or "").strip().casefold()
+
+    if message_key in _NORMAL_STATUS_MESSAGES:
+        return "status"
+
+    if message_key and any(hint in message_key for hint in _ERROR_MESSAGE_HINTS):
+        return "error"
+
+    if description_key and description_key not in _GENERIC_ERROR_TEXT:
+        return "error"
+
+    if trigger == "mower_error_code" or any(
+        hint in trigger for hint in ("robot_error", "mower_error", "fault", "alarm")
+    ):
+        return "error"
+
+    # A task-event report with no known error wording is an operational event,
+    # even if the snapshot still carries the previous robot err_code.
+    if task_event and (message is not None or task_event.get("code") is not None):
+        return "status"
+
+    if _nonzero_error_code(event.get("err_code")):
+        return "error"
+
+    return "unclassified"
+
+
 def _error_stats_data() -> dict:
-    """Aggregate existing opt-in diagnostics; this enables no new collection."""
+    """Aggregate existing opt-in diagnostics without treating normal events as errors."""
     now = _now_dt()
     cut24 = now - timedelta(hours=24)
     cut7 = now - timedelta(days=7)
     cut30 = now - timedelta(days=30)
     conn = _connect()
     try:
-        rows = conn.execute("SELECT installation_id, trigger, received_at, report_json FROM diagnostics ORDER BY received_at DESC").fetchall()
+        rows = conn.execute(
+            "SELECT installation_id, trigger, received_at, report_json "
+            "FROM diagnostics ORDER BY received_at DESC"
+        ).fetchall()
     finally:
         conn.close()
 
-    by_model = Counter(); by_error = Counter(); by_cloud = Counter(); by_status = Counter()
-    installations: set[str] = set(); robots: set[str] = set()
-    model_error = defaultdict(lambda: {"count": 0, "installations": set(), "robots": set(), "description": None, "message": None, "last_seen": None})
-    total_errors = cloud_events = e24 = e7 = e30 = 0
+    by_model = Counter()
+    by_error = Counter()
+    by_cloud = Counter()
+    by_status = Counter()
+    by_status_event = Counter()
+    by_unclassified = Counter()
+    installations: set[str] = set()
+    robots: set[str] = set()
+    model_error = defaultdict(
+        lambda: {
+            "count": 0,
+            "installations": set(),
+            "robots": set(),
+            "description": None,
+            "message": None,
+            "last_seen": None,
+        }
+    )
+    robot_error = defaultdict(
+        lambda: {
+            "count": 0,
+            "model": None,
+            "display": None,
+            "errors": set(),
+            "last_seen": None,
+        }
+    )
+
+    total_diagnostic_events = 0
+    total_errors = 0
+    status_events = 0
+    unclassified_events = 0
+    cloud_events = 0
+    e24 = e7 = e30 = 0
+
     for row in rows:
-        try: report = json.loads(row["report_json"])
-        except (TypeError, ValueError): continue
-        if not isinstance(report, dict): continue
-        model = _robot_model(report); robot_id = _robot_identity(report); installation = str(row["installation_id"] or "")
         try:
-            received = datetime.fromisoformat(str(row["received_at"]).replace("Z", "+00:00"))
-            if received.tzinfo is None: received = received.replace(tzinfo=timezone.utc)
-        except (TypeError, ValueError): received = None
-        event = report.get("diagnostic_event") if isinstance(report.get("diagnostic_event"), dict) else None
-        cloud = report.get("cloud_api_error") if isinstance(report.get("cloud_api_error"), dict) else None
+            report = json.loads(row["report_json"])
+        except (TypeError, ValueError):
+            continue
+        if not isinstance(report, dict):
+            continue
+
+        model = _robot_model(report)
+        robot_id = _robot_identity(report)
+        robot_display = _robot_display_identity(report)
+        installation = str(row["installation_id"] or "")
+
+        try:
+            received = datetime.fromisoformat(
+                str(row["received_at"]).replace("Z", "+00:00")
+            )
+            if received.tzinfo is None:
+                received = received.replace(tzinfo=timezone.utc)
+        except (TypeError, ValueError):
+            received = None
+
+        event = (
+            report.get("diagnostic_event")
+            if isinstance(report.get("diagnostic_event"), dict)
+            else None
+        )
+        cloud = (
+            report.get("cloud_api_error")
+            if isinstance(report.get("cloud_api_error"), dict)
+            else None
+        )
+
         if cloud:
-            cloud_events += 1; by_cloud[str(cloud.get("category") or cloud.get("operation") or "unknown")] += 1
-        if not event: continue
-        total_errors += 1; installations.add(installation)
-        if robot_id: robots.add(robot_id)
+            cloud_events += 1
+            by_cloud[
+                str(cloud.get("category") or cloud.get("operation") or "unknown")
+            ] += 1
+
+        if not event:
+            continue
+
+        total_diagnostic_events += 1
+        kind = _classify_diagnostic_event(row["trigger"], event)
+        task_event, message = _task_event_parts(event)
+        description = str(event.get("err_description") or "").strip() or None
+        code = _event_code(event)
+        code_name = str(code) if code is not None else "n/a"
+        label_text = description or message or "hiba"
+        label = f"{code_name} · {label_text}"
+
+        if kind == "status":
+            status_events += 1
+            by_status_event[label] += 1
+            continue
+        if kind != "error":
+            unclassified_events += 1
+            by_unclassified[label] += 1
+            continue
+
+        total_errors += 1
+        installations.add(installation)
+        if robot_id:
+            robots.add(robot_id)
         by_model[model] += 1
+
         status = event.get("robot_sta") or event.get("mode")
-        if status is not None: by_status[str(status)] += 1
-        code = event.get("err_code"); task_event = event.get("task_event") if isinstance(event.get("task_event"), dict) else {}
-        if code is None: code = task_event.get("code") or event.get("cloud_task_event_code") or event.get("event_code")
-        code_name = str(code) if code is not None else "n/a"; description = event.get("err_description")
-        message = task_event.get("event_message") or task_event.get("message") or task_event.get("description")
-        by_error[f"{code_name} · {description or message or 'hiba'}"] += 1
-        item = model_error[(model, code_name)]; item["count"] += 1; item["installations"].add(installation)
-        if robot_id: item["robots"].add(robot_id)
-        item["description"] = item["description"] or description; item["message"] = item["message"] or message
-        if row["received_at"] and (item["last_seen"] is None or str(row["received_at"]) > item["last_seen"]): item["last_seen"] = str(row["received_at"])
+        if status is not None:
+            by_status[str(status)] += 1
+
+        by_error[label] += 1
+
+        item = model_error[(model, code_name, label_text)]
+        item["count"] += 1
+        item["installations"].add(installation)
+        if robot_id:
+            item["robots"].add(robot_id)
+        item["description"] = item["description"] or description
+        item["message"] = item["message"] or message
+        if row["received_at"] and (
+            item["last_seen"] is None
+            or str(row["received_at"]) > item["last_seen"]
+        ):
+            item["last_seen"] = str(row["received_at"])
+
+        if robot_id:
+            ritem = robot_error[robot_id]
+            ritem["count"] += 1
+            ritem["model"] = ritem["model"] or model
+            ritem["display"] = ritem["display"] or robot_display
+            ritem["errors"].add(label)
+            if row["received_at"] and (
+                ritem["last_seen"] is None
+                or str(row["received_at"]) > ritem["last_seen"]
+            ):
+                ritem["last_seen"] = str(row["received_at"])
+
         if received:
-            if received >= cut24: e24 += 1
-            if received >= cut7: e7 += 1
-            if received >= cut30: e30 += 1
+            if received >= cut24:
+                e24 += 1
+            if received >= cut7:
+                e7 += 1
+            if received >= cut30:
+                e30 += 1
+
     detail = []
-    for (model, code), item in model_error.items():
-        detail.append({"model": model, "error_code": code, "description": item["description"], "message": item["message"], "count": item["count"], "affected_installations": len(item["installations"]), "affected_robots": len(item["robots"]), "last_seen": item["last_seen"]})
+    for (model, code, _), item in model_error.items():
+        detail.append(
+            {
+                "model": model,
+                "error_code": code,
+                "description": item["description"],
+                "message": item["message"],
+                "count": item["count"],
+                "affected_installations": len(item["installations"]),
+                "affected_robots": len(item["robots"]),
+                "last_seen": item["last_seen"],
+            }
+        )
     detail.sort(key=lambda x: (-x["count"], x["model"], x["error_code"]))
-    named = lambda counter: [{"name": k, "count": v} for k, v in counter.most_common()]
-    return {"generated_at": now.isoformat(), "total_error_events": total_errors, "affected_installations": len(installations), "affected_robots": len(robots), "models_with_errors": len(by_model), "cloud_api_events": cloud_events, "error_events_24h": e24, "error_events_7d": e7, "error_events_30d": e30, "by_model": named(by_model), "by_error": named(by_error), "by_cloud_category": named(by_cloud), "by_robot_status": named(by_status), "model_errors": detail[:500]}
+
+    problem_robots = [
+        {
+            "robot": item["display"],
+            "model": item["model"],
+            "error_count": item["count"],
+            "unique_errors": len(item["errors"]),
+            "last_seen": item["last_seen"],
+        }
+        for item in robot_error.values()
+    ]
+    problem_robots.sort(
+        key=lambda x: (
+            -x["error_count"],
+            -x["unique_errors"],
+            str(x["model"] or ""),
+            str(x["robot"] or ""),
+        )
+    )
+
+    named = lambda counter: [
+        {"name": key, "count": value} for key, value in counter.most_common()
+    ]
+    return {
+        "generated_at": now.isoformat(),
+        "classification_version": 2,
+        "total_diagnostic_events": total_diagnostic_events,
+        "total_error_events": total_errors,
+        "status_events": status_events,
+        "unclassified_events": unclassified_events,
+        "affected_installations": len(installations),
+        "affected_robots": len(robots),
+        "models_with_errors": len(by_model),
+        "cloud_api_events": cloud_events,
+        "error_events_24h": e24,
+        "error_events_7d": e7,
+        "error_events_30d": e30,
+        "by_model": named(by_model),
+        "by_error": named(by_error),
+        "by_cloud_category": named(by_cloud),
+        "by_robot_status": named(by_status),
+        "by_status_event": named(by_status_event),
+        "by_unclassified_event": named(by_unclassified),
+        "problem_robots": problem_robots[:100],
+        "model_errors": detail[:500],
+    }
 
 
 @router.get("/api/anthbot/admin/error-stats", dependencies=[Depends(require_admin)])
