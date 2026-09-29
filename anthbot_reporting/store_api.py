@@ -2169,19 +2169,22 @@ def _first_purchase_offer_status(
 ) -> dict[str, Any]:
     settings = _first_purchase_preview_settings()
     enabled = bool(settings.get("live_enabled"))
+    # A direct Voice Store purchase has no Map pairing. The advertised first
+    # purchase offer still belongs to the signed-in account in that case.
+    effective_subject = promo_subject or (f"user:{user_id}" if user_id else None)
     result = {
         "enabled": enabled,
         "eligible": False,
         "price_amount": int(settings["price_amount"]),
         "currency": str(settings["currency"]),
         "requires_account": user_id is None,
-        "requires_robot_or_map": promo_subject is None,
+        "requires_robot_or_map": False,
     }
-    if not enabled or not user_id or not promo_subject:
+    if not enabled or not user_id or not effective_subject:
         return result
     if _user_has_previous_paid_purchase(user_id):
         return result
-    if _promo_subject_has_consumed_offer(promo_subject):
+    if _promo_subject_has_consumed_offer(effective_subject):
         return result
     result["eligible"] = True
     return result
@@ -2192,8 +2195,9 @@ def _reserve_first_purchase_offer(
     promo_subject: str | None,
 ) -> dict[str, Any] | None:
     status = _first_purchase_offer_status(user_id, promo_subject)
-    if not status["eligible"] or promo_subject is None:
+    if not status["eligible"]:
         return None
+    promo_subject = promo_subject or f"user:{user_id}"
 
     now_epoch = int(time.time())
     claim_id = f"abfp_{secrets.token_urlsafe(20)}"
