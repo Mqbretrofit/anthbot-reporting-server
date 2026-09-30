@@ -1912,24 +1912,74 @@ def _currency(record: dict[str, Any]) -> str:
 
 
 def _store_public_metadata(record: dict[str, Any]) -> dict[str, Any]:
-    """Normalize new Builder metadata while keeping legacy Standard packs usable."""
+    """Normalize Builder metadata and infer style/delivery for older uploads."""
+    style_labels = {
+        "standard": "Standard",
+        "funny": "Vicces / karakteres",
+        "wild_funny": "Elborult / nagyon vicces",
+        "sarcastic": "Szarkasztikus",
+        "flirty": "Kacér / érzéki",
+        "cute": "Cuki / kedves",
+    }
+    delivery_labels = {
+        "natural": "Normál / természetes",
+        "emotional": "Érzelmes / meleg",
+        "sensual": "Kacér / érzéki / szexi",
+        "hard": "Kemény / határozott",
+        "cheerful": "Vidám / lelkes",
+        "angry": "Dühös",
+        "whisper": "Suttogós / halk",
+        "calm": "Nyugodt / lágy",
+        "sad": "Szomorú / melankolikus",
+    }
+
+    variant_id = str(record.get("variant_id", "")).strip().lower()
     variant_name = str(record.get("variant_name", "")).strip()
     voice_display_name = str(record.get("voice_display_name", "")).strip()
     if not voice_display_name and variant_name:
         voice_display_name = variant_name.split(" · ", 1)[0].strip()
 
-    style = str(record.get("style", "")).strip().lower() or "standard"
+    explicit_style = str(record.get("style", "")).strip().lower()
+    explicit_delivery = str(record.get("delivery", "")).strip().lower()
+
+    style = explicit_style
+    delivery = explicit_delivery
+
+    # Builder <= 7.20.6 encoded the layers in variant_id, for example:
+    # wild_funny_cheerful. Recover those values so already-uploaded packs do
+    # not incorrectly appear as Standard after the Store metadata upgrade.
+    if not style:
+        for candidate in sorted(style_labels, key=len, reverse=True):
+            if variant_id == candidate or variant_id.startswith(candidate + "_"):
+                style = candidate
+                break
+
+    if not delivery:
+        for candidate in sorted(delivery_labels, key=len, reverse=True):
+            suffix = "_" + candidate
+            if variant_id == candidate or variant_id.endswith(suffix):
+                delivery = candidate
+                break
+
+    # Legacy Standard voices often use ids such as vlasta_standard and contain
+    # no explicit delivery layer. Keep them Standard + natural rather than
+    # inventing a premium style.
+    if not style:
+        if variant_id.endswith("_standard") or "standard" in variant_name.casefold():
+            style = "standard"
+        else:
+            style = "standard"
+    if not delivery:
+        delivery = "natural"
+
     style_name = str(record.get("style_name", "")).strip()
     if not style_name:
-        style_name = "Standard" if style == "standard" else style.replace("_", " ").title()
+        style_name = style_labels.get(style, style.replace("_", " ").title())
 
-    delivery = str(record.get("delivery", "")).strip().lower() or "standard"
     delivery_name = str(record.get("delivery_name", "")).strip()
     if not delivery_name:
-        delivery_name = (
-            "Standard"
-            if delivery == "standard"
-            else delivery.replace("_", " ").title()
+        delivery_name = delivery_labels.get(
+            delivery, delivery.replace("_", " ").title()
         )
 
     character_effect = (
@@ -1950,7 +2000,10 @@ def _store_public_metadata(record: dict[str, Any]) -> dict[str, Any]:
         or record.get("language_code")
         or ""
     ).strip()
-    tier = str(record.get("tier", "")).strip().lower() or "standard"
+    tier = str(record.get("tier", "")).strip().lower()
+    if not tier:
+        tier = "standard" if style == "standard" else "premium"
+
     published_at = str(
         record.get("published_at")
         or record.get("uploaded_at")
