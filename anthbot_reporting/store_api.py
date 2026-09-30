@@ -1911,6 +1911,67 @@ def _currency(record: dict[str, Any]) -> str:
     return value if _CURRENCY_RE.fullmatch(value) else "eur"
 
 
+def _store_public_metadata(record: dict[str, Any]) -> dict[str, Any]:
+    """Normalize new Builder metadata while keeping legacy Standard packs usable."""
+    variant_name = str(record.get("variant_name", "")).strip()
+    voice_display_name = str(record.get("voice_display_name", "")).strip()
+    if not voice_display_name and variant_name:
+        voice_display_name = variant_name.split(" · ", 1)[0].strip()
+
+    style = str(record.get("style", "")).strip().lower() or "standard"
+    style_name = str(record.get("style_name", "")).strip()
+    if not style_name:
+        style_name = "Standard" if style == "standard" else style.replace("_", " ").title()
+
+    delivery = str(record.get("delivery", "")).strip().lower() or "standard"
+    delivery_name = str(record.get("delivery_name", "")).strip()
+    if not delivery_name:
+        delivery_name = (
+            "Standard"
+            if delivery == "standard"
+            else delivery.replace("_", " ").title()
+        )
+
+    character_effect = (
+        str(record.get("character_effect", "")).strip().lower() or "none"
+    )
+    character_effect_name = str(
+        record.get("character_effect_name", "")
+    ).strip()
+    if not character_effect_name:
+        character_effect_name = (
+            "None"
+            if character_effect == "none"
+            else character_effect.replace("_", " ").title()
+        )
+
+    locale = str(
+        record.get("locale")
+        or record.get("language_code")
+        or ""
+    ).strip()
+    tier = str(record.get("tier", "")).strip().lower() or "standard"
+    published_at = str(
+        record.get("published_at")
+        or record.get("uploaded_at")
+        or ""
+    ).strip()
+
+    return {
+        "locale": locale,
+        "voice_display_name": voice_display_name,
+        "style": style,
+        "style_name": style_name,
+        "delivery": delivery,
+        "delivery_name": delivery_name,
+        "character_effect": character_effect,
+        "character_effect_name": character_effect_name,
+        "tier": tier,
+        "license_required": bool(record.get("license_required", True)),
+        "published_at": published_at or None,
+    }
+
+
 def _find_uploaded_pack(pack_id: str) -> dict[str, Any]:
     match = next(
         (item for item in _uploaded_records() if str(item.get("id", "")) == pack_id),
@@ -1967,7 +2028,9 @@ def _public_paid_pack(record: dict[str, Any], request: Request) -> dict[str, Any
     public = dict(record)
     public.pop("filename", None)
     public.pop("uploaded_at", None)
+    public.pop("admin_new", None)
     public.pop("music_url", None)
+    public.update(_store_public_metadata(record))
     public["access"] = "paid"
     public["price_amount"] = _price_amount(record)
     public["currency"] = _currency(record)
@@ -1978,6 +2041,8 @@ def _public_paid_pack(record: dict[str, Any], request: Request) -> dict[str, Any
 
 def _public_free_pack(record: dict[str, Any]) -> dict[str, Any]:
     public = dict(record)
+    public.pop("admin_new", None)
+    public.update(_store_public_metadata(record))
     public["access"] = "free"
     public["price_amount"] = 0
     public["currency"] = None
@@ -1986,6 +2051,22 @@ def _public_free_pack(record: dict[str, Any]) -> dict[str, Any]:
 
 
 def _store_catalog(request: Request) -> dict[str, Any]:
+    _init_store_tables()
+    with core._db() as conn:
+        sales_rows = conn.execute(
+            """
+            SELECT COALESCE(NULLIF(community_id, ''), pack_id) AS voice_id,
+                   COUNT(*) AS sales_count
+            FROM store_orders
+            WHERE payment_status = 'paid'
+            GROUP BY COALESCE(NULLIF(community_id, ''), pack_id)
+            """
+        ).fetchall()
+    sales_counts = {
+        str(row["voice_id"]): int(row["sales_count"] or 0)
+        for row in sales_rows
+    }
+
     free_registry = core._voice_pack_registry(request)
     free_packs = [
         _public_free_pack(item)
@@ -2013,6 +2094,11 @@ def _store_catalog(request: Request) -> dict[str, Any]:
     }
     for item in packs:
         pack_id = str(item.get("id", "")).strip()
+        voice_id = (
+            str(item.get("community_id", "")).strip()
+            or pack_id
+        )
+        item["sales_count"] = int(sales_counts.get(voice_id, 0))
         if pack_id not in uploaded_ids:
             continue
         item["preview_samples"] = [
@@ -5261,6 +5347,8 @@ def admin_store_voice_packs(request: Request) -> dict[str, Any]:
         )
         public["sales"] = int(sales.get(voice_id, {}).get("sales", 0))
         public["revenue"] = int(sales.get(voice_id, {}).get("revenue", 0))
+        public["admin_new"] = bool(record.get("admin_new", False))
+        public.update(_store_public_metadata(record))
         items.append(public)
     items.sort(key=lambda item: str(item.get("id", "")).casefold())
     return {
@@ -5269,6 +5357,58 @@ def admin_store_voice_packs(request: Request) -> dict[str, Any]:
         "checkout_ready": _checkout_ready(),
         "items": items,
     }
+
+
+@router.get(
+    "/api/anthbot/admin/store/new-voice-packs",
+    dependencies=[Depends(core.require_admin)],
+)
+def admin_new_voice_packs() -> dict[str, Any]:
+    """Return uploads that the administrator has not acknowledged yet."""
+    pending: list[dict[str, Any]] = []
+    for record in _uploaded_records():
+        if not bool(record.get("admin_new", False)):
+            continue
+        meta = _store_public_metadata(record)
+        pending.append(
+            {
+                "id": str(record.get("id", "")),
+                "community_id": str(record.get("community_id", "")),
+                "language": str(record.get("language", "")),
+                "locale": meta["locale"],
+                "voice_display_name": meta["voice_display_name"],
+                "style": meta["style"],
+                "style_name": meta["style_name"],
+                "delivery": meta["delivery"],
+                "delivery_name": meta["delivery_name"],
+                "published_at": meta["published_at"],
+            }
+        )
+    pending.sort(
+        key=lambda item: str(item.get("published_at") or ""),
+        reverse=True,
+    )
+    return {"count": len(pending), "items": pending}
+
+
+@router.post(
+    "/api/anthbot/admin/store/new-voice-packs/mark-seen",
+    dependencies=[Depends(core.require_admin)],
+)
+def admin_mark_new_voice_packs_seen() -> dict[str, Any]:
+    """Acknowledge all currently pending uploaded voice packs."""
+    registry = core._uploaded_voice_pack_registry()
+    packs = [item for item in registry.get("packs", []) if isinstance(item, dict)]
+    cleared = 0
+    for item in packs:
+        if bool(item.get("admin_new", False)):
+            cleared += 1
+            item.pop("admin_new", None)
+    if cleared:
+        core._write_uploaded_voice_registry(
+            {"schema": core.VOICE_PACKS_SCHEMA, "packs": packs}
+        )
+    return {"marked_seen": cleared}
 
 
 @router.patch(

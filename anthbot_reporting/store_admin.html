@@ -12,6 +12,9 @@
     .status{padding:14px 16px;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}.pill{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:4px 8px;font-size:.76rem}.pill.good{color:#baf7e7;border-color:rgba(128,224,199,.3)}.pill.warn{color:#ffe3a7;border-color:rgba(255,204,102,.3)}
     .section{margin-bottom:16px;overflow:hidden}.head{padding:16px 18px;border-bottom:1px solid var(--line);font-weight:750}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:980px}th,td{padding:11px 13px;border-bottom:1px solid var(--line);text-align:left;font-size:.87rem}th{color:var(--muted);background:rgba(255,255,255,.02)}.control{background:#0d1626;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:8px;min-height:38px}.price{width:110px}.currency{width:80px}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.78rem}.small{color:var(--muted);font-size:.78rem}.empty{padding:28px;text-align:center;color:var(--muted)}
     .analytics-kpis{grid-template-columns:repeat(4,minmax(0,1fr));padding:14px}.analytics-kpis .kpi{background:rgba(255,255,255,.02);box-shadow:none}.analytics-panels{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:12px;padding:0 14px 14px}.analytics-panel{border:1px solid var(--line);border-radius:13px;overflow:hidden;background:rgba(7,14,25,.35)}.analytics-panel .head{font-size:.86rem;padding:11px 13px}.analytics-panel table{min-width:0}.analytics-panel th,.analytics-panel td{font-size:.8rem;padding:8px 10px}.analytics-note{padding:0 16px 14px;color:var(--muted);font-size:.78rem}.pair-row-current{background:rgba(128,224,199,.07)}.pair-row-current td:first-child{box-shadow:inset 4px 0 0 var(--good)}.pairing-details>summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px}.pairing-details>summary::-webkit-details-marker{display:none}.pairing-details>summary::after{content:"▾";font-size:1rem;color:var(--muted);transition:transform .18s ease}.pairing-details[open]>summary::after{transform:rotate(180deg)}.pairing-current-note{padding:12px 16px}.pairing-current-empty{padding:18px;color:var(--muted)}
+    .new-voice-alert{display:none;margin:0 0 14px;padding:15px 16px;border:1px solid rgba(255,92,112,.48);border-radius:15px;background:linear-gradient(135deg,rgba(255,70,92,.17),rgba(255,162,74,.09));box-shadow:0 14px 36px rgba(0,0,0,.22)}
+    .new-voice-alert.show{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    .new-voice-alert strong{display:block;font-size:1rem;color:#ffd8de}.new-voice-alert .new-list{margin-top:5px;color:#ffd5b4;font-size:.82rem}.new-voice-alert .actions{margin-left:auto}.new-voice-pill{border-color:rgba(255,92,112,.55)!important;background:rgba(255,92,112,.14)!important;color:#ffd5dc!important;font-weight:900}
     @media(max-width:900px){.kpis,.analytics-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.analytics-panels{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}.shell{padding:18px 12px}}
   </style>
 </head>
@@ -20,6 +23,7 @@
     <div class="top"><div class="title"><h1>ANTHBOT Hangbolt admin</h1><div class="sub">Community hangcsomagok (€7.99), fizetések, licencek és egyedi hangkérések</div></div><div class="actions"><a class="btn" href="/store" target="_blank">Publikus Hangbolt</a><a class="btn warning" href="/dashboard/store-first-purchase-preview">Hangbolt akció · próba</a><a class="btn warning" href="/dashboard/home-first-purchase-preview">Főoldal akció · próba</a><a class="btn" href="/dashboard">Vissza a dashboardra</a><button class="btn primary" id="refresh">Frissítés</button></div></div>
     <div class="grid kpis" id="kpis"></div>
     <div class="card status" id="status">Betöltés…</div>
+    <div class="new-voice-alert" id="new-voice-alert" role="status" aria-live="polite"></div>
     <section class="card section">
       <div class="head">Saját Home Assistant</div>
       <div class="small pairing-current-note">A saját Hangbolt-kompatibilis ANTHBOT Map telepítésed külön jelenik meg. Ha az emailes Hangbolt-fiókodhoz kapcsolódik, automatikusan felismerjük, és onnantól tartós tulajdonosi azonosításként megőrizzük: a saját HA-d nem jár le a 7 napos ideiglenes párosítással együtt.</div>
@@ -48,7 +52,7 @@
       </div>
       <div class="analytics-note" id="analytics-note"></div>
     </section>
-    <section class="card section"><div class="head">Hangcsomagok</div><div class="table-wrap"><table><thead><tr><th>Csomag</th><th>Nyelv / hang</th><th>Verzió</th><th>Hozzáférés</th><th>Ár</th><th>Pénznem</th><th>Eladás</th><th>Bevétel</th><th>Állapot</th><th>Művelet</th></tr></thead><tbody id="packs"></tbody></table></div></section>
+    <section class="card section" id="voice-packs-section"><div class="head">Hangcsomagok</div><div class="table-wrap"><table><thead><tr><th>Csomag</th><th>Nyelv / hang</th><th>Verzió</th><th>Hozzáférés</th><th>Ár</th><th>Pénznem</th><th>Eladás</th><th>Bevétel</th><th>Állapot</th><th>Művelet</th></tr></thead><tbody id="packs"></tbody></table></div></section>
     <section class="card section"><div class="head">Egyedi hang kérések · €24.99-tól</div><div class="table-wrap"><table><thead><tr><th>Idő</th><th>Azonosító</th><th>Nyelv</th><th>Hang</th><th>Robot</th><th>Kapcsolat</th><th>Megjegyzés</th><th>Oldal nyelve</th><th>Állapot</th></tr></thead><tbody id="custom-requests"></tbody></table></div></section>
     <section class="card section"><div class="head">Adatvédelmi / GDPR kérelmek</div><div class="table-wrap"><table><thead><tr><th>Idő</th><th>Azonosító</th><th>Típus</th><th>Kapcsolat</th><th>Részletek</th><th>Nyelv</th><th>Állapot</th></tr></thead><tbody id="privacy-requests"></tbody></table></div></section>
     <section class="card section"><div class="head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><span>Legutóbbi rendelések</span><div class="actions"><button class="btn danger" id="delete-test-orders" type="button">Összes Sandbox rendelés törlése</button><button class="btn danger" id="delete-all-orders" type="button">Összes helyi rendelés törlése</button></div></div><div class="table-wrap"><table><thead><tr><th>Idő</th><th>Session</th><th>Csomag</th><th>Állapot</th><th>Email</th><th>Összeg</th><th>Művelet</th></tr></thead><tbody id="orders"></tbody></table></div></section>
@@ -312,15 +316,49 @@
       }
       return download+' <button class="btn danger" onclick="deletePack(\''+esc(id)+'\',this)">Törlés</button>';
     }
+    function renderNewVoiceAlert(data){
+      const host=document.getElementById('new-voice-alert');
+      const items=Array.isArray(data&&data.items)?data.items:[];
+      const count=Number((data&&data.count)||items.length||0);
+      if(!count){
+        host.className='new-voice-alert';
+        host.innerHTML='';
+        return;
+      }
+      const labels=items.slice(0,5).map(p=>{
+        const voice=p.voice_display_name||p.community_id||p.id||'Új hang';
+        const style=p.style_name||'Standard';
+        return voice+' · '+style+(p.language?' · '+p.language:'');
+      });
+      const more=count>labels.length?' + '+String(count-labels.length)+' további':'';
+      host.className='new-voice-alert show';
+      host.innerHTML='<div><strong>🔔 '+esc(count)+' újonnan feltöltött hang vár ellenőrzésre</strong><div class="new-list">'+esc(labels.join(' • ')+more)+'</div></div><div class="actions"><button class="btn warning" type="button" onclick="showNewVoicePacks()">Megnézem</button><button class="btn primary" type="button" onclick="markNewVoicePacksSeen(this)">Megnéztem</button></div>';
+    }
+    function showNewVoicePacks(){
+      const section=document.getElementById('voice-packs-section');
+      if(section)section.scrollIntoView({behavior:'smooth',block:'start'});
+    }
+    async function markNewVoicePacksSeen(button){
+      if(button)button.disabled=true;
+      try{
+        await api('/api/anthbot/admin/store/new-voice-packs/mark-seen',{method:'POST'});
+        await load();
+      }catch(e){
+        if(button)button.disabled=false;
+        alert('Új hangok visszaigazolási hiba: '+e.message);
+      }
+    }
+
     function packRows(items){
       const body=document.getElementById('packs');
       if(!items.length){body.innerHTML='<tr><td colspan="10" class="empty">Nincs feltöltött Community hangcsomag.</td></tr>';return}
       body.innerHTML=items.map(p=>{
         const hidden=!!p.store_hidden;
+        const newBadge=p.admin_new?'<span class="pill new-voice-pill">ÚJ</span> ':'';
         const state=hidden
           ? '<span class="pill warn">Elrejtve</span>'
           : '<span class="pill '+(p.access==='paid'?'good':'')+'">'+(p.access==='paid'?'€7.99 aktív':'Ingyenes')+'</span>';
-        return '<tr><td class="mono">'+esc(p.id)+'</td><td><strong>'+esc(p.language||'—')+'</strong><div class="small">'+esc(p.variant_name||p.community_id||'')+'</div></td><td>'+esc(p.version||'—')+'</td><td><select class="control" data-access onchange="save(\''+esc(p.id)+'\',this)"><option value="free" '+(p.access==='free'?'selected':'')+'>Ingyenes</option><option value="paid" '+(p.access==='paid'?'selected':'')+'>Fizetős</option></select><div class="small" data-save-status>Automatikus mentés</div></td><td><strong data-fixed-price>'+(p.access==='paid'?'7.99':'0.00')+'</strong></td><td><strong data-fixed-currency>'+(p.access==='paid'?'EUR':'—')+'</strong></td><td>'+esc(p.sales||0)+'</td><td>'+esc(money(p.revenue||0,p.currency||'eur'))+'</td><td>'+state+'</td><td>'+packAction(p)+'</td></tr>';
+        return '<tr><td class="mono">'+newBadge+esc(p.id)+'</td><td><strong>'+esc(p.language||'—')+'</strong><div class="small">'+esc(p.voice_display_name||p.variant_name||p.community_id||'')+(p.style_name?' · '+esc(p.style_name):'')+(p.delivery_name?' · '+esc(p.delivery_name):'')+'</div></td><td>'+esc(p.version||'—')+'</td><td><select class="control" data-access onchange="save(\''+esc(p.id)+'\',this)"><option value="free" '+(p.access==='free'?'selected':'')+'>Ingyenes</option><option value="paid" '+(p.access==='paid'?'selected':'')+'>Fizetős</option></select><div class="small" data-save-status>Automatikus mentés</div></td><td><strong data-fixed-price>'+(p.access==='paid'?'7.99':'0.00')+'</strong></td><td><strong data-fixed-currency>'+(p.access==='paid'?'EUR':'—')+'</strong></td><td>'+esc(p.sales||0)+'</td><td>'+esc(money(p.revenue||0,p.currency||'eur'))+'</td><td>'+state+'</td><td>'+packAction(p)+'</td></tr>';
       }).join('');
     }
     function customRequestRows(items){
@@ -437,11 +475,11 @@
     }
     async function load(){
       try{
-        const [catalog,stats,orders,customRequests,privacyRequests,siteAnalytics,ownerPairings,storeAccounts]=await Promise.all([api('/api/anthbot/admin/store/voice-packs'),api('/api/anthbot/admin/store/stats'),api('/api/anthbot/admin/store/orders?limit=100'),api('/api/anthbot/admin/store/custom-voice-requests?limit=100'),api('/api/anthbot/admin/privacy-requests?limit=100'),api('/api/anthbot/admin/site-analytics?days=30'),api('/api/anthbot/admin/store/pairings?limit=200'),api('/api/anthbot/admin/store/accounts?limit=200')]);
+        const [catalog,stats,orders,customRequests,privacyRequests,siteAnalytics,ownerPairings,storeAccounts,newVoicePacks]=await Promise.all([api('/api/anthbot/admin/store/voice-packs'),api('/api/anthbot/admin/store/stats'),api('/api/anthbot/admin/store/orders?limit=100'),api('/api/anthbot/admin/store/custom-voice-requests?limit=100'),api('/api/anthbot/admin/privacy-requests?limit=100'),api('/api/anthbot/admin/site-analytics?days=30'),api('/api/anthbot/admin/store/pairings?limit=200'),api('/api/anthbot/admin/store/accounts?limit=200'),api('/api/anthbot/admin/store/new-voice-packs')]);
         const revenue=(stats.revenue||[]).map(x=>money(x.amount,x.currency)).join(' + ')||money(0,'eur');
-        document.getElementById('kpis').innerHTML=kpi('Feltöltött csomag',catalog.items.length)+kpi('Rendelés',stats.orders||0)+kpi('Fizetett rendelés',stats.paid_orders||0)+kpi('Bevétel',revenue);
+        document.getElementById('kpis').innerHTML=kpi('Feltöltött csomag',catalog.items.length)+kpi('Új hang',newVoicePacks.count||0)+kpi('Rendelés',stats.orders||0)+kpi('Fizetett rendelés',stats.paid_orders||0)+kpi('Bevétel',revenue);
         document.getElementById('status').innerHTML='<span class="pill good">Tulajdonosi hozzáférés: minden csomag letölthető</span><span class="pill '+(stats.store_enabled?'good':'warn')+'">Store: '+(stats.store_enabled?'bekapcsolva':'kikapcsolva')+'</span><span class="pill '+(stats.checkout_ready?'good':'warn')+'">Stripe: '+(stats.checkout_ready?'kész':'nincs teljesen konfigurálva')+'</span><span class="pill '+(stats.automatic_tax?'good':'warn')+'">Stripe automatic tax: '+(stats.automatic_tax?'be':'ki')+'</span><span class="small">A tulajdonosi letöltés admin jogosultsághoz kötött, nem hoz létre rendelést vagy licencet. A fizetős csomagok publikus letöltése továbbra is vásárláshoz kötött.</span>';
-        await ownerPairingRows(ownerPairings.items||[]);storeAccountRows(storeAccounts,catalog.items||[]);analyticsRows(siteAnalytics);packRows(catalog.items||[]);customRequestRows(customRequests.items||[]);privacyRequestRows(privacyRequests.items||[]);orderRows(orders.items||[]);
+        renderNewVoiceAlert(newVoicePacks);await ownerPairingRows(ownerPairings.items||[]);storeAccountRows(storeAccounts,catalog.items||[]);analyticsRows(siteAnalytics);packRows(catalog.items||[]);customRequestRows(customRequests.items||[]);privacyRequestRows(privacyRequests.items||[]);orderRows(orders.items||[]);
       }catch(e){document.getElementById('status').innerHTML='<span style="color:#ffc4cc">Hiba: '+esc(e.message)+'</span>'}
     }
     document.getElementById('refresh').onclick=load;document.getElementById('delete-test-orders').onclick=deleteAllTestOrders;document.getElementById('delete-all-orders').onclick=deleteAllLocalOrders;load();

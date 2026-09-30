@@ -470,7 +470,10 @@ def _public_base_url(request: Request) -> str:
 def _public_voice_pack(record: dict[str, Any], request: Request) -> dict[str, Any]:
     public = dict(record)
     filename = public.pop("filename", None)
-    public.pop("uploaded_at", None)
+    uploaded_at = public.pop("uploaded_at", None)
+    public.pop("admin_new", None)
+    if uploaded_at:
+        public["published_at"] = uploaded_at
     if (
         isinstance(filename, str)
         and filename
@@ -975,6 +978,17 @@ async def upload_voice_pack(
     variant_id: str = Form(default="default", min_length=1, max_length=64),
     variant_name: str = Form(default="", max_length=128),
     voice_gender: str = Form(default="unknown", max_length=32),
+    locale: str = Form(default="", max_length=32),
+    voice_display_name: str = Form(default="", max_length=128),
+    style: str = Form(default="standard", max_length=64),
+    style_name: str = Form(default="", max_length=128),
+    delivery: str = Form(default="standard", max_length=64),
+    delivery_name: str = Form(default="", max_length=128),
+    character_effect: str = Form(default="none", max_length=64),
+    character_effect_name: str = Form(default="", max_length=128),
+    tier: str = Form(default="standard", max_length=32),
+    license_required: bool = Form(default=True),
+    preview_files: str = Form(default="", max_length=2048),
     technical_slot: str = Form(default=COMMUNITY_TECHNICAL_SLOT, max_length=64),
     english_name: str = Form(default=COMMUNITY_TECHNICAL_LANGUAGE, min_length=1, max_length=64),
     sex: str = Form(default=COMMUNITY_TECHNICAL_SEX, min_length=1, max_length=32),
@@ -998,6 +1012,43 @@ async def upload_voice_pack(
     voice_gender = (voice_gender or "unknown").strip().lower()
     if voice_gender:
         voice_gender = _voice_pack_safe_part(voice_gender, field="voice_gender")
+
+    locale = (locale or language_code).strip()
+    locale = _voice_pack_safe_part(locale, field="locale")
+    voice_display_name = voice_display_name.strip()
+    style = _voice_pack_safe_part(
+        (style or "standard").strip().lower(), field="style"
+    )
+    style_name = style_name.strip() or ("Standard" if style == "standard" else style)
+    delivery = _voice_pack_safe_part(
+        (delivery or "standard").strip().lower(), field="delivery"
+    )
+    delivery_name = delivery_name.strip() or (
+        "Standard" if delivery == "standard" else delivery
+    )
+    character_effect = _voice_pack_safe_part(
+        (character_effect or "none").strip().lower(), field="character_effect"
+    )
+    character_effect_name = character_effect_name.strip() or (
+        "None" if character_effect == "none" else character_effect
+    )
+    tier = _voice_pack_safe_part(
+        (tier or "standard").strip().lower(), field="tier"
+    )
+
+    canonical_preview_files = ["A004.mp3", "A005.mp3"]
+    if preview_files.strip():
+        try:
+            requested_previews = json.loads(preview_files)
+        except (TypeError, ValueError, json.JSONDecodeError) as err:
+            raise HTTPException(
+                status_code=422, detail="preview_files must be a JSON array"
+            ) from err
+        if requested_previews != canonical_preview_files:
+            raise HTTPException(
+                status_code=422,
+                detail="community voice previews must be A004.mp3 and A005.mp3",
+            )
 
     if community_id.strip():
         community_id = _voice_pack_safe_part(
@@ -1159,6 +1210,18 @@ async def upload_voice_pack(
         "variant_id": variant_id,
         "variant_name": variant_name,
         "voice_gender": voice_gender or "unknown",
+        "locale": locale,
+        "voice_display_name": voice_display_name,
+        "style": style,
+        "style_name": style_name,
+        "delivery": delivery,
+        "delivery_name": delivery_name,
+        "character_effect": character_effect,
+        "character_effect_name": character_effect_name,
+        "tier": tier,
+        "license_required": bool(license_required),
+        "preview_files": canonical_preview_files,
+        "admin_new": True,
         "technical_slot": COMMUNITY_TECHNICAL_SLOT,
         "english_name": english_name,
         "sex": sex,
