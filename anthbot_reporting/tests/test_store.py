@@ -457,8 +457,19 @@ class VoiceStoreTests(unittest.TestCase):
                 "version": "1.0.0",
                 "community_id": "hu_preview_standard",
                 "variant_id": "preview_standard",
-                "variant_name": "Noémi · Standard",
+                "variant_name": "Noémi · Elborult / nagyon vicces",
                 "voice_gender": "female",
+                "locale": "hu-HU",
+                "voice_display_name": "Noémi",
+                "style": "wild_funny",
+                "style_name": "Elborult / nagyon vicces",
+                "delivery": "cheerful",
+                "delivery_name": "Vidám / lelkes",
+                "character_effect": "none",
+                "character_effect_name": "Natúr",
+                "tier": "premium",
+                "license_required": "true",
+                "preview_files": '["A004.mp3","A005.mp3"]',
                 "technical_slot": "German_girl",
             },
         )
@@ -468,6 +479,18 @@ class VoiceStoreTests(unittest.TestCase):
         catalog = self.client.get("/api/anthbot/store/voice-packs")
         self.assertEqual(catalog.status_code, 200)
         pack = next(item for item in catalog.json()["packs"] if item["id"] == pack_id)
+        self.assertEqual(pack["locale"], "hu-HU")
+        self.assertEqual(pack["voice_display_name"], "Noémi")
+        self.assertEqual(pack["style"], "wild_funny")
+        self.assertEqual(pack["style_name"], "Elborult / nagyon vicces")
+        self.assertEqual(pack["delivery"], "cheerful")
+        self.assertEqual(pack["delivery_name"], "Vidám / lelkes")
+        self.assertEqual(pack["character_effect"], "none")
+        self.assertEqual(pack["tier"], "premium")
+        self.assertTrue(pack["license_required"])
+        self.assertEqual(pack["sales_count"], 0)
+        self.assertTrue(pack["published_at"])
+        self.assertNotIn("admin_new", pack)
         self.assertEqual(len(pack["preview_samples"]), 2)
         self.assertTrue(pack["preview_samples"][0]["url"].endswith("/preview/1"))
         self.assertTrue(pack["preview_samples"][1]["url"].endswith("/preview/2"))
@@ -495,14 +518,82 @@ class VoiceStoreTests(unittest.TestCase):
         html = store.text
         self.assertIn('id="voice-search"', html)
         self.assertIn('id="filter-language"', html)
+        self.assertIn('id="filter-name"', html)
         self.assertIn('id="filter-gender"', html)
+        self.assertIn('id="filter-style"', html)
+        self.assertIn('id="filter-delivery"', html)
+        self.assertIn('id="filter-effect"', html)
         self.assertIn('id="filter-model"', html)
         self.assertIn('id="filter-access"', html)
+        self.assertIn('id="filter-sort"', html)
         self.assertIn("language-groups", html)
         self.assertIn("data-preview-url", html)
         self.assertIn('"Minta 1"', html)
         self.assertIn('"Minta 2"', html)
+        self.assertIn('new-badge', html)
+        self.assertIn('style-badge', html)
+        self.assertIn('sortPopular:"Legnépszerűbb"', html)
         self.assertEqual(html.count("filtersTitle:"), 23)
+
+    def test_legacy_voice_upload_defaults_to_standard_store_metadata(self) -> None:
+        uploaded = self._upload_pack()
+        catalog = self.client.get("/api/anthbot/store/voice-packs")
+        self.assertEqual(catalog.status_code, 200)
+        pack = next(
+            item for item in catalog.json()["packs"]
+            if item["id"] == uploaded["id"]
+        )
+        self.assertEqual(pack["voice_display_name"], "Vlasta (női)")
+        self.assertEqual(pack["style"], "standard")
+        self.assertEqual(pack["style_name"], "Standard")
+        self.assertEqual(pack["delivery"], "standard")
+        self.assertEqual(pack["delivery_name"], "Standard")
+        self.assertEqual(pack["character_effect"], "none")
+        self.assertEqual(pack["sales_count"], 0)
+
+    def test_new_voice_upload_admin_alert_requires_explicit_acknowledgement(self) -> None:
+        uploaded = self._upload_pack()
+        pack_id = uploaded["id"]
+
+        pending = self.client.get(
+            "/api/anthbot/admin/store/new-voice-packs",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(pending.status_code, 200)
+        self.assertEqual(pending.json()["count"], 1)
+        self.assertEqual(pending.json()["items"][0]["id"], pack_id)
+
+        public = self.client.get("/api/anthbot/store/voice-packs")
+        self.assertEqual(public.status_code, 200)
+        public_pack = next(
+            item for item in public.json()["packs"] if item["id"] == pack_id
+        )
+        self.assertNotIn("admin_new", public_pack)
+
+        admin_catalog = self.client.get(
+            "/api/anthbot/admin/store/voice-packs",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(admin_catalog.status_code, 200)
+        admin_pack = next(
+            item for item in admin_catalog.json()["items"]
+            if item["id"] == pack_id
+        )
+        self.assertTrue(admin_pack["admin_new"])
+
+        acknowledged = self.client.post(
+            "/api/anthbot/admin/store/new-voice-packs/mark-seen",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(acknowledged.status_code, 200)
+        self.assertEqual(acknowledged.json()["marked_seen"], 1)
+
+        pending_after = self.client.get(
+            "/api/anthbot/admin/store/new-voice-packs",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(pending_after.status_code, 200)
+        self.assertEqual(pending_after.json()["count"], 0)
 
     def test_search_console_verification_is_optional_and_configurable(self) -> None:
         home = self.client.get("/")
