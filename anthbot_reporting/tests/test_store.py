@@ -546,8 +546,8 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(pack["voice_display_name"], "Vlasta (női)")
         self.assertEqual(pack["style"], "standard")
         self.assertEqual(pack["style_name"], "Standard")
-        self.assertEqual(pack["delivery"], "natural")
-        self.assertEqual(pack["delivery_name"], "Normál / természetes")
+        self.assertEqual(pack["delivery"], "standard")
+        self.assertEqual(pack["delivery_name"], "Standard")
         self.assertEqual(pack["character_effect"], "none")
         self.assertEqual(pack["sales_count"], 0)
 
@@ -582,6 +582,73 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(pack["delivery"], "cheerful")
         self.assertEqual(pack["delivery_name"], "Vidám / lelkes")
         self.assertEqual(pack["tier"], "premium")
+
+    def test_recent_preexisting_upload_is_bootstrapped_as_new(self) -> None:
+        uploaded = self._upload_pack()
+        pack_id = uploaded["id"]
+
+        # Simulate a pack uploaded shortly before the admin alert feature was
+        # deployed: it has uploaded_at but no per-record admin_new flag.
+        registry = store_api.core._uploaded_voice_pack_registry()
+        packs = [item for item in registry["packs"] if isinstance(item, dict)]
+        target = next(item for item in packs if item["id"] == pack_id)
+        target.pop("admin_new", None)
+        store_api.core._write_uploaded_voice_registry(
+            {"schema": store_api.core.VOICE_PACKS_SCHEMA, "packs": packs}
+        )
+
+        pending = self.client.get(
+            "/api/anthbot/admin/store/new-voice-packs",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(pending.status_code, 200)
+        self.assertEqual(pending.json()["count"], 1)
+        self.assertEqual(pending.json()["items"][0]["id"], pack_id)
+
+        admin_catalog = self.client.get(
+            "/api/anthbot/admin/store/voice-packs",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(admin_catalog.status_code, 200)
+        admin_pack = next(
+            item for item in admin_catalog.json()["items"]
+            if item["id"] == pack_id
+        )
+        self.assertTrue(admin_pack["admin_new"])
+
+        acknowledged = self.client.post(
+            "/api/anthbot/admin/store/new-voice-packs/mark-seen",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(acknowledged.status_code, 200)
+        self.assertEqual(acknowledged.json()["marked_seen"], 1)
+
+        pending_after = self.client.get(
+            "/api/anthbot/admin/store/new-voice-packs",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(pending_after.status_code, 200)
+        self.assertEqual(pending_after.json()["count"], 0)
+
+    def test_old_preexisting_upload_is_not_bootstrapped_as_new(self) -> None:
+        uploaded = self._upload_pack()
+        pack_id = uploaded["id"]
+
+        registry = store_api.core._uploaded_voice_pack_registry()
+        packs = [item for item in registry["packs"] if isinstance(item, dict)]
+        target = next(item for item in packs if item["id"] == pack_id)
+        target.pop("admin_new", None)
+        target["uploaded_at"] = "2020-01-01T00:00:00+00:00"
+        store_api.core._write_uploaded_voice_registry(
+            {"schema": store_api.core.VOICE_PACKS_SCHEMA, "packs": packs}
+        )
+
+        pending = self.client.get(
+            "/api/anthbot/admin/store/new-voice-packs",
+            headers=self._admin_headers(),
+        )
+        self.assertEqual(pending.status_code, 200)
+        self.assertEqual(pending.json()["count"], 0)
 
     def test_new_voice_upload_admin_alert_requires_explicit_acknowledgement(self) -> None:
         uploaded = self._upload_pack()
