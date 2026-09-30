@@ -1912,7 +1912,7 @@ def _currency(record: dict[str, Any]) -> str:
 
 
 def _store_public_metadata(record: dict[str, Any]) -> dict[str, Any]:
-    """Normalize Builder metadata and infer style/delivery for older uploads."""
+    """Normalize Builder metadata and recover themed metadata from legacy variants."""
     style_labels = {
         "standard": "Standard",
         "funny": "Vicces / karakteres",
@@ -1922,6 +1922,7 @@ def _store_public_metadata(record: dict[str, Any]) -> dict[str, Any]:
         "cute": "Cuki / kedves",
     }
     delivery_labels = {
+        "standard": "Standard",
         "natural": "Normál / természetes",
         "emotional": "Érzelmes / meleg",
         "sensual": "Kacér / érzéki / szexi",
@@ -1942,42 +1943,47 @@ def _store_public_metadata(record: dict[str, Any]) -> dict[str, Any]:
     explicit_style = str(record.get("style", "")).strip().lower()
     explicit_delivery = str(record.get("delivery", "")).strip().lower()
 
+    inferred_style = ""
+    for candidate in sorted(style_labels, key=len, reverse=True):
+        if variant_id == candidate or variant_id.startswith(candidate + "_"):
+            inferred_style = candidate
+            break
+
+    inferred_delivery = ""
+    for candidate in sorted(delivery_labels, key=len, reverse=True):
+        suffix = "_" + candidate
+        if variant_id == candidate or variant_id.endswith(suffix):
+            inferred_delivery = candidate
+            break
+
+    # Older Builder uploads could arrive after the new endpoint existed and
+    # therefore get the server's old "standard" default even though the
+    # variant_id already encoded wild_funny_cheerful. A themed variant id is
+    # more specific than that fallback, so let it recover the intended value.
     style = explicit_style
+    if inferred_style and inferred_style != "standard":
+        if not style or style == "standard":
+            style = inferred_style
+    if not style:
+        style = inferred_style or "standard"
+
     delivery = explicit_delivery
-
-    # Builder <= 7.20.6 encoded the layers in variant_id, for example:
-    # wild_funny_cheerful. Recover those values so already-uploaded packs do
-    # not incorrectly appear as Standard after the Store metadata upgrade.
-    if not style:
-        for candidate in sorted(style_labels, key=len, reverse=True):
-            if variant_id == candidate or variant_id.startswith(candidate + "_"):
-                style = candidate
-                break
-
+    if inferred_delivery and inferred_delivery != "standard":
+        if not delivery or delivery == "standard":
+            delivery = inferred_delivery
     if not delivery:
-        for candidate in sorted(delivery_labels, key=len, reverse=True):
-            suffix = "_" + candidate
-            if variant_id == candidate or variant_id.endswith(suffix):
-                delivery = candidate
-                break
-
-    # Legacy Standard voices often use ids such as vlasta_standard and contain
-    # no explicit delivery layer. Keep them Standard + natural rather than
-    # inventing a premium style.
-    if not style:
-        if variant_id.endswith("_standard") or "standard" in variant_name.casefold():
-            style = "standard"
-        else:
-            style = "standard"
-    if not delivery:
-        delivery = "natural"
+        delivery = inferred_delivery or "standard"
 
     style_name = str(record.get("style_name", "")).strip()
-    if not style_name:
+    if not style_name or (
+        style != "standard" and style_name.casefold() == "standard"
+    ):
         style_name = style_labels.get(style, style.replace("_", " ").title())
 
     delivery_name = str(record.get("delivery_name", "")).strip()
-    if not delivery_name:
+    if not delivery_name or (
+        delivery != "standard" and delivery_name.casefold() == "standard"
+    ):
         delivery_name = delivery_labels.get(
             delivery, delivery.replace("_", " ").title()
         )
@@ -2001,7 +2007,7 @@ def _store_public_metadata(record: dict[str, Any]) -> dict[str, Any]:
         or ""
     ).strip()
     tier = str(record.get("tier", "")).strip().lower()
-    if not tier:
+    if not tier or (tier == "standard" and style != "standard"):
         tier = "standard" if style == "standard" else "premium"
 
     published_at = str(
@@ -5365,6 +5371,74 @@ def admin_download_voice_pack(pack_id: str) -> FileResponse:
     )
 
 
+_VOICE_UPLOADS_SEEN_SETTING_KEY = "voice_uploads_seen_at"
+_VOICE_UPLOAD_BOOTSTRAP_WINDOW = timedelta(hours=24)
+
+
+def _parse_store_timestamp(value: Any) -> datetime | None:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _voice_uploads_seen_at() -> datetime | None:
+    _init_store_tables()
+    with core._db() as conn:
+        row = conn.execute(
+            "SELECT value FROM store_admin_settings WHERE key = ?",
+            (_VOICE_UPLOADS_SEEN_SETTING_KEY,),
+        ).fetchone()
+    if row is None:
+        return None
+    return _parse_store_timestamp(row["value"])
+
+
+def _save_voice_uploads_seen_at(value: datetime) -> None:
+    _init_store_tables()
+    normalized = value.astimezone(timezone.utc).isoformat()
+    now = core._iso()
+    with core._db() as conn:
+        conn.execute(
+            """
+            INSERT INTO store_admin_settings(key, value, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(key) DO UPDATE SET
+                value = excluded.value,
+                updated_at = excluded.updated_at
+            """,
+            (_VOICE_UPLOADS_SEEN_SETTING_KEY, normalized, now),
+        )
+
+
+def _new_voice_pack_records() -> list[dict[str, Any]]:
+    """Return uploads newer than the admin watermark plus explicit legacy flags."""
+    records = _uploaded_records()
+    seen_at = _voice_uploads_seen_at()
+    if seen_at is None:
+        # Migration bootstrap: surface only genuinely fresh pre-existing
+        # uploads, rather than declaring the whole historical catalog "new".
+        cutoff = datetime.now(timezone.utc) - _VOICE_UPLOAD_BOOTSTRAP_WINDOW
+    else:
+        cutoff = seen_at
+
+    pending: list[dict[str, Any]] = []
+    for record in records:
+        if bool(record.get("admin_new", False)):
+            pending.append(record)
+            continue
+        uploaded_at = _parse_store_timestamp(record.get("uploaded_at"))
+        if uploaded_at is not None and uploaded_at > cutoff:
+            pending.append(record)
+    return pending
+
+
 @router.get(
     "/api/anthbot/admin/store/voice-packs",
     dependencies=[Depends(core.require_admin)],
@@ -5387,6 +5461,12 @@ def admin_store_voice_packs(request: Request) -> dict[str, Any]:
         for row in sales_rows
     }
 
+    pending_ids = {
+        str(item.get("id", ""))
+        for item in _new_voice_pack_records()
+        if str(item.get("id", ""))
+    }
+
     items: list[dict[str, Any]] = []
     for record in _uploaded_records():
         public = core._public_voice_pack(record, request)
@@ -5400,7 +5480,7 @@ def admin_store_voice_packs(request: Request) -> dict[str, Any]:
         )
         public["sales"] = int(sales.get(voice_id, {}).get("sales", 0))
         public["revenue"] = int(sales.get(voice_id, {}).get("revenue", 0))
-        public["admin_new"] = bool(record.get("admin_new", False))
+        public["admin_new"] = str(record.get("id", "")) in pending_ids
         public.update(_store_public_metadata(record))
         items.append(public)
     items.sort(key=lambda item: str(item.get("id", "")).casefold())
@@ -5419,9 +5499,7 @@ def admin_store_voice_packs(request: Request) -> dict[str, Any]:
 def admin_new_voice_packs() -> dict[str, Any]:
     """Return uploads that the administrator has not acknowledged yet."""
     pending: list[dict[str, Any]] = []
-    for record in _uploaded_records():
-        if not bool(record.get("admin_new", False)):
-            continue
+    for record in _new_voice_pack_records():
         meta = _store_public_metadata(record)
         pending.append(
             {
@@ -5450,18 +5528,23 @@ def admin_new_voice_packs() -> dict[str, Any]:
 )
 def admin_mark_new_voice_packs_seen() -> dict[str, Any]:
     """Acknowledge all currently pending uploaded voice packs."""
+    pending = _new_voice_pack_records()
     registry = core._uploaded_voice_pack_registry()
     packs = [item for item in registry.get("packs", []) if isinstance(item, dict)]
-    cleared = 0
+    changed = False
     for item in packs:
         if bool(item.get("admin_new", False)):
-            cleared += 1
             item.pop("admin_new", None)
-    if cleared:
+            changed = True
+    if changed:
         core._write_uploaded_voice_registry(
             {"schema": core.VOICE_PACKS_SCHEMA, "packs": packs}
         )
-    return {"marked_seen": cleared}
+
+    # Use "now" rather than the latest record timestamp so clock-identical
+    # uploads already visible in this acknowledgement cannot reappear.
+    _save_voice_uploads_seen_at(datetime.now(timezone.utc))
+    return {"marked_seen": len(pending)}
 
 
 @router.patch(
