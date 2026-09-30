@@ -150,6 +150,114 @@ def _telemetry_models(raw: object) -> set[str]:
     }
 
 
+def _usage_stats_data() -> dict:
+    """Return the opt-in telemetry population used by the main admin dashboard.
+
+    This is the canonical population for analysis of installations that actually
+    send anonymous usage telemetry.  It intentionally does not use the separate
+    minimal presence-heartbeat IDs, because those serve a broader discovery
+    purpose and are not the same population as the opt-in telemetry dashboard.
+    """
+    now = _now_dt()
+    cut24 = now - timedelta(hours=24)
+    cut7 = now - timedelta(days=7)
+    cut30 = now - timedelta(days=30)
+
+    conn = _connect()
+    try:
+        rows = [
+            dict(row)
+            for row in conn.execute(
+                """
+                SELECT installation_id, integration_version, home_assistant_version,
+                       device_count, model_counts_json, first_seen, last_seen
+                FROM installations
+                ORDER BY last_seen DESC
+                """
+            ).fetchall()
+        ]
+    finally:
+        conn.close()
+
+    version_counts = Counter()
+    model_counts = Counter()
+    total_robots = 0
+
+    def _is_active(row: dict, cutoff: datetime) -> bool:
+        last_seen = _parse_timestamp(row.get("last_seen"))
+        return last_seen is not None and last_seen >= cutoff
+
+    items = []
+    for row in rows:
+        version = str(row.get("integration_version") or "Unknown")
+        version_counts[version] += 1
+
+        try:
+            counts = (
+                json.loads(row.get("model_counts_json"))
+                if isinstance(row.get("model_counts_json"), str)
+                else {}
+            )
+        except (TypeError, ValueError):
+            counts = {}
+        if not isinstance(counts, dict):
+            counts = {}
+
+        clean_counts: dict[str, int] = {}
+        for model, count in counts.items():
+            if (
+                isinstance(model, str)
+                and model.strip()
+                and isinstance(count, int)
+                and not isinstance(count, bool)
+                and count > 0
+            ):
+                name = model.strip()
+                clean_counts[name] = count
+                model_counts[name] += count
+
+        try:
+            device_count = max(0, int(row.get("device_count") or 0))
+        except (TypeError, ValueError):
+            device_count = 0
+        total_robots += device_count
+
+        items.append(
+            {
+                "installation_id": str(row.get("installation_id") or ""),
+                "version": version,
+                "home_assistant_version": row.get("home_assistant_version"),
+                "device_count": device_count,
+                "model_counts": clean_counts,
+                "first_seen": row.get("first_seen"),
+                "last_seen": row.get("last_seen"),
+            }
+        )
+
+    return {
+        "generated_at": now.isoformat(),
+        "source": "opt_in_telemetry_installations",
+        "total": len(rows),
+        "total_robots": total_robots,
+        "active_24h": sum(1 for row in rows if _is_active(row, cut24)),
+        "active_7d": sum(1 for row in rows if _is_active(row, cut7)),
+        "active_30d": sum(1 for row in rows if _is_active(row, cut30)),
+        "by_version": [
+            {"name": name, "count": count}
+            for name, count in sorted(
+                version_counts.items(), key=lambda pair: (-pair[1], pair[0])
+            )
+        ],
+        "by_model": [
+            {"name": name, "count": count}
+            for name, count in sorted(
+                model_counts.items(), key=lambda pair: (-pair[1], pair[0])
+            )
+        ],
+        "items": items[:500],
+    }
+
+
 def _presence_stats_data() -> dict:
     """Return presence rows reconciled with same-server 2.4.9.2+ telemetry.
 
@@ -318,6 +426,7 @@ def _presence_stats_data() -> dict:
 
     return {
         "generated_at": now.isoformat(),
+        "source": "presence_heartbeat_with_telemetry_fallback",
         "total": len(merged),
         "active_24h": sum(1 for item in merged if _is_active(item, cut24)),
         "active_7d": sum(1 for item in merged if _is_active(item, cut7)),
@@ -700,6 +809,7 @@ def analysis_export() -> Response:
     payload = {
         "schema": "anthbot-reporting-analysis-export-v1",
         "generated_at": generated.isoformat(),
+        "usage_statistics": _usage_stats_data(),
         "presence": _presence_stats_data(),
         "error_statistics": _error_stats_data(),
     }
