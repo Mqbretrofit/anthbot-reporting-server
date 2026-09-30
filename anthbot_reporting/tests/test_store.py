@@ -546,10 +546,42 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(pack["voice_display_name"], "Vlasta (női)")
         self.assertEqual(pack["style"], "standard")
         self.assertEqual(pack["style_name"], "Standard")
-        self.assertEqual(pack["delivery"], "standard")
-        self.assertEqual(pack["delivery_name"], "Standard")
+        self.assertEqual(pack["delivery"], "natural")
+        self.assertEqual(pack["delivery_name"], "Normál / természetes")
         self.assertEqual(pack["character_effect"], "none")
         self.assertEqual(pack["sales_count"], 0)
+
+    def test_legacy_themed_variant_id_recovers_style_and_delivery(self) -> None:
+        response = self.client.post(
+            "/api/anthbot/admin/voice-packs",
+            headers=self._admin_headers(),
+            files={"file": ("hu-funny.pack", b"legacy-themed-pack", "application/octet-stream")},
+            data={
+                "language": "Magyar",
+                "language_code": "hu-HU",
+                "version": "1.0.0",
+                "community_id": "hu_eszter_wild_funny_cheerful",
+                "variant_id": "wild_funny_cheerful",
+                "variant_name": "Eszter · Elborult / nagyon vicces",
+                "voice_gender": "female",
+                "technical_slot": "German_girl",
+            },
+        )
+        self.assertEqual(response.status_code, 201)
+        pack_id = response.json()["pack"]["id"]
+
+        catalog = self.client.get("/api/anthbot/store/voice-packs")
+        self.assertEqual(catalog.status_code, 200)
+        pack = next(
+            item for item in catalog.json()["packs"]
+            if item["id"] == pack_id
+        )
+        self.assertEqual(pack["voice_display_name"], "Eszter")
+        self.assertEqual(pack["style"], "wild_funny")
+        self.assertEqual(pack["style_name"], "Elborult / nagyon vicces")
+        self.assertEqual(pack["delivery"], "cheerful")
+        self.assertEqual(pack["delivery_name"], "Vidám / lelkes")
+        self.assertEqual(pack["tier"], "premium")
 
     def test_new_voice_upload_admin_alert_requires_explicit_acknowledgement(self) -> None:
         uploaded = self._upload_pack()
