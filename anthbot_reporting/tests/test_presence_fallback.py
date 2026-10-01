@@ -116,6 +116,43 @@ class PresenceTelemetryFallbackTests(unittest.TestCase):
 
         self.assertEqual(stats["total"], 2)
 
+    def test_legacy_unique_pair_is_backfilled_outside_time_window(self) -> None:
+        presence_id = self._presence(version="2.4.9.5-beta8")
+        old = (presence_api._now_dt() - timedelta(days=2)).isoformat()
+        conn = presence_api._connect()
+        try:
+            conn.execute(
+                "UPDATE installation_presence SET first_seen=?, last_seen=? WHERE install_id=?",
+                (old, old, presence_id),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        self._telemetry(version="2.4.9.5-beta8")
+        stats = presence_api._presence_stats_data()
+        self.assertEqual(stats["total"], 1)
+        self.assertEqual(stats["items"][0]["install_id"], presence_id)
+
+    def test_legacy_backfill_refuses_ambiguous_same_signature(self) -> None:
+        old = (presence_api._now_dt() - timedelta(days=2)).isoformat()
+        ids = [self._presence(), self._presence()]
+        conn = presence_api._connect()
+        try:
+            for presence_id in ids:
+                conn.execute(
+                    "UPDATE installation_presence SET first_seen=?, last_seen=? WHERE install_id=?",
+                    (old, old, presence_id),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+
+        self._telemetry()
+        self._telemetry()
+        stats = presence_api._presence_stats_data()
+        self.assertEqual(stats["total"], 4)
+
     def test_reconciled_ids_stay_linked_outside_time_window(self) -> None:
         presence_id = self._presence()
         telemetry_id = self._telemetry()
