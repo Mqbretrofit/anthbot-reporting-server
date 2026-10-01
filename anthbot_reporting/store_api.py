@@ -1943,16 +1943,21 @@ def _store_public_metadata(record: dict[str, Any]) -> dict[str, Any]:
     explicit_style = str(record.get("style", "")).strip().lower()
     explicit_delivery = str(record.get("delivery", "")).strip().lower()
 
+    # community_variant_id is voice-scoped, for example:
+    # eleven_exavitqu4vr4xnsdxmal_wild_funny_cheerful
+    # so the style is not necessarily at the beginning. Match complete
+    # underscore-delimited layer tokens, longest style first.
     inferred_style = ""
     for candidate in sorted(style_labels, key=len, reverse=True):
-        if variant_id == candidate or variant_id.startswith(candidate + "_"):
+        pattern = rf"(?:^|_){re.escape(candidate)}(?:_|$)"
+        if re.search(pattern, variant_id):
             inferred_style = candidate
             break
 
     inferred_delivery = ""
     for candidate in sorted(delivery_labels, key=len, reverse=True):
-        suffix = "_" + candidate
-        if variant_id == candidate or variant_id.endswith(suffix):
+        pattern = rf"(?:^|_){re.escape(candidate)}(?:_|$)"
+        if re.search(pattern, variant_id):
             inferred_delivery = candidate
             break
 
@@ -1960,17 +1965,18 @@ def _store_public_metadata(record: dict[str, Any]) -> dict[str, Any]:
     # therefore get the server's old "standard" default even though the
     # variant_id already encoded wild_funny_cheerful. A themed variant id is
     # more specific than that fallback, so let it recover the intended value.
+    # The variant id is part of the stable voice identity and is authoritative
+    # when it encodes a known non-default layer. This also repairs uploads made
+    # while older Store code wrote an inconsistent explicit style value.
     style = explicit_style
     if inferred_style and inferred_style != "standard":
-        if not style or style == "standard":
-            style = inferred_style
+        style = inferred_style
     if not style:
         style = inferred_style or "standard"
 
     delivery = explicit_delivery
     if inferred_delivery and inferred_delivery != "standard":
-        if not delivery or delivery == "standard":
-            delivery = inferred_delivery
+        delivery = inferred_delivery
     if not delivery:
         delivery = inferred_delivery or "standard"
 
