@@ -583,6 +583,49 @@ class VoiceStoreTests(unittest.TestCase):
         self.assertEqual(pack["delivery_name"], "Vidám / lelkes")
         self.assertEqual(pack["tier"], "premium")
 
+    def test_provider_prefixed_variant_overrides_wrong_explicit_style_metadata(self) -> None:
+        response = self.client.post(
+            "/api/anthbot/admin/voice-packs",
+            headers=self._admin_headers(),
+            files={
+                "file": (
+                    "hu-prefixed-funny.pack",
+                    b"provider-prefixed-themed-pack",
+                    "application/octet-stream",
+                )
+            },
+            data={
+                "language": "Magyar",
+                "language_code": "hu-HU",
+                "version": "1.0.0",
+                "community_id": "hu_eleven_exavitqu4vr4xnsdxmal_wild_funny_cheerful",
+                "variant_id": "eleven_exavitqu4vr4xnsdxmal_wild_funny_cheerful",
+                "variant_name": "Eszter · Elborult / nagyon vicces",
+                "voice_gender": "female",
+                # Reproduce the bad Store metadata visible in production.
+                "style": "flirty",
+                "style_name": "Kacér / érzéki",
+                "delivery": "sensual",
+                "delivery_name": "Kacér / érzéki / szexi",
+                "technical_slot": "German_girl",
+            },
+        )
+        self.assertEqual(response.status_code, 201)
+        pack_id = response.json()["pack"]["id"]
+
+        catalog = self.client.get("/api/anthbot/store/voice-packs")
+        self.assertEqual(catalog.status_code, 200)
+        pack = next(
+            item for item in catalog.json()["packs"]
+            if item["id"] == pack_id
+        )
+        self.assertEqual(pack["voice_display_name"], "Eszter")
+        self.assertEqual(pack["style"], "wild_funny")
+        self.assertEqual(pack["style_name"], "Elborult / nagyon vicces")
+        self.assertEqual(pack["delivery"], "cheerful")
+        self.assertEqual(pack["delivery_name"], "Vidám / lelkes")
+        self.assertEqual(pack["tier"], "premium")
+
     def test_recent_preexisting_upload_is_bootstrapped_as_new(self) -> None:
         uploaded = self._upload_pack()
         pack_id = uploaded["id"]
