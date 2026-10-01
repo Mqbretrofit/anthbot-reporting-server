@@ -104,8 +104,8 @@ class PresenceTelemetryFallbackTests(unittest.TestCase):
         conn = presence_api._connect()
         try:
             conn.execute(
-                "UPDATE installation_presence SET last_seen=? WHERE install_id=?",
-                (old_last_seen, presence_id),
+                "UPDATE installation_presence SET first_seen=?, last_seen=? WHERE install_id=?",
+                (old_last_seen, old_last_seen, presence_id),
             )
             conn.commit()
         finally:
