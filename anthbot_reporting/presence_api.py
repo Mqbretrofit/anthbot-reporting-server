@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
+import hashlib
 import json
 import os
 import re
@@ -60,11 +61,21 @@ def init_presence_tables() -> None:
             telemetry_id TEXT PRIMARY KEY,
             presence_id TEXT NOT NULL UNIQUE,
             created_at TEXT NOT NULL,
-            last_confirmed TEXT NOT NULL
+            last_confirmed TEXT NOT NULL,
+            match_method TEXT NOT NULL DEFAULT 'legacy'
         );
         CREATE INDEX IF NOT EXISTS idx_presence_telemetry_links_presence_id
             ON presence_telemetry_links(presence_id);
         """)
+        columns = {
+            row["name"]
+            for row in conn.execute("PRAGMA table_info(presence_telemetry_links)").fetchall()
+        }
+        if "match_method" not in columns:
+            conn.execute(
+                "ALTER TABLE presence_telemetry_links "
+                "ADD COLUMN match_method TEXT NOT NULL DEFAULT 'legacy'"
+            )
         conn.commit()
     finally:
         conn.close()
@@ -353,7 +364,7 @@ def _presence_stats_data() -> dict:
         for row in link_rows
         if row.get("telemetry_id") and row.get("presence_id")
     }
-    links_to_persist: list[tuple[str, str]] = []
+    links_to_persist: list[tuple[str, str, str]] = []
     unresolved_telemetry: list[dict] = []
 
     for row in telemetry_rows:
@@ -420,7 +431,7 @@ def _presence_stats_data() -> dict:
         if len(candidates) == 1:
             candidate = candidates[0]
             matched_presence_ids.add(candidate["install_id"])
-            links_to_persist.append((telemetry_id, candidate["install_id"]))
+            links_to_persist.append((telemetry_id, candidate["install_id"], "time_window"))
             candidate["first_seen"] = min(
                 value
                 for value in (candidate.get("first_seen"), row.get("first_seen"))
@@ -483,7 +494,7 @@ def _presence_stats_data() -> dict:
         merged.remove(fallback)
         by_id.pop(telemetry_id, None)
         matched_presence_ids.add(candidate["install_id"])
-        links_to_persist.append((telemetry_id, candidate["install_id"]))
+        links_to_persist.append((telemetry_id, candidate["install_id"], "legacy_unique_signature"))
         candidate["first_seen"] = min(
             value for value in (candidate.get("first_seen"), row.get("first_seen")) if value
         )
@@ -495,15 +506,20 @@ def _presence_stats_data() -> dict:
         confirmed = _now()
         conn = _connect()
         try:
-            for telemetry_id, presence_id in links_to_persist:
+            for telemetry_id, presence_id, match_method in links_to_persist:
                 conn.execute(
                     """INSERT INTO presence_telemetry_links
-                       (telemetry_id, presence_id, created_at, last_confirmed)
-                       VALUES (?, ?, ?, ?)
+                       (telemetry_id, presence_id, created_at, last_confirmed, match_method)
+                       VALUES (?, ?, ?, ?, ?)
                        ON CONFLICT(telemetry_id) DO UPDATE SET
                        presence_id=excluded.presence_id,
-                       last_confirmed=excluded.last_confirmed""",
-                    (telemetry_id, presence_id, confirmed, confirmed),
+                       last_confirmed=excluded.last_confirmed,
+                       match_method=CASE
+                           WHEN presence_telemetry_links.match_method='legacy'
+                           THEN excluded.match_method
+                           ELSE presence_telemetry_links.match_method
+                       END""",
+                    (telemetry_id, presence_id, confirmed, confirmed, match_method),
                 )
             conn.commit()
         finally:
@@ -555,6 +571,74 @@ def _presence_stats_data() -> dict:
         ],
         "items": items,
     }
+
+
+def _audit_id(value: str | None) -> str:
+    if not value:
+        return "—"
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()[:12]
+
+
+@router.get("/api/anthbot/admin/presence-dedup-audit", dependencies=[Depends(require_admin)])
+def presence_dedup_audit() -> dict:
+    """Return privacy-safe evidence for persisted presence/telemetry links."""
+    init_presence_tables()
+    conn = _connect()
+    try:
+        rows = [
+            dict(row)
+            for row in conn.execute(
+                """SELECT l.telemetry_id, l.presence_id, l.created_at,
+                          l.last_confirmed, l.match_method,
+                          p.version AS presence_version,
+                          p.first_seen AS presence_first_seen,
+                          p.last_seen AS presence_last_seen,
+                          i.integration_version AS telemetry_version,
+                          i.first_seen AS telemetry_first_seen,
+                          i.last_seen AS telemetry_last_seen,
+                          i.model_counts_json
+                   FROM presence_telemetry_links l
+                   LEFT JOIN installation_presence p ON p.install_id=l.presence_id
+                   LEFT JOIN installations i ON i.installation_id=l.telemetry_id
+                   ORDER BY l.created_at DESC"""
+            ).fetchall()
+        ]
+        model_rows = [
+            dict(row)
+            for row in conn.execute(
+                "SELECT install_id, model FROM installation_presence_models"
+            ).fetchall()
+        ]
+    finally:
+        conn.close()
+
+    models_by_presence: dict[str, set[str]] = defaultdict(set)
+    for row in model_rows:
+        models_by_presence[str(row["install_id"])].add(str(row["model"]))
+
+    items = []
+    for row in rows:
+        presence_models = models_by_presence.get(str(row.get("presence_id") or ""), set())
+        telemetry_models = _telemetry_models(row.get("model_counts_json"))
+        items.append({
+            "presence_ref": _audit_id(row.get("presence_id")),
+            "telemetry_ref": _audit_id(row.get("telemetry_id")),
+            "match_method": row.get("match_method") or "legacy",
+            "version": row.get("presence_version") or row.get("telemetry_version"),
+            "models": " | ".join(sorted(presence_models or telemetry_models)) or None,
+            "presence_first_seen": row.get("presence_first_seen"),
+            "presence_last_seen": row.get("presence_last_seen"),
+            "telemetry_first_seen": row.get("telemetry_first_seen"),
+            "telemetry_last_seen": row.get("telemetry_last_seen"),
+            "linked_at": row.get("created_at"),
+            "last_confirmed": row.get("last_confirmed"),
+            "version_matches": (
+                row.get("presence_version") == row.get("telemetry_version")
+                if row.get("presence_version") and row.get("telemetry_version") else None
+            ),
+            "models_match": presence_models == telemetry_models if presence_models and telemetry_models else None,
+        })
+    return {"generated_at": _now(), "total_links": len(items), "items": items}
 
 
 @router.get("/api/anthbot/admin/presence-stats", dependencies=[Depends(require_admin)])
