@@ -2408,6 +2408,18 @@ class VoiceStoreTests(unittest.TestCase):
             "/api/anthbot/admin/store/voice-packs/'+encodeURIComponent(id)+'/download",
             admin_html,
         )
+        self.assertIn('id="voice-pack-search"', admin_html)
+        self.assertIn('id="voice-pack-language"', admin_html)
+        self.assertIn('id="voice-pack-style"', admin_html)
+        self.assertIn('id="voice-pack-access"', admin_html)
+        self.assertIn('id="voice-pack-status"', admin_html)
+        self.assertIn('id="voice-pack-sort"', admin_html)
+        self.assertIn('id="voice-pack-reset"', admin_html)
+        self.assertIn('id="voice-pack-result-count"', admin_html)
+        self.assertIn("anthbot_voice_admin_filters_v1", admin_html)
+        self.assertIn("renderVoiceAdminPacks", admin_html)
+        self.assertIn("Csak új", admin_html)
+        self.assertIn("Legújabb", admin_html)
 
     def test_admin_can_grant_owner_map_access_without_fake_purchase(self) -> None:
         pack = self._upload_pack()
