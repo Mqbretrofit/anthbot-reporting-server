@@ -99,7 +99,7 @@ class PresenceTelemetryFallbackTests(unittest.TestCase):
     def test_unrelated_same_model_installations_are_kept_separate(self) -> None:
         presence_id = self._presence()
         old_last_seen = (
-            presence_api._now_dt() - timedelta(minutes=10)
+            presence_api._now_dt() - timedelta(minutes=30)
         ).isoformat()
         conn = presence_api._connect()
         try:
@@ -115,6 +115,31 @@ class PresenceTelemetryFallbackTests(unittest.TestCase):
         stats = presence_api._presence_stats_data()
 
         self.assertEqual(stats["total"], 2)
+
+    def test_reconciled_ids_stay_linked_outside_time_window(self) -> None:
+        presence_id = self._presence()
+        telemetry_id = self._telemetry()
+        first = presence_api._presence_stats_data()
+        self.assertEqual(first["total"], 1)
+
+        old = (presence_api._now_dt() - timedelta(hours=2)).isoformat()
+        conn = presence_api._connect()
+        try:
+            conn.execute(
+                "UPDATE installation_presence SET first_seen=?, last_seen=? WHERE install_id=?",
+                (old, old, presence_id),
+            )
+            conn.execute(
+                "UPDATE installations SET first_seen=?, last_seen=? WHERE installation_id=?",
+                (presence_api._now(), presence_api._now(), telemetry_id),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        second = presence_api._presence_stats_data()
+        self.assertEqual(second["total"], 1)
+        self.assertEqual(second["items"][0]["install_id"], presence_id)
 
 
 if __name__ == "__main__":
