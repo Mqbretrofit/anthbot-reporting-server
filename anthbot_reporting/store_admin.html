@@ -15,7 +15,8 @@
     .new-voice-alert{display:none;margin:0 0 14px;padding:15px 16px;border:1px solid rgba(255,92,112,.48);border-radius:15px;background:linear-gradient(135deg,rgba(255,70,92,.17),rgba(255,162,74,.09));box-shadow:0 14px 36px rgba(0,0,0,.22)}
     .new-voice-alert.show{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
     .new-voice-alert strong{display:block;font-size:1rem;color:#ffd8de}.new-voice-alert .new-list{margin-top:5px;color:#ffd5b4;font-size:.82rem}.new-voice-alert .actions{margin-left:auto}.new-voice-pill{border-color:rgba(255,92,112,.55)!important;background:rgba(255,92,112,.14)!important;color:#ffd5dc!important;font-weight:900}
-    .voice-admin-toolbar{display:grid;grid-template-columns:minmax(280px,2fr) repeat(5,minmax(150px,1fr)) auto;gap:9px;padding:12px 14px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.015);align-items:center}
+    .voice-admin-quick{display:flex;gap:8px;flex-wrap:wrap;padding:12px 14px 0}.voice-admin-quick .btn{min-height:34px;padding:7px 11px}.voice-admin-quick .btn.active{border-color:rgba(120,164,255,.72);background:rgba(103,126,255,.22);box-shadow:0 0 0 1px rgba(103,126,255,.12) inset}
+    .voice-admin-toolbar{display:grid;grid-template-columns:minmax(280px,2fr) repeat(6,minmax(145px,1fr)) auto;gap:9px;padding:12px 14px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.015);align-items:center}
     .voice-admin-toolbar .control{width:100%;min-width:0}.voice-admin-search{min-width:280px}.voice-admin-count{white-space:nowrap;color:var(--muted);font-size:.82rem}.voice-admin-reset{white-space:nowrap}
     @media(max-width:1250px){.voice-admin-toolbar{grid-template-columns:repeat(3,minmax(0,1fr))}.voice-admin-search{grid-column:span 2;min-width:0}.voice-admin-reset{width:100%}}
     @media(max-width:900px){.kpis,.analytics-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.analytics-panels{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}.shell{padding:18px 12px}.voice-admin-toolbar{grid-template-columns:1fr 1fr}.voice-admin-search{grid-column:1/-1}.voice-admin-reset{width:100%}}
@@ -61,13 +62,24 @@
         <span>Hangcsomagok</span>
         <span class="voice-admin-count" id="voice-pack-result-count">0 / 0 hang</span>
       </div>
+      <div class="voice-admin-quick" id="voice-pack-quick">
+        <button class="btn" type="button" data-voice-quick="all">Mind <span data-quick-count="all">0</span></button>
+        <button class="btn" type="button" data-voice-quick="new">Új <span data-quick-count="new">0</span></button>
+        <button class="btn" type="button" data-voice-quick="paid">Fizetős <span data-quick-count="paid">0</span></button>
+        <button class="btn" type="button" data-voice-quick="free">Ingyenes <span data-quick-count="free">0</span></button>
+        <button class="btn" type="button" data-voice-quick="visible">Látható <span data-quick-count="visible">0</span></button>
+        <button class="btn" type="button" data-voice-quick="hidden">Elrejtett <span data-quick-count="hidden">0</span></button>
+        <button class="btn" type="button" data-voice-quick="sold">Van eladás <span data-quick-count="sold">0</span></button>
+        <button class="btn" type="button" data-voice-quick="unsold">Nincs eladás <span data-quick-count="unsold">0</span></button>
+      </div>
       <div class="voice-admin-toolbar">
         <input class="control voice-admin-search" id="voice-pack-search" type="search" autocomplete="off" placeholder="Keresés: nyelv, hangnév, csomag ID, stílus…">
         <select class="control" id="voice-pack-language"><option value="">Minden nyelv</option></select>
         <select class="control" id="voice-pack-style"><option value="">Minden stílus</option></select>
         <select class="control" id="voice-pack-access"><option value="">Minden hozzáférés</option><option value="paid">Fizetős</option><option value="free">Ingyenes</option></select>
-        <select class="control" id="voice-pack-status"><option value="">Minden állapot</option><option value="new">Csak új</option><option value="visible">Látható</option><option value="hidden">Elrejtett</option></select>
-        <select class="control" id="voice-pack-sort"><option value="newest">Legújabb</option><option value="voice">Hangnév</option><option value="language">Nyelv</option><option value="sales">Eladás</option><option value="id">Csomag ID</option></select>
+        <select class="control" id="voice-pack-status"><option value="">Minden állapot</option><option value="new">Új</option><option value="visible">Látható</option><option value="hidden">Elrejtett</option></select>
+        <select class="control" id="voice-pack-sales"><option value="">Minden eladás</option><option value="sold">Van eladás</option><option value="unsold">Nincs eladás</option></select>
+        <select class="control" id="voice-pack-sort"><option value="newest">Legújabb</option><option value="voice">Hangnév</option><option value="language">Nyelv</option><option value="sales">Eladás</option><option value="revenue">Bevétel</option><option value="id">Csomag ID</option></select>
         <button class="btn voice-admin-reset" id="voice-pack-reset" type="button">Szűrők törlése</button>
       </div>
       <div class="table-wrap"><table><thead><tr><th>Csomag</th><th>Nyelv / hang</th><th>Verzió</th><th>Hozzáférés</th><th>Ár</th><th>Pénznem</th><th>Eladás</th><th>Bevétel</th><th>Állapot</th><th>Művelet</th></tr></thead><tbody id="packs"></tbody></table></div>
@@ -391,6 +403,7 @@
           style:document.getElementById('voice-pack-style').value,
           access:document.getElementById('voice-pack-access').value,
           status:document.getElementById('voice-pack-status').value,
+          sales:document.getElementById('voice-pack-sales').value,
           sort:document.getElementById('voice-pack-sort').value
         }));
       }catch(_){}
@@ -401,6 +414,7 @@
       document.getElementById('voice-pack-search').value=String(saved.search||'');
       document.getElementById('voice-pack-access').value=String(saved.access||'');
       document.getElementById('voice-pack-status').value=String(saved.status||'');
+      document.getElementById('voice-pack-sales').value=String(saved.sales||'');
       document.getElementById('voice-pack-sort').value=String(saved.sort||'newest');
       return saved;
     }
@@ -418,6 +432,62 @@
       voiceAdminSetOptions(language,languages,'Minden nyelv',previousLanguage);
       voiceAdminSetOptions(style,styles,'Minden stílus',previousStyle);
     }
+    function voiceAdminUpdateQuickCounts(){
+      const counts={
+        all:voiceAdminItems.length,
+        new:voiceAdminItems.filter(p=>!!p.admin_new).length,
+        paid:voiceAdminItems.filter(p=>String(p.access||'free')==='paid').length,
+        free:voiceAdminItems.filter(p=>String(p.access||'free')==='free').length,
+        visible:voiceAdminItems.filter(p=>!p.store_hidden).length,
+        hidden:voiceAdminItems.filter(p=>!!p.store_hidden).length,
+        sold:voiceAdminItems.filter(p=>Number(p.sales||0)>0).length,
+        unsold:voiceAdminItems.filter(p=>Number(p.sales||0)<=0).length
+      };
+      Object.entries(counts).forEach(([key,value])=>{
+        const host=document.querySelector('[data-quick-count="'+key+'"]');
+        if(host)host.textContent=String(value);
+      });
+    }
+    function voiceAdminCurrentQuick(){
+      const search=document.getElementById('voice-pack-search').value.trim();
+      const language=document.getElementById('voice-pack-language').value;
+      const style=document.getElementById('voice-pack-style').value;
+      const access=document.getElementById('voice-pack-access').value;
+      const status=document.getElementById('voice-pack-status').value;
+      const sales=document.getElementById('voice-pack-sales').value;
+      if(!search&&!language&&!style&&!access&&!status&&!sales)return 'all';
+      if(!search&&!language&&!style&&status==='new'&&!access&&!sales)return 'new';
+      if(!search&&!language&&!style&&access==='paid'&&!status&&!sales)return 'paid';
+      if(!search&&!language&&!style&&access==='free'&&!status&&!sales)return 'free';
+      if(!search&&!language&&!style&&status==='visible'&&!access&&!sales)return 'visible';
+      if(!search&&!language&&!style&&status==='hidden'&&!access&&!sales)return 'hidden';
+      if(!search&&!language&&!style&&sales==='sold'&&!access&&!status)return 'sold';
+      if(!search&&!language&&!style&&sales==='unsold'&&!access&&!status)return 'unsold';
+      return '';
+    }
+    function voiceAdminUpdateQuickActive(){
+      const active=voiceAdminCurrentQuick();
+      document.querySelectorAll('[data-voice-quick]').forEach(button=>{
+        button.classList.toggle('active',button.dataset.voiceQuick===active);
+      });
+    }
+    function applyVoiceAdminQuick(kind){
+      document.getElementById('voice-pack-search').value='';
+      document.getElementById('voice-pack-language').value='';
+      document.getElementById('voice-pack-style').value='';
+      document.getElementById('voice-pack-access').value='';
+      document.getElementById('voice-pack-status').value='';
+      document.getElementById('voice-pack-sales').value='';
+      if(kind==='new')document.getElementById('voice-pack-status').value='new';
+      if(kind==='paid')document.getElementById('voice-pack-access').value='paid';
+      if(kind==='free')document.getElementById('voice-pack-access').value='free';
+      if(kind==='visible')document.getElementById('voice-pack-status').value='visible';
+      if(kind==='hidden')document.getElementById('voice-pack-status').value='hidden';
+      if(kind==='sold')document.getElementById('voice-pack-sales').value='sold';
+      if(kind==='unsold')document.getElementById('voice-pack-sales').value='unsold';
+      renderVoiceAdminPacks();
+    }
+
     function renderVoiceAdminPacks(){
       const body=document.getElementById('packs');
       const query=document.getElementById('voice-pack-search').value.trim().toLocaleLowerCase('hu-HU');
@@ -425,6 +495,7 @@
       const style=document.getElementById('voice-pack-style').value;
       const access=document.getElementById('voice-pack-access').value;
       const status=document.getElementById('voice-pack-status').value;
+      const sales=document.getElementById('voice-pack-sales').value;
       const sort=document.getElementById('voice-pack-sort').value||'newest';
 
       let items=voiceAdminItems.filter(p=>{
@@ -435,11 +506,16 @@
         if(status==='new'&&!p.admin_new)return false;
         if(status==='visible'&&p.store_hidden)return false;
         if(status==='hidden'&&!p.store_hidden)return false;
+        if(sales==='sold'&&Number(p.sales||0)<=0)return false;
+        if(sales==='unsold'&&Number(p.sales||0)>0)return false;
         return true;
       });
       items=[...items].sort((a,b)=>{
         if(sort==='sales'){
           const diff=Number(b.sales||0)-Number(a.sales||0);
+          if(diff)return diff;
+        }else if(sort==='revenue'){
+          const diff=Number(b.revenue||0)-Number(a.revenue||0);
           if(diff)return diff;
         }else if(sort==='voice'){
           return String(a.voice_display_name||a.variant_name||a.community_id||'').localeCompare(String(b.voice_display_name||b.variant_name||b.community_id||''),'hu',{sensitivity:'base'});
@@ -456,6 +532,8 @@
       });
 
       document.getElementById('voice-pack-result-count').textContent=items.length+' / '+voiceAdminItems.length+' hang';
+      voiceAdminUpdateQuickCounts();
+      voiceAdminUpdateQuickActive();
       if(!items.length){
         body.innerHTML='<tr><td colspan="10" class="empty">Nincs a szűrésnek megfelelő hangcsomag.</td></tr>';
         voiceAdminSaveFilters();
@@ -485,6 +563,7 @@
       document.getElementById('voice-pack-style').value='';
       document.getElementById('voice-pack-access').value='';
       document.getElementById('voice-pack-status').value='';
+      document.getElementById('voice-pack-sales').value='';
       document.getElementById('voice-pack-sort').value='newest';
       renderVoiceAdminPacks();
     }
@@ -494,8 +573,11 @@
         clearTimeout(timer);
         timer=setTimeout(renderVoiceAdminPacks,80);
       });
-      ['voice-pack-language','voice-pack-style','voice-pack-access','voice-pack-status','voice-pack-sort'].forEach(id=>{
+      ['voice-pack-language','voice-pack-style','voice-pack-access','voice-pack-status','voice-pack-sales','voice-pack-sort'].forEach(id=>{
         document.getElementById(id).addEventListener('change',renderVoiceAdminPacks);
+      });
+      document.querySelectorAll('[data-voice-quick]').forEach(button=>{
+        button.addEventListener('click',()=>applyVoiceAdminQuick(button.dataset.voiceQuick||'all'));
       });
       document.getElementById('voice-pack-reset').addEventListener('click',resetVoiceAdminFilters);
     }
