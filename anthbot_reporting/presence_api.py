@@ -354,6 +354,7 @@ def _presence_stats_data() -> dict:
         if row.get("telemetry_id") and row.get("presence_id")
     }
     links_to_persist: list[tuple[str, str]] = []
+    unresolved_telemetry: list[dict] = []
 
     for row in telemetry_rows:
         version = str(row.get("integration_version") or "").strip()
@@ -432,6 +433,9 @@ def _presence_stats_data() -> dict:
             )
             continue
 
+        # Keep unresolved rows for a conservative legacy backfill pass below.
+        unresolved_telemetry.append(row)
+
         # No unambiguous same-load presence heartbeat exists. The server did
         # still receive this 2.4.9.2+ installation through its telemetry API,
         # so expose it as a fallback instead of silently dropping it.
@@ -445,6 +449,47 @@ def _presence_stats_data() -> dict:
         }
         merged.append(fallback)
         by_id[telemetry_id] = fallback
+
+    # Legacy backfill: older databases may already contain a presence/telemetry
+    # pair whose timestamps have drifted too far apart for the normal matcher.
+    # Reconcile without a time window only when the version + exact model-set
+    # signature is one-to-one on BOTH sides. This deliberately refuses popular
+    # signatures with multiple installations, preventing cross-user merges.
+    unmatched_presence_by_signature: dict[tuple[str, tuple[str, ...]], list[dict]] = defaultdict(list)
+    for item in merged:
+        if item["_source"] == "presence" and item["install_id"] not in matched_presence_ids:
+            signature = (item["version"], tuple(sorted(item["_models"])))
+            unmatched_presence_by_signature[signature].append(item)
+
+    unresolved_by_signature: dict[tuple[str, tuple[str, ...]], list[dict]] = defaultdict(list)
+    for row in unresolved_telemetry:
+        version = str(row.get("integration_version") or "").strip()
+        models = _telemetry_models(row.get("model_counts_json"))
+        if version and models:
+            unresolved_by_signature[(version, tuple(sorted(models)))].append(row)
+
+    for signature, telemetry_group in unresolved_by_signature.items():
+        presence_group = unmatched_presence_by_signature.get(signature, [])
+        if len(telemetry_group) != 1 or len(presence_group) != 1:
+            continue
+
+        row = telemetry_group[0]
+        candidate = presence_group[0]
+        telemetry_id = str(row.get("installation_id") or "")
+        fallback = by_id.get(telemetry_id)
+        if not telemetry_id or fallback is None or fallback["_source"] != "telemetry_fallback":
+            continue
+
+        merged.remove(fallback)
+        by_id.pop(telemetry_id, None)
+        matched_presence_ids.add(candidate["install_id"])
+        links_to_persist.append((telemetry_id, candidate["install_id"]))
+        candidate["first_seen"] = min(
+            value for value in (candidate.get("first_seen"), row.get("first_seen")) if value
+        )
+        candidate["last_seen"] = max(
+            value for value in (candidate.get("last_seen"), row.get("last_seen")) if value
+        )
 
     if links_to_persist:
         confirmed = _now()
