@@ -56,6 +56,14 @@ def init_presence_tables() -> None:
             PRIMARY KEY (install_id, model)
         );
         CREATE INDEX IF NOT EXISTS idx_presence_models_last_seen ON installation_presence_models(last_seen);
+        CREATE TABLE IF NOT EXISTS presence_telemetry_links (
+            telemetry_id TEXT PRIMARY KEY,
+            presence_id TEXT NOT NULL UNIQUE,
+            created_at TEXT NOT NULL,
+            last_confirmed TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_presence_telemetry_links_presence_id
+            ON presence_telemetry_links(presence_id);
         """)
         conn.commit()
     finally:
@@ -96,7 +104,7 @@ def presence_heartbeat(payload: PresencePayload) -> dict[str, bool]:
 
 
 _PRESENCE_FALLBACK_MIN_VERSION = (2, 4, 9, 2)
-_PRESENCE_RECONCILE_WINDOW = timedelta(minutes=2)
+_PRESENCE_RECONCILE_WINDOW = timedelta(minutes=15)
 
 
 def _version_tuple(value: str | None) -> tuple[int, ...] | None:
@@ -268,9 +276,11 @@ def _presence_stats_data() -> dict:
     the Presence dashboard complete by using that telemetry row as a fallback.
 
     To avoid double counting, a telemetry row is collapsed into a presence row
-    only when version + model set match and there is exactly one presence
-    heartbeat within a tight two-minute window. Older integration versions are
-    never synthesized because they did not implement the minimal heartbeat.
+    when version + model set match and there is exactly one presence heartbeat
+    close to either its first or latest observation. The resulting ID pair is
+    persisted, so later heartbeat timing cannot split one installation back into
+    two rows. Older integration versions are never synthesized because they did
+    not implement the minimal heartbeat.
     """
     init_presence_tables()
     now = _now_dt()
@@ -304,6 +314,12 @@ def _presence_stats_data() -> dict:
                 """
             ).fetchall()
         ]
+        link_rows = [
+            dict(row)
+            for row in conn.execute(
+                "SELECT telemetry_id, presence_id FROM presence_telemetry_links"
+            ).fetchall()
+        ]
     finally:
         conn.close()
 
@@ -332,6 +348,13 @@ def _presence_stats_data() -> dict:
         by_id[install_id] = item
 
     matched_presence_ids: set[str] = set()
+    persisted_links = {
+        str(row.get("telemetry_id") or ""): str(row.get("presence_id") or "")
+        for row in link_rows
+        if row.get("telemetry_id") and row.get("presence_id")
+    }
+    links_to_persist: list[tuple[str, str]] = []
+
     for row in telemetry_rows:
         version = str(row.get("integration_version") or "").strip()
         if not _supports_presence_fallback(version):
@@ -343,6 +366,21 @@ def _presence_stats_data() -> dict:
             continue
 
         telemetry_last = _parse_timestamp(row.get("last_seen"))
+        telemetry_first = _parse_timestamp(row.get("first_seen"))
+
+        linked_presence_id = persisted_links.get(telemetry_id)
+        linked = by_id.get(linked_presence_id) if linked_presence_id else None
+        if linked is not None and linked["_source"] == "presence":
+            linked["_models"].update(telemetry_models)
+            linked["first_seen"] = min(
+                value for value in (linked.get("first_seen"), row.get("first_seen")) if value
+            )
+            linked["last_seen"] = max(
+                value for value in (linked.get("last_seen"), row.get("last_seen")) if value
+            )
+            matched_presence_ids.add(linked["install_id"])
+            continue
+
         exact = by_id.get(telemetry_id)
         if exact is not None:
             exact["_models"].update(telemetry_models)
@@ -365,14 +403,23 @@ def _presence_stats_data() -> dict:
                 if item["version"] != version or item["_models"] != telemetry_models:
                     continue
                 presence_last = _parse_timestamp(item.get("last_seen"))
-                if presence_last is None:
-                    continue
-                if abs(presence_last - telemetry_last) <= _PRESENCE_RECONCILE_WINDOW:
+                presence_first = _parse_timestamp(item.get("first_seen"))
+                last_matches = (
+                    presence_last is not None
+                    and abs(presence_last - telemetry_last) <= _PRESENCE_RECONCILE_WINDOW
+                )
+                first_matches = (
+                    telemetry_first is not None
+                    and presence_first is not None
+                    and abs(presence_first - telemetry_first) <= _PRESENCE_RECONCILE_WINDOW
+                )
+                if last_matches or first_matches:
                     candidates.append(item)
 
         if len(candidates) == 1:
             candidate = candidates[0]
             matched_presence_ids.add(candidate["install_id"])
+            links_to_persist.append((telemetry_id, candidate["install_id"]))
             candidate["first_seen"] = min(
                 value
                 for value in (candidate.get("first_seen"), row.get("first_seen"))
@@ -398,6 +445,24 @@ def _presence_stats_data() -> dict:
         }
         merged.append(fallback)
         by_id[telemetry_id] = fallback
+
+    if links_to_persist:
+        confirmed = _now()
+        conn = _connect()
+        try:
+            for telemetry_id, presence_id in links_to_persist:
+                conn.execute(
+                    """INSERT INTO presence_telemetry_links
+                       (telemetry_id, presence_id, created_at, last_confirmed)
+                       VALUES (?, ?, ?, ?)
+                       ON CONFLICT(telemetry_id) DO UPDATE SET
+                       presence_id=excluded.presence_id,
+                       last_confirmed=excluded.last_confirmed""",
+                    (telemetry_id, presence_id, confirmed, confirmed),
+                )
+            conn.commit()
+        finally:
+            conn.close()
 
     merged.sort(key=lambda item: str(item.get("last_seen") or ""), reverse=True)
 
