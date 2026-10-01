@@ -111,10 +111,13 @@ class PresenceTelemetryFallbackTests(unittest.TestCase):
         finally:
             conn.close()
 
+        # Two telemetry rows with the same signature make the legacy identity
+        # ambiguous, so neither may be collapsed into the old presence row.
+        self._telemetry()
         self._telemetry()
         stats = presence_api._presence_stats_data()
 
-        self.assertEqual(stats["total"], 2)
+        self.assertEqual(stats["total"], 3)
 
     def test_legacy_unique_pair_is_backfilled_outside_time_window(self) -> None:
         presence_id = self._presence(version="2.4.9.5-beta8")
