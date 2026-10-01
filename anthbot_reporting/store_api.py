@@ -1981,14 +1981,28 @@ def _store_public_metadata(record: dict[str, Any]) -> dict[str, Any]:
         delivery = inferred_delivery or "standard"
 
     style_name = str(record.get("style_name", "")).strip()
-    if not style_name or (
-        style != "standard" and style_name.casefold() == "standard"
+    style_recovered_from_variant = bool(
+        inferred_style
+        and inferred_style != "standard"
+        and inferred_style != explicit_style
+    )
+    if (
+        style_recovered_from_variant
+        or not style_name
+        or (style != "standard" and style_name.casefold() == "standard")
     ):
         style_name = style_labels.get(style, style.replace("_", " ").title())
 
     delivery_name = str(record.get("delivery_name", "")).strip()
-    if not delivery_name or (
-        delivery != "standard" and delivery_name.casefold() == "standard"
+    delivery_recovered_from_variant = bool(
+        inferred_delivery
+        and inferred_delivery != "standard"
+        and inferred_delivery != explicit_delivery
+    )
+    if (
+        delivery_recovered_from_variant
+        or not delivery_name
+        or (delivery != "standard" and delivery_name.casefold() == "standard")
     ):
         delivery_name = delivery_labels.get(
             delivery, delivery.replace("_", " ").title()
