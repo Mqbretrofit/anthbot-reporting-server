@@ -1,0 +1,755 @@
+{
+  "source": "https://github.com/NabuCasa/hass-nabucasa/blob/225509708d0e3a037064bb7531b09a04f6be9c69/hass_nabucasa/voice_data.py",
+  "languages": [
+    {
+      "locale": "hu-HU",
+      "language": "Magyar",
+      "search_name": "magyar (Magyarország)"
+    },
+    {
+      "locale": "en-US",
+      "language": "English",
+      "search_name": "amerikai angol"
+    },
+    {
+      "locale": "de-DE",
+      "language": "Deutsch (Deutschland)",
+      "search_name": "német (Németország)"
+    },
+    {
+      "locale": "it-IT",
+      "language": "Italiano",
+      "search_name": "olasz (Olaszország)"
+    },
+    {
+      "locale": "fr-FR",
+      "language": "Français",
+      "search_name": "francia (Franciaország)"
+    },
+    {
+      "locale": "es-ES",
+      "language": "Español",
+      "search_name": "európai spanyol"
+    },
+    {
+      "locale": "cs-CZ",
+      "language": "Čeština",
+      "search_name": "cseh (Csehország)"
+    },
+    {
+      "locale": "sk-SK",
+      "language": "Slovenčina",
+      "search_name": "szlovák (Szlovákia)"
+    },
+    {
+      "locale": "pl-PL",
+      "language": "Polski",
+      "search_name": "lengyel (Lengyelország)"
+    },
+    {
+      "locale": "af-ZA",
+      "language": "Afrikaans (Suid-Afrika)",
+      "search_name": "afrikaans (Dél-afrikai Köztársaság)"
+    },
+    {
+      "locale": "am-ET",
+      "language": "አማርኛ (ኢትዮጵያ)",
+      "search_name": "amhara (Etiópia)"
+    },
+    {
+      "locale": "ar-AE",
+      "language": "العربية (الإمارات العربية المتحدة)",
+      "search_name": "arab (Egyesült Arab Emírségek)"
+    },
+    {
+      "locale": "ar-BH",
+      "language": "العربية (البحرين)",
+      "search_name": "arab (Bahrein)"
+    },
+    {
+      "locale": "ar-DZ",
+      "language": "العربية (الجزائر)",
+      "search_name": "arab (Algéria)"
+    },
+    {
+      "locale": "ar-EG",
+      "language": "العربية (مصر)",
+      "search_name": "arab (Egyiptom)"
+    },
+    {
+      "locale": "ar-IQ",
+      "language": "العربية (العراق)",
+      "search_name": "arab (Irak)"
+    },
+    {
+      "locale": "ar-JO",
+      "language": "العربية (الأردن)",
+      "search_name": "arab (Jordánia)"
+    },
+    {
+      "locale": "ar-KW",
+      "language": "العربية (الكويت)",
+      "search_name": "arab (Kuvait)"
+    },
+    {
+      "locale": "ar-LB",
+      "language": "العربية (لبنان)",
+      "search_name": "arab (Libanon)"
+    },
+    {
+      "locale": "ar-LY",
+      "language": "العربية (ليبيا)",
+      "search_name": "arab (Líbia)"
+    },
+    {
+      "locale": "ar-MA",
+      "language": "العربية (المغرب)",
+      "search_name": "arab (Marokkó)"
+    },
+    {
+      "locale": "ar-OM",
+      "language": "العربية (عُمان)",
+      "search_name": "arab (Omán)"
+    },
+    {
+      "locale": "ar-QA",
+      "language": "العربية (قطر)",
+      "search_name": "arab (Katar)"
+    },
+    {
+      "locale": "ar-SA",
+      "language": "العربية (المملكة العربية السعودية)",
+      "search_name": "arab (Szaúd-Arábia)"
+    },
+    {
+      "locale": "ar-SY",
+      "language": "العربية (سوريا)",
+      "search_name": "arab (Szíria)"
+    },
+    {
+      "locale": "ar-TN",
+      "language": "العربية (تونس)",
+      "search_name": "arab (Tunézia)"
+    },
+    {
+      "locale": "ar-YE",
+      "language": "العربية (اليمن)",
+      "search_name": "arab (Jemen)"
+    },
+    {
+      "locale": "as-IN",
+      "language": "অসমীয়া (ভাৰত)",
+      "search_name": "asszámi (India)"
+    },
+    {
+      "locale": "az-AZ",
+      "language": "azərbaycan (Azərbaycan)",
+      "search_name": "azerbajdzsáni (Azerbajdzsán)"
+    },
+    {
+      "locale": "bg-BG",
+      "language": "български (България)",
+      "search_name": "bolgár (Bulgária)"
+    },
+    {
+      "locale": "bn-BD",
+      "language": "বাংলা (বাংলাদেশ)",
+      "search_name": "bangla (Banglades)"
+    },
+    {
+      "locale": "bn-IN",
+      "language": "বাংলা (ভারত)",
+      "search_name": "bangla (India)"
+    },
+    {
+      "locale": "bs-BA",
+      "language": "bosanski (Bosna i Hercegovina)",
+      "search_name": "bosnyák (Bosznia-Hercegovina)"
+    },
+    {
+      "locale": "ca-ES",
+      "language": "català (Espanya)",
+      "search_name": "katalán (Spanyolország)"
+    },
+    {
+      "locale": "cy-GB",
+      "language": "Cymraeg (Y Deyrnas Unedig)",
+      "search_name": "walesi (Egyesült Királyság)"
+    },
+    {
+      "locale": "da-DK",
+      "language": "dansk (Danmark)",
+      "search_name": "dán (Dánia)"
+    },
+    {
+      "locale": "de-AT",
+      "language": "Deutsch (Österreich)",
+      "search_name": "osztrák német"
+    },
+    {
+      "locale": "de-CH",
+      "language": "Deutsch (Schweiz)",
+      "search_name": "svájci felnémet"
+    },
+    {
+      "locale": "el-GR",
+      "language": "Ελληνικά (Ελλάδα)",
+      "search_name": "görög (Görögország)"
+    },
+    {
+      "locale": "en-AU",
+      "language": "Australian English",
+      "search_name": "ausztrál angol"
+    },
+    {
+      "locale": "en-CA",
+      "language": "Canadian English",
+      "search_name": "kanadai angol"
+    },
+    {
+      "locale": "en-GB",
+      "language": "British English",
+      "search_name": "brit angol"
+    },
+    {
+      "locale": "en-HK",
+      "language": "English (Hong Kong SAR China)",
+      "search_name": "angol (Hongkong KKT)"
+    },
+    {
+      "locale": "en-IE",
+      "language": "English (Ireland)",
+      "search_name": "angol (Írország)"
+    },
+    {
+      "locale": "en-IN",
+      "language": "English (India)",
+      "search_name": "angol (India)"
+    },
+    {
+      "locale": "en-KE",
+      "language": "English (Kenya)",
+      "search_name": "angol (Kenya)"
+    },
+    {
+      "locale": "en-NG",
+      "language": "English (Nigeria)",
+      "search_name": "angol (Nigéria)"
+    },
+    {
+      "locale": "en-NZ",
+      "language": "English (New Zealand)",
+      "search_name": "angol (Új-Zéland)"
+    },
+    {
+      "locale": "en-PH",
+      "language": "English (Philippines)",
+      "search_name": "angol (Fülöp-szigetek)"
+    },
+    {
+      "locale": "en-SG",
+      "language": "English (Singapore)",
+      "search_name": "angol (Szingapúr)"
+    },
+    {
+      "locale": "en-TZ",
+      "language": "English (Tanzania)",
+      "search_name": "angol (Tanzánia)"
+    },
+    {
+      "locale": "en-ZA",
+      "language": "English (South Africa)",
+      "search_name": "angol (Dél-afrikai Köztársaság)"
+    },
+    {
+      "locale": "es-AR",
+      "language": "español (Argentina)",
+      "search_name": "spanyol (Argentína)"
+    },
+    {
+      "locale": "es-BO",
+      "language": "español (Bolivia)",
+      "search_name": "spanyol (Bolívia)"
+    },
+    {
+      "locale": "es-CL",
+      "language": "español (Chile)",
+      "search_name": "spanyol (Chile)"
+    },
+    {
+      "locale": "es-CO",
+      "language": "español (Colombia)",
+      "search_name": "spanyol (Kolumbia)"
+    },
+    {
+      "locale": "es-CR",
+      "language": "español (Costa Rica)",
+      "search_name": "spanyol (Costa Rica)"
+    },
+    {
+      "locale": "es-CU",
+      "language": "español (Cuba)",
+      "search_name": "spanyol (Kuba)"
+    },
+    {
+      "locale": "es-DO",
+      "language": "español (República Dominicana)",
+      "search_name": "spanyol (Dominikai Köztársaság)"
+    },
+    {
+      "locale": "es-EC",
+      "language": "español (Ecuador)",
+      "search_name": "spanyol (Ecuador)"
+    },
+    {
+      "locale": "es-GQ",
+      "language": "español (Guinea Ecuatorial)",
+      "search_name": "spanyol (Egyenlítői-Guinea)"
+    },
+    {
+      "locale": "es-GT",
+      "language": "español (Guatemala)",
+      "search_name": "spanyol (Guatemala)"
+    },
+    {
+      "locale": "es-HN",
+      "language": "español (Honduras)",
+      "search_name": "spanyol (Honduras)"
+    },
+    {
+      "locale": "es-MX",
+      "language": "español de México",
+      "search_name": "spanyol (mexikói)"
+    },
+    {
+      "locale": "es-NI",
+      "language": "español (Nicaragua)",
+      "search_name": "spanyol (Nicaragua)"
+    },
+    {
+      "locale": "es-PA",
+      "language": "español (Panamá)",
+      "search_name": "spanyol (Panama)"
+    },
+    {
+      "locale": "es-PE",
+      "language": "español (Perú)",
+      "search_name": "spanyol (Peru)"
+    },
+    {
+      "locale": "es-PR",
+      "language": "español (Puerto Rico)",
+      "search_name": "spanyol (Puerto Rico)"
+    },
+    {
+      "locale": "es-PY",
+      "language": "español (Paraguay)",
+      "search_name": "spanyol (Paraguay)"
+    },
+    {
+      "locale": "es-SV",
+      "language": "español (El Salvador)",
+      "search_name": "spanyol (Salvador)"
+    },
+    {
+      "locale": "es-US",
+      "language": "español (Estados Unidos)",
+      "search_name": "spanyol (Egyesült Államok)"
+    },
+    {
+      "locale": "es-UY",
+      "language": "español (Uruguay)",
+      "search_name": "spanyol (Uruguay)"
+    },
+    {
+      "locale": "es-VE",
+      "language": "español (Venezuela)",
+      "search_name": "spanyol (Venezuela)"
+    },
+    {
+      "locale": "et-EE",
+      "language": "eesti (Eesti)",
+      "search_name": "észt (Észtország)"
+    },
+    {
+      "locale": "eu-ES",
+      "language": "euskara (Espainia)",
+      "search_name": "baszk (Spanyolország)"
+    },
+    {
+      "locale": "fa-IR",
+      "language": "فارسی (ایران)",
+      "search_name": "perzsa (Irán)"
+    },
+    {
+      "locale": "fi-FI",
+      "language": "suomi (Suomi)",
+      "search_name": "finn (Finnország)"
+    },
+    {
+      "locale": "fil-PH",
+      "language": "Filipino (Pilipinas)",
+      "search_name": "filippínó (Fülöp-szigetek)"
+    },
+    {
+      "locale": "fr-BE",
+      "language": "français (Belgique)",
+      "search_name": "francia (Belgium)"
+    },
+    {
+      "locale": "fr-CA",
+      "language": "français canadien",
+      "search_name": "kanadai francia"
+    },
+    {
+      "locale": "fr-CH",
+      "language": "français suisse",
+      "search_name": "svájci francia"
+    },
+    {
+      "locale": "ga-IE",
+      "language": "Gaeilge (Éire)",
+      "search_name": "ír (Írország)"
+    },
+    {
+      "locale": "gl-ES",
+      "language": "galego (España)",
+      "search_name": "gallego (Spanyolország)"
+    },
+    {
+      "locale": "gu-IN",
+      "language": "ગુજરાતી (ભારત)",
+      "search_name": "gudzsaráti (India)"
+    },
+    {
+      "locale": "he-IL",
+      "language": "עברית (ישראל)",
+      "search_name": "héber (Izrael)"
+    },
+    {
+      "locale": "hi-IN",
+      "language": "हिन्दी (भारत)",
+      "search_name": "hindi (India)"
+    },
+    {
+      "locale": "hr-HR",
+      "language": "hrvatski (Hrvatska)",
+      "search_name": "horvát (Horvátország)"
+    },
+    {
+      "locale": "hy-AM",
+      "language": "հայերեն (Հայաստան)",
+      "search_name": "örmény (Örményország)"
+    },
+    {
+      "locale": "id-ID",
+      "language": "Indonesia (Indonesia)",
+      "search_name": "indonéz (Indonézia)"
+    },
+    {
+      "locale": "is-IS",
+      "language": "íslenska (Ísland)",
+      "search_name": "izlandi (Izland)"
+    },
+    {
+      "locale": "iu-Cans-CA",
+      "language": "Inuktitut (Unified Canadian Aboriginal Syllabics, Canada)",
+      "search_name": "inuktitut (Egyesített kanadai őslakos jelek, Kanada)"
+    },
+    {
+      "locale": "iu-Latn-CA",
+      "language": "Inuktitut (Latin, Canada)",
+      "search_name": "inuktitut (Latin, Kanada)"
+    },
+    {
+      "locale": "ja-JP",
+      "language": "日本語 (日本)",
+      "search_name": "japán (Japán)"
+    },
+    {
+      "locale": "jv-ID",
+      "language": "Jawa (Indonésia)",
+      "search_name": "jávai (Indonézia)"
+    },
+    {
+      "locale": "ka-GE",
+      "language": "ქართული (საქართველო)",
+      "search_name": "grúz (Grúzia)"
+    },
+    {
+      "locale": "kk-KZ",
+      "language": "қазақ тілі (Қазақстан)",
+      "search_name": "kazah (Kazahsztán)"
+    },
+    {
+      "locale": "km-KH",
+      "language": "ខ្មែរ (កម្ពុជា)",
+      "search_name": "khmer (Kambodzsa)"
+    },
+    {
+      "locale": "kn-IN",
+      "language": "ಕನ್ನಡ (ಭಾರತ)",
+      "search_name": "kannada (India)"
+    },
+    {
+      "locale": "ko-KR",
+      "language": "한국어(대한민국)",
+      "search_name": "koreai (Dél-Korea)"
+    },
+    {
+      "locale": "lo-LA",
+      "language": "ລາວ (ລາວ)",
+      "search_name": "lao (Laosz)"
+    },
+    {
+      "locale": "lt-LT",
+      "language": "lietuvių (Lietuva)",
+      "search_name": "litván (Litvánia)"
+    },
+    {
+      "locale": "lv-LV",
+      "language": "latviešu (Latvija)",
+      "search_name": "lett (Lettország)"
+    },
+    {
+      "locale": "mk-MK",
+      "language": "македонски (Северна Македонија)",
+      "search_name": "macedón (Észak-Macedónia)"
+    },
+    {
+      "locale": "ml-IN",
+      "language": "മലയാളം (ഇന്ത്യ)",
+      "search_name": "malajálam (India)"
+    },
+    {
+      "locale": "mn-MN",
+      "language": "монгол (Монгол)",
+      "search_name": "mongol (Mongólia)"
+    },
+    {
+      "locale": "mr-IN",
+      "language": "मराठी (भारत)",
+      "search_name": "maráthi (India)"
+    },
+    {
+      "locale": "ms-MY",
+      "language": "Melayu (Malaysia)",
+      "search_name": "maláj (Malajzia)"
+    },
+    {
+      "locale": "mt-MT",
+      "language": "Malti (Malta)",
+      "search_name": "máltai (Málta)"
+    },
+    {
+      "locale": "my-MM",
+      "language": "မြန်မာ (မြန်မာ)",
+      "search_name": "burmai (Mianmar)"
+    },
+    {
+      "locale": "nb-NO",
+      "language": "norsk bokmål (Norge)",
+      "search_name": "norvég (bokmål) (Norvégia)"
+    },
+    {
+      "locale": "ne-NP",
+      "language": "नेपाली (नेपाल)",
+      "search_name": "nepáli (Nepál)"
+    },
+    {
+      "locale": "nl-BE",
+      "language": "Vlaams",
+      "search_name": "flamand"
+    },
+    {
+      "locale": "nl-NL",
+      "language": "Nederlands (Nederland)",
+      "search_name": "holland (Hollandia)"
+    },
+    {
+      "locale": "or-IN",
+      "language": "ଓଡ଼ିଆ (ଭାରତ)",
+      "search_name": "odia (India)"
+    },
+    {
+      "locale": "pa-IN",
+      "language": "ਪੰਜਾਬੀ (ਭਾਰਤ)",
+      "search_name": "pandzsábi (India)"
+    },
+    {
+      "locale": "ps-AF",
+      "language": "پښتو (افغانستان)",
+      "search_name": "pastu (Afganisztán)"
+    },
+    {
+      "locale": "pt-BR",
+      "language": "português (Brasil)",
+      "search_name": "brazíliai portugál"
+    },
+    {
+      "locale": "pt-PT",
+      "language": "português europeu",
+      "search_name": "európai portugál"
+    },
+    {
+      "locale": "ro-RO",
+      "language": "română (România)",
+      "search_name": "román (Románia)"
+    },
+    {
+      "locale": "ru-RU",
+      "language": "русский (Россия)",
+      "search_name": "orosz (Oroszország)"
+    },
+    {
+      "locale": "si-LK",
+      "language": "සිංහල (ශ්‍රී ලංකාව)",
+      "search_name": "szingaléz (Srí Lanka)"
+    },
+    {
+      "locale": "sl-SI",
+      "language": "slovenščina (Slovenija)",
+      "search_name": "szlovén (Szlovénia)"
+    },
+    {
+      "locale": "so-SO",
+      "language": "Soomaali (Soomaaliya)",
+      "search_name": "szomáli (Szomália)"
+    },
+    {
+      "locale": "sq-AL",
+      "language": "shqip (Shqipëri)",
+      "search_name": "albán (Albánia)"
+    },
+    {
+      "locale": "sr-Latn-RS",
+      "language": "srpski (latinica, Srbija)",
+      "search_name": "szerb (Latin, Szerbia)"
+    },
+    {
+      "locale": "sr-RS",
+      "language": "српски (Србија)",
+      "search_name": "szerb (Szerbia)"
+    },
+    {
+      "locale": "su-ID",
+      "language": "Basa Sunda (Indonesia)",
+      "search_name": "szundanéz (Indonézia)"
+    },
+    {
+      "locale": "sv-SE",
+      "language": "svenska (Sverige)",
+      "search_name": "svéd (Svédország)"
+    },
+    {
+      "locale": "sw-KE",
+      "language": "Kiswahili (Kenya)",
+      "search_name": "szuahéli (Kenya)"
+    },
+    {
+      "locale": "sw-TZ",
+      "language": "Kiswahili (Tanzania)",
+      "search_name": "szuahéli (Tanzánia)"
+    },
+    {
+      "locale": "ta-IN",
+      "language": "தமிழ் (இந்தியா)",
+      "search_name": "tamil (India)"
+    },
+    {
+      "locale": "ta-LK",
+      "language": "தமிழ் (இலங்கை)",
+      "search_name": "tamil (Srí Lanka)"
+    },
+    {
+      "locale": "ta-MY",
+      "language": "தமிழ் (மலேசியா)",
+      "search_name": "tamil (Malajzia)"
+    },
+    {
+      "locale": "ta-SG",
+      "language": "தமிழ் (சிங்கப்பூர்)",
+      "search_name": "tamil (Szingapúr)"
+    },
+    {
+      "locale": "te-IN",
+      "language": "తెలుగు (భారతదేశం)",
+      "search_name": "telugu (India)"
+    },
+    {
+      "locale": "th-TH",
+      "language": "ไทย (ไทย)",
+      "search_name": "thai (Thaiföld)"
+    },
+    {
+      "locale": "tr-TR",
+      "language": "Türkçe (Türkiye)",
+      "search_name": "török (Törökország)"
+    },
+    {
+      "locale": "uk-UA",
+      "language": "українська (Україна)",
+      "search_name": "ukrán (Ukrajna)"
+    },
+    {
+      "locale": "ur-IN",
+      "language": "اردو (بھارت)",
+      "search_name": "urdu (India)"
+    },
+    {
+      "locale": "ur-PK",
+      "language": "اردو (پاکستان)",
+      "search_name": "urdu (Pakisztán)"
+    },
+    {
+      "locale": "uz-UZ",
+      "language": "o‘zbek (Oʻzbekiston)",
+      "search_name": "üzbég (Üzbegisztán)"
+    },
+    {
+      "locale": "vi-VN",
+      "language": "Tiếng Việt (Việt Nam)",
+      "search_name": "vietnámi (Vietnám)"
+    },
+    {
+      "locale": "wuu-CN",
+      "language": "Wu Chinese (China)",
+      "search_name": "wu kínai (Kína)"
+    },
+    {
+      "locale": "yue-CN",
+      "language": "粤语 (中国)",
+      "search_name": "kantoni (Kína)"
+    },
+    {
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "search_name": "kínai (Kína)"
+    },
+    {
+      "locale": "zh-CN-henan",
+      "language": "中文（中国，HENAN）",
+      "search_name": "kínai (Kína, HENAN)"
+    },
+    {
+      "locale": "zh-CN-shandong",
+      "language": "中文（中国，SHANDONG）",
+      "search_name": "kínai (Kína, SHANDONG)"
+    },
+    {
+      "locale": "zh-HK",
+      "language": "中文（中國香港特別行政區）",
+      "search_name": "kínai (Hongkong KKT)"
+    },
+    {
+      "locale": "zh-TW",
+      "language": "中文（台灣）",
+      "search_name": "kínai (Tajvan)"
+    },
+    {
+      "locale": "zu-ZA",
+      "language": "isiZulu (iNingizimu Afrika)",
+      "search_name": "zulu (Dél-afrikai Köztársaság)"
+    }
+  ]
+}

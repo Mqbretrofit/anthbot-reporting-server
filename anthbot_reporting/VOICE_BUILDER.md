@@ -13,6 +13,14 @@ add-on recovers interrupted jobs and reuses finished audio.
 2. Select a provider, languages, voices, text style, delivery and character
    effect. **Add to batch** saves that selection; different recipes can coexist
    in the same batch. Cloud voices apply only to their matching locale.
+   The searchable language picker offers all 150 language/region entries from
+   the desktop Builder's Nabu Casa catalog, including separate German, Austrian
+   and Swiss German choices. Search by native name, Hungarian name or locale.
+   Existing selections and manually added languages remain available. Locales
+   without a prepared script use the existing cached OpenAI translation flow;
+   an OpenAI key is required unless a matching script has already been imported
+   or cached. Speech language coverage depends on the selected provider/model;
+   the existing Cloud voice presets remain unchanged.
 3. Generate **A004/A005 previews**, then start a full batch. The full builder
    reuses the preview TTS cache. Generated output is validated as MP3,
    16 kHz, mono, 32 kbit/s. The three original non-speech assets A001/A003/A030
