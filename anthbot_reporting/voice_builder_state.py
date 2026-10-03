@@ -89,6 +89,10 @@ def db():
         CREATE TABLE IF NOT EXISTS budgets (
             id TEXT PRIMARY KEY, credit_limit INTEGER NOT NULL, reserved REAL DEFAULT 0
         );
+        CREATE TABLE IF NOT EXISTS batch_options (
+            id TEXT PRIMARY KEY, continue_on_error INTEGER DEFAULT 1,
+            upload_enabled INTEGER DEFAULT 1
+        );
     ''')
     try:
         yield c
@@ -104,6 +108,7 @@ class Spec(BaseModel):
     language: str = Field(default='Magyar', min_length=1, max_length=64)
     voice_id: str = Field(min_length=1, max_length=128, pattern=r'^[a-zA-Z0-9_.|:-]+$')
     voice_display_name: str = Field(default='', max_length=100)
+    provider_voice_name: str = Field(default='', max_length=200)
     voice_gender: str = Field(default='unknown', pattern=r'^(male|female|unknown)$')
     text_style: str = 'standard'
     delivery: str = 'natural'
@@ -112,6 +117,8 @@ class Spec(BaseModel):
     error_model: str = Field(default='eleven_flash_v2_5', max_length=80, pattern=r'^[a-zA-Z0-9_.-]+$')
     hybrid: bool = True
     translation_model: str = Field(default='gpt-4o-mini', max_length=80, pattern=r'^[a-zA-Z0-9_.-]+$')
+    translation_target: str = Field(default='', pattern=r'^(?:[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8}){0,2})?$')
+    legacy_theme: str = Field(default='', pattern=r'^(|standard|funny|robot|scifi|deep|radio)$')
     ha_url: str = Field(default='', max_length=2048)
     ha_engine: str = Field(default='tts.home_assistant_cloud', max_length=128, pattern=r'^tts\.[a-zA-Z0-9_]+$')
 
@@ -135,7 +142,7 @@ class Spec(BaseModel):
 
 class Settings(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    selections: list[Spec] = Field(default_factory=list, max_length=64)
+    selections: list[Spec] = Field(default_factory=list, max_length=4096)
     credit_limit: int = Field(default=10000, ge=0, le=10000000)
     secret_updates: dict[str, str] = Field(default_factory=dict)
     draft: dict = Field(default_factory=dict)
@@ -145,8 +152,10 @@ class Settings(BaseModel):
     def valid_draft(cls, value):
         allowed = {'provider','locales','voices','text_style','delivery','character_effect','model','error_model',
                    'hybrid','translation_model','ha_url','ha_engine','custom_voice','custom_name','custom_gender',
-                   'custom_locale','custom_language','custom_voices','custom_languages','voice_catalog'}
-        if not set(value) <= allowed or len(canonical(value)) > 20000:
+                   'custom_locale','custom_language','custom_voices','custom_languages','voice_catalog',
+                   'translation_target','legacy_theme','voice_query','licensed_only','batch_scope','continue_on_error',
+                   'locale_selections','follow_log','skip_completed','upload_enabled'}
+        if not set(value) <= allowed or len(canonical(value)) > 1024*1024:
             raise ValueError('Érvénytelen felületi beállítások')
         def has_secret(obj):
             if isinstance(obj, dict):
@@ -239,14 +248,17 @@ def jobs():
 def pending_work():
     with db() as c:
         return c.execute("""SELECT 1 FROM jobs WHERE status IN ('queued','running') OR
-            (status='completed' AND mode='build' AND published='' AND error='') LIMIT 1""").fetchone() is not None
+            (status='completed' AND mode='build' AND published='' AND error='' AND
+             NOT EXISTS (SELECT 1 FROM batch_options b WHERE b.id=jobs.batch_id AND b.upload_enabled=0)) LIMIT 1""").fetchone() is not None
 
 
-def create_jobs(specs, mode, credit_limit):
+def create_jobs(specs, mode, credit_limit, *, continue_on_error=True, upload_enabled=True):
     batch = secrets.token_hex(16)
     ids = []
     with db() as c:
         c.execute('INSERT INTO budgets(id, credit_limit) VALUES (?,?)', (batch, credit_limit))
+        c.execute('INSERT INTO batch_options(id,continue_on_error,upload_enabled) VALUES (?,?,?)',
+                  (batch,int(continue_on_error),int(upload_enabled)))
         for spec in specs:
             jid = secrets.token_hex(16)
             ids.append(jid)
@@ -256,7 +268,7 @@ def create_jobs(specs, mode, credit_limit):
 
 
 def update(job_id, **values):
-    allowed = {'status', 'progress', 'current_file', 'error', 'published'}
+    allowed = {'status', 'progress', 'current_file', 'error', 'published', 'mode'}
     if not values or not set(values) <= allowed:
         raise ValueError('Invalid job update')
     with db() as c:
@@ -292,6 +304,11 @@ def set_status(job_id, status):
             if row['status'] not in ('failed', 'paused', 'completed'):
                 raise ValueError('Ez a feladat már fut vagy várakozik')
         c.execute('UPDATE jobs SET status=?,error=?,updated=? WHERE id=?', (status, '', time.time(), job_id))
+
+
+def refund_reservation(batch_id, amount):
+    with db() as c:
+        c.execute('UPDATE budgets SET reserved=MAX(0,reserved-?) WHERE id=?',(amount,batch_id))
 
 
 def launch_worker():

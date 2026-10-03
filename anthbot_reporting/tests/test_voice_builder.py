@@ -19,6 +19,7 @@ import voice_builder_engine as engine
 import voice_builder_api as api_module
 import voice_builder_worker as worker
 import voice_builder_publish as publisher
+import voice_builder_text as text_engine
 
 
 class VoiceBuilderTests(unittest.TestCase):
@@ -104,7 +105,7 @@ class VoiceBuilderTests(unittest.TestCase):
             state.Spec(provider='openai',voice_id='coral',locale=entry['locale'],language=entry['language'])
         self.assertIn('language-search',r.text)
         self.assertEqual(len(cat['effects']),9)
-        self.assertEqual(len(self.api('/voices/ha_cloud').json()['items']),18)
+        self.assertEqual(len(self.api('/voices/ha_cloud').json()['items']),489)
         self.client.post('/dashboard/login',data={'token':'test-admin'})
         self.assertIn('Voice Builder',self.client.get('/dashboard').text)
 
@@ -219,19 +220,25 @@ class VoiceBuilderTests(unittest.TestCase):
     def test_styles_rewrite_104_rows_keep_97_errors_exact_and_reuse_text_cache(self):
         spec=self.spec.model_copy(update={'text_style':'funny'})
         job=self.job(spec)
-        def rewrite(rows,*a):
+        def rewrite(rows,*a,**kw):
+            if kw.get('qa'):
+                return [{'file':p['file'],'corrected_text':p['candidate'],'grammar_ok':True,'meaning_ok':True,
+                         'character_ok':True,'review_required':False,'note':''} for p in rows]
             return [{'file':p['file'],'text':'Kertkaland! '+p['file']} for p in rows]
-        with patch.object(engine,'chat_rows',side_effect=rewrite) as chat:
+        with patch.object(text_engine,'responses_rows',side_effect=rewrite) as chat:
             doc=engine.load_prompts(spec,{},job['id'])
         source={p['file']:p['text'] for p in state.load_asset('prompts/hu-HU.json')['prompts']}
         self.assertEqual(sum(p['file'].startswith('E') for p in doc['prompts']),97)
-        self.assertEqual(len(chat.call_args[0][0]),104)
+        self.assertEqual(chat.call_count,2)  # draft, independent full 201-row QA
+        self.assertEqual(len(chat.call_args[0][0]),201)
+        self.assertEqual(doc['character_rewrite_changed_count'],104)
+        self.assertEqual(doc['style_verification'],text_engine.VERIFICATION)
         for p in doc['prompts']:
             if p['file'].startswith('E'):
                 self.assertEqual(p['text'],source[p['file']])
             else:
                 self.assertNotEqual(p['text'],source[p['file']])
-        with patch.object(engine,'chat_rows',side_effect=AssertionError('Repeat translation')):
+        with patch.object(text_engine,'responses_rows',side_effect=AssertionError('Repeat translation or QA')):
             engine.load_prompts(spec,{},self.job(spec)['id'])
         self.assertFalse(engine.fresh_text('Hello world.','Hello world. Ha ha!'))
 
@@ -239,13 +246,16 @@ class VoiceBuilderTests(unittest.TestCase):
         first=state.Spec(provider='openai',voice_id='coral',locale='ro-RO',language='Română',text_style='funny')
         effect=next(x['id'] for x in state.load_asset('character-effects.json')['effects'] if x['id']!='none')
         second=first.model_copy(update={'voice_id':'onyx','character_effect':effect})
-        def rows(items,instruction,*a):
-            prefix='Kertkaland' if instruction.startswith('Rewrite') else 'Traducere'
+        def rows(items,instruction,*a,**kw):
+            if kw.get('qa'):
+                return [{'file':p['file'],'corrected_text':p['candidate'],'grammar_ok':True,'meaning_ok':True,
+                         'character_ok':True,'review_required':False,'note':''} for p in items]
+            prefix='Kertkaland' if 'copywriter' in instruction else 'Traducere'
             return [{'file':p['file'],'text':prefix+' '+p['file']} for p in items]
-        with patch.object(engine,'chat_rows',side_effect=rows) as chat:
+        with patch.object(text_engine,'responses_rows',side_effect=rows) as chat:
             original=engine.load_prompts(first,{},self.job(first)['id'])
-            self.assertEqual(chat.call_count,2)
-        with patch.object(engine,'chat_rows',side_effect=AssertionError('Duplicate translation/style')):
+            self.assertEqual(chat.call_count,3)
+        with patch.object(text_engine,'responses_rows',side_effect=AssertionError('Duplicate translation/style/QA')):
             reused=engine.load_prompts(second,{},self.job(second)['id'])
         self.assertEqual(original,reused)
 

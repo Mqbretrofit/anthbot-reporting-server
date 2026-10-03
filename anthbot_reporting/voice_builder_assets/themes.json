@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "builder_version": "0.1.0-alpha.7.20.4",
+  "themes": [
+    {
+      "id": "standard",
+      "display_name": "Standard / eredeti szöveg",
+      "short_name": "Standard",
+      "description": "Tiszta TTS hang, eredeti ANTHBOT szövegkönyv.",
+      "ffmpeg_filter": "",
+      "provider_style_preference": [],
+      "script_override_dir": "",
+      "commercial_tier": "standard",
+      "license_required": true,
+      "sellable": true
+    },
+    {
+      "id": "funny",
+      "display_name": "Vicces / Cartoon",
+      "short_name": "Vicces",
+      "description": "Legacy klasszikus kompatibilitási téma. A teljes, kötelező 104/104 nem-error humoros átíráshoz használd a „Minden nyelv / stílus / automatikus” ablak Vicces szövegstílusát; ott csak az E*.mp3 error sorok maradnak komolyak.",
+      "ffmpeg_filter": "asetrate=19000,aresample=16000,atempo=0.842105",
+      "provider_style_preference": [
+        "cheerful",
+        "excited"
+      ],
+      "script_override_dir": "theme-overrides/funny",
+      "commercial_tier": "premium",
+      "license_required": true,
+      "sellable": true
+    },
+    {
+      "id": "robot",
+      "display_name": "Robot",
+      "short_name": "Robot",
+      "description": "Elektronikus/robotikus hangszín, az eredeti mondatok megtartásával.",
+      "ffmpeg_filter": "chorus=0.5:0.9:40|55:0.4|0.3:0.25|0.2:2|2.3",
+      "provider_style_preference": [],
+      "script_override_dir": "",
+      "commercial_tier": "premium",
+      "license_required": true,
+      "sellable": true
+    },
+    {
+      "id": "scifi",
+      "display_name": "Sci-Fi",
+      "short_name": "Sci-Fi",
+      "description": "Futurisztikus flanger + enyhe visszhang; az eredeti mondatok megtartásával.",
+      "ffmpeg_filter": "flanger=delay=8:depth=2:regen=0:width=71:speed=0.8:shape=triangular:phase=25:interp=linear,aecho=0.8:0.7:35:0.18",
+      "provider_style_preference": [
+        "excited"
+      ],
+      "script_override_dir": "",
+      "commercial_tier": "premium",
+      "license_required": true,
+      "sellable": true
+    },
+    {
+      "id": "deep",
+      "display_name": "Mély / Boss",
+      "short_name": "Mély",
+      "description": "Mélyebb hangmagasság, változatlan szöveggel.",
+      "ffmpeg_filter": "asetrate=13500,aresample=16000,atempo=1.185185",
+      "provider_style_preference": [],
+      "script_override_dir": "",
+      "commercial_tier": "premium",
+      "license_required": true,
+      "sellable": true
+    },
+    {
+      "id": "radio",
+      "display_name": "Rádió / Walkie-talkie",
+      "short_name": "Rádió",
+      "description": "Keskenysávú rádiós karakter, változatlan szöveggel.",
+      "ffmpeg_filter": "highpass=f=250,lowpass=f=3400,acompressor=threshold=0.125:ratio=4:attack=5:release=50",
+      "provider_style_preference": [],
+      "script_override_dir": "",
+      "commercial_tier": "premium",
+      "license_required": true,
+      "sellable": true
+    }
+  ]
+}

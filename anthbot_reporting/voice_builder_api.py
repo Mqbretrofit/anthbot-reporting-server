@@ -10,7 +10,7 @@ import zipfile
 from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 import app as core
@@ -38,9 +38,12 @@ PREFIX = '/api/anthbot/admin/voice-builder'
 
 class Start(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    selections: list[state.Spec] = Field(min_length=1, max_length=64)
-    mode: str = Field(default='build', pattern=r'^(build|preview|import)$')
+    selections: list[state.Spec] = Field(min_length=1, max_length=4096)
+    mode: str = Field(default='build', pattern=r'^(build|preview|import|text|generate)$')
     credit_limit: int = Field(default=10000, ge=0, le=10000000)
+    skip_completed: bool = True
+    continue_on_error: bool = True
+    upload_enabled: bool = True
 
 
 class Resume(BaseModel):
@@ -67,7 +70,8 @@ def catalog():
             'providers':state.load_asset('tts-providers.json'),
             'text_styles':state.load_asset('text-styles.json')['styles'],
             'delivery_styles':state.load_asset('delivery-styles.json')['styles'],
-            'effects':state.load_asset('character-effects.json')['effects']}
+            'effects':state.load_asset('character-effects.json')['effects'],
+            'legacy_themes':state.load_asset('themes.json')['themes']}
 
 
 @router.get(PREFIX + '/settings')
@@ -81,11 +85,11 @@ def save_settings(payload: state.Settings):
 
 
 @router.get(PREFIX + '/voices/{provider}')
-def voices(provider: str):
+def voices(provider: str, query: str = '', licensed_only: bool = True):
     if provider not in ('elevenlabs','openai','ha_cloud','fish_audio'):
         raise HTTPException(422, 'Ismeretlen szolgáltató')
     try:
-        return {'items':engine.available_voices(provider)}
+        return {'items':engine.available_voices(provider,query[:200],licensed_only)}
     except RuntimeError as err:
         raise HTTPException(502, str(err)) from None
 
@@ -115,13 +119,42 @@ def jobs():
 def start(payload: Start):
     specs = list({state.digest(s.model_dump()):s for s in payload.selections}.values())
     specs = [s.model_copy(update={'voice_display_name': engine.alias(s)}) if not s.voice_display_name.strip() else s for s in specs]
-    ids = state.create_jobs(specs, 'build' if payload.mode == 'import' else payload.mode, payload.credit_limit)
+    skipped = []
+    if payload.skip_completed and payload.mode != 'import':
+        def signature(spec):
+            return state.digest(spec.model_dump(exclude={'voice_display_name','provider_voice_name','language'}))
+        with state.db() as c:
+            previous = [state.public_job(r) for r in c.execute("SELECT * FROM jobs WHERE status='completed' AND mode=? ORDER BY created DESC",(payload.mode,))]
+        complete = {}
+        for old in previous:
+            try:
+                directory = state.job_dir(old['id'])
+                doc = engine.validate_prompts(json.loads((directory/'prompts.json').read_text()))
+                from voice_builder_text import require_approval
+                require_approval(old['id'],doc)
+                if payload.mode == 'build':
+                    manifest = json.loads((directory/'manifest.json').read_text())
+                    if manifest['prompt_sha256'] != state.digest(doc) or not (directory/'pack.tar.gz').exists():
+                        continue
+                complete.setdefault(signature(state.Spec.model_validate(old['spec'])),old['id'])
+            except (OSError,ValueError,RuntimeError,KeyError):
+                continue
+        selected = []
+        for spec in specs:
+            prior = complete.get(signature(spec))
+            if prior:
+                skipped.append(prior)
+            else:
+                selected.append(spec)
+        specs = selected
+    ids = state.create_jobs(specs, 'build' if payload.mode == 'import' else payload.mode, payload.credit_limit,
+        continue_on_error=payload.continue_on_error,upload_enabled=payload.upload_enabled) if specs else []
     if payload.mode == 'import':
         for jid in ids:
             state.set_status(jid, 'paused')
     else:
         state.launch_worker()
-    return {'items':[state.get_job(jid) for jid in ids]}
+    return {'items':[state.get_job(jid) for jid in ids+skipped], 'skipped_completed':skipped}
 
 
 @router.get(PREFIX + '/jobs/{jid}')
@@ -162,7 +195,8 @@ def resume(jid: str, payload: Resume):
 @router.get(PREFIX + '/jobs/{jid}/files/{name}')
 def download(jid: str, name: str):
     job_or_404(jid)
-    if name in ('pack.tar.gz','manifest.json','catalog.json','prompts.json','estimate.json'):
+    if name in ('pack.tar.gz','manifest.json','catalog.json','prompts.json','estimate.json','voice_set.json',
+                'text-review.json','audio-diagnostics.json'):
         path = state.job_dir(jid) / name
     elif name in ('A004.mp3','A005.mp3'):
         path = state.job_dir(jid) / 'audio' / name
@@ -241,7 +275,11 @@ def _import_audio(jid, file):
             path = staged/name
             state.atomic(path,data)
             if not engine.spoken_valid(path):
-                raise ValueError('Nem 16 kHz / mono / 32 kbit/s MP3: '+name)
+                if not engine.raw_valid(path):
+                    raise ValueError('Hibás MP3: '+name)
+                target = staged/('normalized-'+name)
+                engine.normalize(path,target,state.Spec.model_validate(job['spec']))
+                target.replace(path)
         directory.mkdir(parents=True,exist_ok=True)
         for name in files:
             (staged/name).replace(directory/name)
@@ -309,6 +347,135 @@ def save_rules(payload: dict):
             raise HTTPException(422,'Érvénytelen stílusszabály')
     state.atomic(state.root()/'style-rules.json',state.canonical(payload).encode())
     return payload
+
+
+@router.post(PREFIX + '/style-rules/reset')
+def reset_rules():
+    payload = state.load_asset('style-rules.defaults.json')
+    state.atomic(state.root()/'style-rules.json',state.canonical(payload).encode())
+    return payload
+
+
+@router.post(PREFIX + '/preset-import')
+def import_preset(file: UploadFile = File(...)):
+    """Restore desktop v5 selections and options, retaining server credentials."""
+    try:
+        raw = file.file.read(1024*1024+1)
+        if len(raw)>1024*1024:
+            raise ValueError('Túl nagy beállításfájl')
+        doc = json.loads(raw.decode('utf-8-sig'))
+        if not isinstance(doc,dict) or not str(doc.get('schema','')).startswith('anthbot-selection-preset-v'):
+            raise ValueError('Desktop Builder selection_preset.json szükséges')
+        provider = doc.get('tts_provider_id','elevenlabs')
+        selections, local, voices = [], {}, {}
+        defaults = {'provider':provider, 'text_style':doc.get('text_style_id','standard'),
+                    'delivery':doc.get('delivery_style_id','natural'), 'character_effect':doc.get('character_effect_id','none'),
+                    'hybrid':doc.get('elevenlabs_hybrid',True), 'translation_model':doc.get('openai_model') or 'gpt-4o-mini',
+                    'ha_url':doc.get('home_assistant_url','')}
+        if provider == 'fish_audio':
+            defaults['model'] = doc.get('fish_audio_model','s2.1-pro-free')
+        for entry in doc.get('catalog',[]):
+            locale = entry['locale']
+            metadata = {v['voice_id']:v for v in entry.get('voice_info',[])}
+            local[locale] = {'voices':entry.get('voices',[]), 'target':entry.get('translation_target','')}
+            for vid in entry.get('voices',[]):
+                info = metadata.get(vid,{})
+                spec = state.Spec(**defaults,locale=locale,language=entry.get('native_name') or entry.get('display_name') or locale,
+                    voice_id=vid,provider_voice_name=info.get('name',''),
+                    voice_gender=info.get('gender','unknown') if info.get('gender') in ('female','male') else 'unknown',
+                    translation_target=entry.get('translation_target',''))
+                selections.append(spec)
+                voices[(locale,vid)] = {'id':vid,'locale':locale if provider=='ha_cloud' else '',
+                    'name':info.get('name') or vid,'gender':spec.voice_gender}
+        current = state.settings()
+        draft = {**current.get('draft',{}),**defaults,'locales':list(local),'locale_selections':local,
+                 'voice_catalog':list(voices.values()),'voices':list({s.voice_id for s in selections}),
+                 'licensed_only':doc.get('fish_licensed_only',True),'follow_log':doc.get('follow_log',True),
+                 'batch_scope':{'one_per_locale':'first','all_voices':'all'}.get(doc.get('batch_scope_id'),'selected'),
+                 'skip_completed':doc.get('skip_completed',True),'continue_on_error':doc.get('continue_on_error',True),
+                 'upload_enabled':doc.get('upload_enabled',True)}
+        saved = state.save_settings(state.Settings(selections=selections,draft=draft,
+            credit_limit=doc.get('elevenlabs_credit_limit',current['credit_limit'])))
+    except (ValueError,KeyError,TypeError,UnicodeError):
+        raise HTTPException(422,'Hibás vagy nem támogatott Builder beállításfájl') from None
+    return {'imported':len(saved['selections']),'configured':saved['configured']}
+
+
+@router.get(PREFIX + '/reviews')
+def reviews():
+    from voice_builder_review import items
+    return {'items':items()}
+
+
+@router.post(PREFIX + '/jobs/{jid}/review')
+def review(jid: str):
+    job_or_404(jid)
+    from voice_builder_review import start_review
+    try:
+        with state.locked(jid+'.lock',blocking=False):
+            return start_review(jid)
+    except (ValueError, BlockingIOError) as err:
+        raise HTTPException(409,str(err) or 'A feladat még fut') from None
+
+
+@router.post(PREFIX + '/jobs/{jid}/validate')
+def validate(jid: str):
+    job_or_404(jid)
+    try:
+        with state.locked(jid+'.lock',blocking=False):
+            return engine.validate_audio(jid)
+    except BlockingIOError:
+        raise HTTPException(409,'A feladat még fut') from None
+
+
+@router.post(PREFIX + '/jobs/{jid}/build')
+def build_existing(jid: str):
+    job = job_or_404(jid)
+    if job['status'] not in ('completed','failed','paused'):
+        raise HTTPException(409,'A feladat még fut')
+    try:
+        with state.locked(jid+'.lock',blocking=False):
+            doc = engine.validate_prompts(json.loads((state.job_dir(jid)/'prompts.json').read_text()))
+            engine.build_pack(jid,state.Spec.model_validate(job['spec']),doc)
+            state.update(jid,mode='build',status='completed',progress=100,error='')
+    except (OSError,ValueError,RuntimeError,BlockingIOError) as err:
+        raise HTTPException(409,str(err) if isinstance(err,(ValueError,RuntimeError)) else 'A kész hangok vagy az ellenőrzés hiányoznak') from None
+    state.launch_worker()
+    return state.get_job(jid)
+
+
+@router.get(PREFIX + '/jobs/{jid}/audio.zip')
+def export_audio(jid: str):
+    job_or_404(jid)
+    output = io.BytesIO()
+    with state.locked(jid+'.lock'),zipfile.ZipFile(output,'w',compression=zipfile.ZIP_STORED) as z:
+        for name in sorted(engine.expected_names()):
+            path = state.job_dir(jid)/'audio'/name
+            if path.is_file():
+                z.writestr(name,path.read_bytes())
+    return Response(output.getvalue(),media_type='application/zip',
+                    headers={'Content-Disposition':'attachment; filename="audio.zip"'})
+
+
+@router.get(PREFIX + '/jobs/{jid}/review-backup.zip')
+def export_review_backup(jid: str):
+    job_or_404(jid)
+    directory = state.root()/'review-backups'/jid
+    if not directory.exists():
+        raise HTTPException(404,'Ehhez a feladathoz nincs korábbi javítási mentés')
+    output = io.BytesIO()
+    with state.locked(jid+'.lock'),zipfile.ZipFile(output,'w',compression=zipfile.ZIP_STORED) as z:
+        for revision in sorted(directory.iterdir()):
+            if not revision.is_dir() or len(revision.name)!=64:
+                continue
+            allowed = {'manifest.json','prompts.json','registry-record.json','pack.tar.gz','store-pack.tar.gz'}
+            for path in sorted(revision.rglob('*')):
+                relative = path.relative_to(revision)
+                if path.is_file() and not path.is_symlink() and (str(relative) in allowed or
+                    (len(relative.parts)==2 and relative.parts[0]=='audio' and path.name in engine.expected_names())):
+                    z.writestr(revision.name+'/'+relative.as_posix(),path.read_bytes())
+    return Response(output.getvalue(),media_type='application/zip',
+                    headers={'Content-Disposition':'attachment; filename="review-backup.zip"'})
 
 @router.post(PREFIX + '/cache-import')
 def cache_import(file: UploadFile = File(...)):

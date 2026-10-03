@@ -5,7 +5,6 @@ signatures, localized text and finished audio are durable and reusable.
 """
 from __future__ import annotations
 
-from difflib import SequenceMatcher
 import gzip
 import hashlib
 import io
@@ -30,19 +29,25 @@ class Paused(Exception):
 
 
 class ProviderError(RuntimeError):
-    def __init__(self, status=0, *, reason='', operation=''):
+    def __init__(self, status=0, *, reason='', operation='', retry_after=0):
         self.status = status
+        self.retry_after = retry_after
         messages = {
             'invalid_api_key': 'Érvénytelen vagy visszavont API-kulcs. Mentsd el a teljes, érvényes kulcsot.',
             'missing_api_key': 'A szolgáltató nem kapott API-kulcsot.',
             'missing_permissions': 'Az API-kulcs jogosultsága hiányzik.',
             'insufficient_permissions': 'Az API-kulcs jogosultsága hiányzik.',
             'quota_exceeded': 'A szolgáltatói kreditkeret elfogyott, vagy az API-kulcs saját kerete nem elegendő.',
+            'insufficient_quota': 'Az OpenAI fiók kerete elfogyott. Nem próbáljuk újra automatikusan.',
+            'credit_balance_exhausted': 'Az OpenAI kreditkeret elfogyott.',
+            'organization_usage_limit_exceeded': 'Az OpenAI szervezeti keret elfogyott.',
+            'organization_spend_limit_exceeded': 'Az OpenAI szervezeti költési limit elfogyott.',
+            'project_spend_limit_exceeded': 'Az OpenAI projekt költési limit elfogyott.',
             'voice_not_found': 'A kiválasztott hang nem található vagy nem hozzáférhető.',
             'subscription_required': 'A szolgáltató ehhez előfizetést kér.',
             'unusual_activity': 'Az ElevenLabs szokatlan aktivitás miatt korlátozta a hozzáférést.',
         }
-        self.reason = reason if reason in messages else ''
+        self.reason = reason if isinstance(reason,str) and reason in messages else ''
         message = ('A szolgáltató elutasította a kérést (HTTP %s).' % status if status else
                    'A szolgáltató nem válaszolt. A kész fájlok megmaradtak; a feladat folytatható.')
         if operation:
@@ -96,16 +101,24 @@ def request(url, payload=None, headers=None, *, json_result=False):
         # Parse only a bounded, allowlisted reason code. Never log provider text,
         # headers, credentials, voice IDs, URLs or user-supplied query strings.
         reason = ''
+        retry_after = 0
+        try:
+            retry_after = max(0, min(300, int(e.headers.get('Retry-After','0'))))
+        except (ValueError, TypeError):
+            pass
         try:
             body = json.loads(e.read(8192))
             detail = body.get('detail',{}) if isinstance(body,dict) else {}
             if isinstance(detail,dict) and isinstance(detail.get('status'),str):
                 reason = detail['status']
+            error = body.get('error',{}) if isinstance(body,dict) else {}
+            if isinstance(error,dict):
+                reason = error.get('code') or error.get('type') or reason
         except (ValueError, UnicodeError, OSError, TypeError):
             pass
         finally:
             e.close()
-        raise ProviderError(e.code, reason=reason, operation=provider_operation(url)) from None
+        raise ProviderError(e.code, reason=reason, operation=provider_operation(url), retry_after=retry_after) from None
     except (URLError, TimeoutError, OSError):
         raise ProviderError() from None
     if json_result:
@@ -185,6 +198,9 @@ def definitions(spec):
 def normalize(source, dest, spec, *, native_delivery=True):
     _, delivery, effect = definitions(spec)
     filters = [effect.get('ffmpeg_filter', '')]
+    if spec.legacy_theme:
+        theme = next(x for x in state.load_asset('themes.json')['themes'] if x['id'] == spec.legacy_theme)
+        filters = [theme.get('ffmpeg_filter','')]
     if not native_delivery:
         filters.insert(0, delivery.get('fallback_ffmpeg_filter', ''))
     filters = ','.join(f for f in filters if f)
@@ -214,6 +230,8 @@ def validate_prompts(doc):
     rows = doc['prompts']
     if len(rows) != 201 or {p.get('file') for p in rows if isinstance(p, dict)} != expected_names():
         raise ValueError('A szövegkönyvnek pontosan a 201 eredeti fájlnevet kell tartalmaznia')
+    if [p['file'] for p in rows] != [p['file'] for p in state.load_asset('prompts/en-US.json')['prompts']]:
+        raise ValueError('A szövegkönyv fájlsorrendje eltér az eredeti 201 sortól')
     if any(not isinstance(p.get('text'), str) or not 0 < len(p['text'].strip()) <= 2000 for p in rows):
         raise ValueError('Üres vagy túl hosszú hangszöveg')
     return doc
@@ -229,17 +247,20 @@ def rules():
     return json.loads(p.read_text()) if p.exists() else state.load_asset('style-rules.json')
 
 
-def prompt_key(spec, *, styled=False, base=None):
+def prompt_key(spec, *, styled=False, base=None, legacy=False):
     sig = {'schema': 1, 'master': state.digest(state.load_asset('prompts/en-US.json')),
            'locale': spec.locale, 'model': spec.translation_model}
     if styled:
+        if not legacy:
+            sig.pop('model')
+            sig['schema'] = 2
         sig.update(base=state.digest(base), style=spec.text_style, delivery=spec.delivery,
                    rules=rules(), definitions=definitions(spec)[:2])
     return state.digest(sig)
 
 
-def prompt_path(spec, *, styled=False, base=None):
-    return state.root() / 'prompt-cache' / (prompt_key(spec, styled=styled, base=base) + '.json')
+def prompt_path(spec, *, styled=False, base=None, legacy=False):
+    return state.root() / 'prompt-cache' / (prompt_key(spec, styled=styled, base=base,legacy=legacy) + '.json')
 
 
 def chat_rows(rows, instruction, spec, keys, jid):
@@ -278,79 +299,13 @@ def chat_rows(rows, instruction, spec, keys, jid):
 
 
 def load_prompts(spec, keys, jid, *, before_ai=None):
-    jobpath = state.job_dir(jid) / 'prompts.json'
-    if jobpath.exists():
-        state.log(jid, 'A feladat kész szövegkönyvét használjuk; nincs új fordítás vagy stilizálás.')
-        return validate_prompts(json.loads(jobpath.read_text()))
-    migrated = state.root() / 'migrated-prompts' / (spec.locale+'_'+spec.text_style+'_'+spec.delivery+'.json')
-    if migrated.exists():
-        data = json.loads(migrated.read_text())
-        if data.get('rules_hash') == state.digest(rules()):
-            doc = validate_prompts(data['doc'])
-            state.atomic(jobpath, state.canonical(doc).encode())
-            state.log(jid, 'Korábbi Builder szöveg-cache átvéve; nincs új fordítás vagy stilizálás.')
-            return doc
-    basepath = prompt_path(spec)
-    bundled = state.ASSETS / 'prompts' / (spec.locale + '.json')
-    if basepath.exists():
-        base = validate_prompts(json.loads(basepath.read_text()))
-        state.log(jid, 'Meglévő fordítás használata; nincs új fordítási kérés.')
-    elif bundled.exists():
-        base = validate_prompts(json.loads(bundled.read_text(encoding='utf-8-sig')))
-        state.atomic(basepath, state.canonical(base).encode())
-    else:
-        if before_ai:
-            before_ai()
-        master = state.load_asset('prompts/en-US.json')
-        translated = chat_rows(master['prompts'],
-            'Translate the ANTHBOT mower messages naturally and accurately into %s (%s). '
-            'Preserve the exact mower event, safety meaning and necessary actions.' % (spec.language, spec.locale),
-            spec, keys, jid)
-        base = validate_prompts({'locale': spec.locale, 'prompts': translated, 'prompt_count': 201})
-        state.atomic(basepath, state.canonical(base).encode())
-    style, delivery, _ = definitions(spec)
-    rewrite = style.get('rewrite_text') or delivery.get('rewrite_text')
-    if not rewrite:
-        doc = base
-    else:
-        path = prompt_path(spec, styled=True, base=base)
-        if path.exists():
-            doc = validate_prompts(json.loads(path.read_text()))
-            state.log(jid, 'Meglévő stílusszöveg használata; nincs új szövegkérés.')
-        else:
-            if before_ai:
-                before_ai()
-            eligible = [p for p in base['prompts'] if not p['file'].startswith('E')]
-            policy = rules()
-            instruction = ('Rewrite every line in %s (%s). %s\nStyle: %s\n%s\nDelivery: %s\n%s' %
-                           (spec.language, spec.locale, policy['global_rule'], style['description'],
-                            policy['styles'].get(spec.text_style, {}).get('rule', ''),
-                            delivery['description'], delivery.get('text_direction', '')))
-            rewritten = chat_rows(eligible, instruction, spec, keys, jid)
-            mapping = {p['file']: p['text'] for p in rewritten}
-            # Reject unchanged/source+append variants; repair only failed rows.
-            for attempt in range(5):
-                bad = [p for p in eligible if not fresh_text(p['text'], mapping[p['file']])]
-                if not bad:
-                    break
-                mapping.update({p['file']: p['text'] for p in chat_rows(bad,
-                    instruction + '\nPrevious output retained too much source wording. Use fresh sentence structure, '
-                    'not the source followed by a joke. Every non-error line must be rewritten.', spec, keys, jid)})
-            if any(not fresh_text(p['text'], mapping[p['file']]) for p in eligible):
-                raise RuntimeError('A stílusellenőrzés változatlan mondatokat talált. A csomag nem lett publikálva.')
-            doc = validate_prompts({**base, 'prompts': [
-                {'file': p['file'], 'text': mapping.get(p['file'], p['text'])} for p in base['prompts']]})
-            # Critical E rows always remain exact, irrespective of AI output.
-            state.atomic(path, state.canonical(doc).encode())
-    state.atomic(jobpath, state.canonical(doc).encode())
-    return doc
+    from voice_builder_text import load_prompts as load
+    return load(spec, keys, jid, before_ai)
 
 
 def fresh_text(source, candidate):
-    def norm(t):
-        return re.sub(r'\W+', ' ', t.casefold()).strip()
-    a, b = norm(source), norm(candidate)
-    return a != b and not b.startswith(a + ' ') and SequenceMatcher(None, a, b).ratio() < .88
+    from voice_builder_text import fresh_text as fresh
+    return fresh(source, candidate)
 
 
 def tts_signature(spec, text, filename):
@@ -393,8 +348,8 @@ def tts_signature(spec, text, filename):
                 'format': 'mp3', 'sample_rate': 44100, 'mp3_bitrate': 128, 'latency': 'normal',
                 'normalize': True, 'temperature': temp, 'top_p': top,
                 'prosody': {'speed': speed, 'volume': 0, 'normalize_loudness': True}}
-    profile = next((p for p in state.load_asset('profiles.json')['tts_profiles']
-                    if p['voice'] == spec.voice_id and p['language_code'] == spec.locale), {})
+    profile = next((p for p in state.load_asset('cloud-voices.json')['voices']
+                    if p['id'] == spec.voice_id and p['locale'] == spec.locale), {})
     variant = next((v for v in delivery.get('provider_style_preference', []) if v in profile.get('variants', [])), '') if not error else ''
     return {'provider': spec.provider, 'ha_url': spec.ha_url, 'engine_id': spec.ha_engine,
             'message': text, 'language': spec.locale, 'cache': True,
@@ -435,8 +390,8 @@ def audio_request(sig, keys):
     try:
         answer = request(sig['ha_url'] + '/api/tts_get_url', payload,
                          {'Authorization': 'Bearer ' + keys['ha_token']}, json_result=True)
-    except ProviderError:
-        if not native:
+    except ProviderError as err:
+        if not native or err.status not in (400,422):
             raise
         payload['options'] = {**payload['options'], 'voice': payload['options']['voice'].split('||')[0]}
         answer = request(sig['ha_url'] + '/api/tts_get_url', payload,
@@ -523,9 +478,38 @@ def alias(spec):
             pool = pools.get(spec.voice_gender, pools['female'] + pools['male'])
             reserved = state.load_asset('voice-alias-reserved-names.json')['languages'].get(language, [])
             used = {slug(v) for v in names.values()} | set(reserved)
+            chosen = ''
+            keys = state.credentials() if spec.provider == 'elevenlabs' else {}
+            if keys.get('openai_key') and keys.get('elevenlabs_key'):
+                # Match desktop's once-per-locale/voice AI alias. Check EL
+                # access before a new paid name request, and never replace a
+                # saved public name during later generation or review.
+                try:
+                    request('https://api.elevenlabs.io/v1/user/subscription',
+                            headers={'xi-api-key':keys['elevenlabs_key']},json_result=True)
+                    instruction = ('Choose ONE short culturally natural fictional public first name for a synthetic robotic-lawn-mower voice. '
+                        'Return ONLY JSON {"name":"..."}. Use a normal first name, 2–24 characters, no surname, number, title, brand, celebrity or trademark. '
+                        'Match gender when known; use a suitable neutral local name otherwise. '\
+                        'Locale: %s. Language: %s. Gender: %s. Do not reuse provider name: %s. Do not duplicate these reserved names: %s.' %
+                        (spec.locale,spec.language,spec.voice_gender,spec.provider_voice_name,', '.join(sorted(used))))
+                    response = paid_once({'purpose':'public-voice-alias','alias_key':key},
+                        lambda: request('https://api.openai.com/v1/responses',
+                            {'model':spec.translation_model,'store':False,'input':instruction,'max_output_tokens':120},
+                            {'Authorization':'Bearer '+keys['openai_key']},json_result=True),
+                        state.root()/'paid-alias-results'/(key+'.json'))
+                    output = response.get('output_text') or ''.join(c.get('text','') for o in response.get('output',[])
+                        if o.get('type') == 'message' for c in o.get('content',[]) if c.get('type') == 'output_text')
+                    candidate = json.loads(output).get('name','').strip()
+                    if (2 <= len(candidate) <= 24 and not re.search(r'[\d\r\n]',candidate) and
+                        any(c.isalpha() for c in candidate) and slug(candidate) not in used and
+                        candidate.casefold() != spec.provider_voice_name.casefold()):
+                        chosen = candidate
+                except (RuntimeError,ValueError,KeyError,TypeError,AttributeError):
+                    # A saved fallback also prevents repeated failed paid names.
+                    pass
             start = int(key[:8],16) % len(pool)
             candidates = pool[start:] + pool[:start]
-            base = next((v for v in candidates if slug(v) not in used), candidates[0])
+            base = chosen or next((v for v in candidates if slug(v) not in used), candidates[0])
             value, n = base, 2
             while slug(value) in used:
                 value, n = base + ' ' + str(n), n + 1
@@ -535,6 +519,8 @@ def alias(spec):
 
 
 def build_pack(jid, spec, doc):
+    from voice_builder_text import require_approval
+    approval = require_approval(jid, doc)
     directory = state.job_dir(jid)
     for p in doc['prompts']:
         if not spoken_valid(directory / 'audio' / p['file']):
@@ -559,11 +545,12 @@ def build_pack(jid, spec, doc):
     tmp.replace(archive)
     public = metadata(spec)
     data = archive.read_bytes()
-    manifest = {'schema_version': 1, 'builder_version': 'server-1.0 / desktop-7.20.11', 'public_store': public,
+    manifest = {'schema_version': 2, 'builder_version': 'server-1.0.51 / desktop-7.20.11', 'public_store': public,
                 'technical': spec.model_dump(exclude={'voice_display_name','ha_url'}),
                 'music_md5': hashlib.md5(data).hexdigest(), 'sha256': hashlib.sha256(data).hexdigest(),
                 'size': len(data), 'spoken_count': 201, 'total_mp3': 204,
-                'fixed_sha256': state.FIXED, 'prompt_sha256': state.digest(doc)}
+                'fixed_sha256': state.FIXED, 'prompt_sha256': state.digest(doc),
+                'text_verification': approval, 'anthbot_voice_set_template': voice_set_template(spec)}
     state.atomic(directory / 'manifest.json', state.canonical(manifest).encode())
     state.atomic(directory / 'catalog.json', state.canonical(public).encode())
     state.log(jid, 'Ellenőrzött csomag kész: 201 beszélt + 3 eredeti hang, A004/A005 próbahang.')
@@ -573,8 +560,11 @@ def metadata(spec):
     style, delivery, effect = definitions(spec)
     display = alias(spec)
     # Display-name edits must never invalidate a previously sold entitlement.
-    variant = 'voice_' + state.digest({'provider':spec.provider,'voice':spec.voice_id,'locale':spec.locale,
-                                       'style':spec.text_style,'delivery':spec.delivery,'effect':spec.character_effect})[:32]
+    signature = {'provider':spec.provider,'voice':spec.voice_id,'locale':spec.locale,
+                 'style':spec.text_style,'delivery':spec.delivery,'effect':spec.character_effect}
+    if spec.legacy_theme:
+        signature['legacy_theme'] = spec.legacy_theme
+    variant = 'voice_' + state.digest(signature)[:32]
     language_code = spec.locale.lower() if spec.locale.lower().startswith(('zh-cn','zh-tw','zh-hk')) else spec.locale.split('-')[0].lower()
     return {'community_id': language_code + '_' + variant, 'variant_id': variant,
             'variant_name': display + ' · ' + style['short_name'] + ' · ' + delivery['short_name'],
@@ -607,6 +597,9 @@ def run_job(job):
             subscription = request('https://api.elevenlabs.io/v1/user/subscription',
                                    headers={'xi-api-key':keys['elevenlabs_key']},json_result=True)
     doc = load_prompts(spec, keys, jid, before_ai=before_ai)
+    if job['mode'] == 'text':
+        state.update(jid,status='completed',progress=100,current_file='',error='')
+        return
     preflight(job, spec, doc, keys, subscription=subscription)
     selected = [p for p in doc['prompts'] if job['mode'] != 'preview' or p['file'] in ('A004.mp3','A005.mp3')]
     for index, p in enumerate(selected):
@@ -630,20 +623,25 @@ def run_job(job):
                 raise RuntimeError('Hiányzik a kiválasztott TTS-szolgáltató API-kulcsa vagy tokenje')
             for attempt in range(3):
                 check(jid)
+                reservation = [0]
                 def reserve_audio():
                     if spec.provider == 'elevenlabs':
                         rates = json.loads((directory/'rates.json').read_text())
                         cost = len(sig['text']) * rates.get(sig['model_id'], 1)
                         state.reserve(job['batch_id'], cost)
+                        reservation[0] = cost
                 try:
                     data, native = paid_once({'purpose':'tts','signature':sig},
                         lambda: audio_request(sig, keys), raw, binary=True,
                         native=spec.provider != 'ha_cloud', before_send=reserve_audio)
                     break
                 except ProviderError as e:
+                    if reservation[0] and e.status in (400,401,403,404,405,413,415,422,429):
+                        state.refund_reservation(job['batch_id'],reservation[0])
                     # Only an explicit rate-limit rejection is retried. Server
                     # errors/timeouts may have been billed and remain journaled.
-                    if e.status != 429 or attempt == 2:
+                    if e.status != 429 or e.reason in ('quota_exceeded','insufficient_quota','credit_balance_exhausted',
+                        'organization_usage_limit_exceeded','organization_spend_limit_exceeded','project_spend_limit_exceeded') or attempt == 2:
                         raise
                     state.log(jid, name + ': átmeneti szolgáltatói hiba, újrapróbálás.')
                     time.sleep(attempt + 1)
@@ -656,22 +654,36 @@ def run_job(job):
         check(jid)
         normalize(raw, dest, spec, native_delivery=native)
     check(jid)
-    if job['mode'] != 'preview':
+    if job['mode'] == 'build':
         build_pack(jid, spec, doc)
+        from voice_builder_review import replacement_ready
+        replacement_ready(jid)
     state.update(jid, status='completed', progress=100, current_file='', error='')
 
 
-def available_voices(provider):
-    keys = state.credentials()
-    if provider == 'elevenlabs':
-        if not keys.get('elevenlabs_key'):
-            raise RuntimeError('Előbb mentsd el az ElevenLabs API-kulcsot')
-        data = request('https://api.elevenlabs.io/v1/voices', headers={'xi-api-key': keys['elevenlabs_key']}, json_result=True)
-        return [{'id':x['voice_id'], 'name':x.get('name', x['voice_id']), 'gender': x.get('labels',{}).get('gender','unknown')}
-                for x in data.get('voices', [])]
-    if provider == 'openai':
-        return [{'id':v,'name':v,'gender':'unknown'} for v in state.load_asset('tts-providers.json')['openai_voices']]
-    if provider == 'ha_cloud':
-        return [{'id':x['voice'],'name':x['display_name'],'gender':x['gender'],'locale':x['language_code'],
-                 'language':x['language']} for x in state.load_asset('profiles.json')['tts_profiles'] if x.get('enabled')]
-    return []  # Fish reference IDs are entered explicitly, as in the desktop builder.
+def available_voices(provider, query='', licensed_only=True):
+    from voice_builder_catalog import available_voices as load
+    return load(provider, query, licensed_only)
+
+
+def voice_set_template(spec, *, version='', url='', md5=''):
+    return {**state.load_asset('profiles.json')['pack_profiles'][0]['anthbot_voice_set_template'],
+            'version': version, 'music_url': url, 'music_md5': md5}
+
+
+def validate_audio(jid):
+    directory = state.job_dir(jid)
+    report = {'missing':[], 'invalid':[], 'fixed_invalid':[]}
+    for name in sorted(expected_names()):
+        path = directory/'audio'/name
+        if not path.exists():
+            report['missing'].append(name)
+        elif not spoken_valid(path):
+            report['invalid'].append(name)
+    for name,sha in state.FIXED.items():
+        path = state.ASSETS/'base-assets/genie_slot3_community'/name
+        if not path.exists() or hashlib.sha256(path.read_bytes()).hexdigest() != sha or not raw_valid(path):
+            report['fixed_invalid'].append(name)
+    report['ok'] = not any(report.values())
+    state.atomic(directory/'audio-diagnostics.json',state.canonical(report).encode())
+    return report
