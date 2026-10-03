@@ -30,10 +30,51 @@ class Paused(Exception):
 
 
 class ProviderError(RuntimeError):
-    def __init__(self, status=0):
+    def __init__(self, status=0, *, reason='', operation=''):
         self.status = status
-        super().__init__('A szolgáltató elutasította a kérést (HTTP %s).' % status if status else
-                         'A szolgáltató nem válaszolt. A kész fájlok megmaradtak; a feladat folytatható.')
+        messages = {
+            'invalid_api_key': 'Érvénytelen vagy visszavont API-kulcs. Mentsd el a teljes, érvényes kulcsot.',
+            'missing_api_key': 'A szolgáltató nem kapott API-kulcsot.',
+            'missing_permissions': 'Az API-kulcs jogosultsága hiányzik.',
+            'insufficient_permissions': 'Az API-kulcs jogosultsága hiányzik.',
+            'quota_exceeded': 'A szolgáltatói kreditkeret elfogyott, vagy az API-kulcs saját kerete nem elegendő.',
+            'voice_not_found': 'A kiválasztott hang nem található vagy nem hozzáférhető.',
+            'subscription_required': 'A szolgáltató ehhez előfizetést kér.',
+            'unusual_activity': 'Az ElevenLabs szokatlan aktivitás miatt korlátozta a hozzáférést.',
+        }
+        self.reason = reason if reason in messages else ''
+        message = ('A szolgáltató elutasította a kérést (HTTP %s).' % status if status else
+                   'A szolgáltató nem válaszolt. A kész fájlok megmaradtak; a feladat folytatható.')
+        if operation:
+            message = operation + ': ' + message
+        if self.reason:
+            message += ' ' + messages[self.reason]
+            if self.reason in ('missing_permissions','insufficient_permissions'):
+                permission = {'ElevenLabs kreditkeret lekérdezése':'User → Read',
+                              'ElevenLabs modelllista':'Models → Read',
+                              'ElevenLabs hanglista':'Voices → Read',
+                              'ElevenLabs hanggenerálás':'Text to Speech'}.get(operation)
+                if permission:
+                    message += ' ElevenLabs → Developers → API Keys → Edit: ' + permission + '.'
+        elif status in (401,403):
+            message += ' Ellenőrizd a kulcs érvényességét és a művelethez tartozó jogosultságot.'
+        super().__init__(message)
+
+
+def provider_operation(url):
+    parts = urlsplit(url)
+    if parts.hostname == 'api.elevenlabs.io':
+        path = parts.path
+        if path == '/v1/user/subscription':
+            return 'ElevenLabs kreditkeret lekérdezése'
+        if path == '/v1/models':
+            return 'ElevenLabs modelllista'
+        if path in ('/v1/voices','/v2/voices'):
+            return 'ElevenLabs hanglista'
+        if path.startswith('/v1/text-to-speech/'):
+            return 'ElevenLabs hanggenerálás'
+    return {'api.openai.com':'OpenAI szöveg- vagy hangfeldolgozás',
+            'api.fish.audio':'Fish Audio hanggenerálás'}.get(parts.hostname,'')
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -52,7 +93,19 @@ def request(url, payload=None, headers=None, *, json_result=False):
             if len(result) > MAX_AUDIO:
                 raise RuntimeError('Túl nagy szolgáltatói válasz')
     except HTTPError as e:
-        raise ProviderError(e.code) from None
+        # Parse only a bounded, allowlisted reason code. Never log provider text,
+        # headers, credentials, voice IDs, URLs or user-supplied query strings.
+        reason = ''
+        try:
+            body = json.loads(e.read(8192))
+            detail = body.get('detail',{}) if isinstance(body,dict) else {}
+            if isinstance(detail,dict) and isinstance(detail.get('status'),str):
+                reason = detail['status']
+        except (ValueError, UnicodeError, OSError, TypeError):
+            pass
+        finally:
+            e.close()
+        raise ProviderError(e.code, reason=reason, operation=provider_operation(url)) from None
     except (URLError, TimeoutError, OSError):
         raise ProviderError() from None
     if json_result:
@@ -185,7 +238,7 @@ def chat_rows(rows, instruction, spec, keys, jid):
     return result
 
 
-def load_prompts(spec, keys, jid):
+def load_prompts(spec, keys, jid, *, before_ai=None):
     jobpath = state.job_dir(jid) / 'prompts.json'
     if jobpath.exists():
         return validate_prompts(json.loads(jobpath.read_text()))
@@ -206,6 +259,8 @@ def load_prompts(spec, keys, jid):
         base = validate_prompts(json.loads(bundled.read_text(encoding='utf-8-sig')))
         state.atomic(basepath, state.canonical(base).encode())
     else:
+        if before_ai:
+            before_ai()
         master = state.load_asset('prompts/en-US.json')
         translated = chat_rows(master['prompts'],
             'Translate the ANTHBOT mower messages naturally and accurately into %s (%s). '
@@ -223,6 +278,8 @@ def load_prompts(spec, keys, jid):
             doc = validate_prompts(json.loads(path.read_text()))
             state.log(jid, 'Meglévő stílusszöveg használata; nincs új szövegkérés.')
         else:
+            if before_ai:
+                before_ai()
             eligible = [p for p in base['prompts'] if not p['file'].startswith('E')]
             policy = rules()
             instruction = ('Rewrite every line in %s (%s). %s\nStyle: %s\n%s\nDelivery: %s\n%s' %
@@ -367,7 +424,7 @@ def estimate(job, spec, doc, rates=None):
     return {'estimated_credits': int(credit + .999), 'new_requests': new}
 
 
-def preflight(job, spec, doc, keys):
+def preflight(job, spec, doc, keys, *, subscription=None):
     rates = {}
     if spec.provider == 'elevenlabs':
         pending = any(not spoken_valid(state.job_dir(job['id'])/'audio'/p['file']) and
@@ -400,7 +457,8 @@ def preflight(job, spec, doc, keys):
         budget = c.execute('SELECT * FROM budgets WHERE id=?', (job['batch_id'],)).fetchone()
     if budget['credit_limit'] and budget['reserved'] + estimate_value['estimated_credits'] > budget['credit_limit']:
         raise RuntimeError('A becsült fogyasztás meghaladja a köteg megmaradt kreditkeretét. A TTS nem indult el.')
-    subscription = request('https://api.elevenlabs.io/v1/user/subscription', headers={'xi-api-key': keys['elevenlabs_key']}, json_result=True)
+    if subscription is None:
+        subscription = request('https://api.elevenlabs.io/v1/user/subscription', headers={'xi-api-key': keys['elevenlabs_key']}, json_result=True)
     remaining = subscription.get('character_limit', 0) - subscription.get('character_count', 0)
     if remaining < estimate_value['estimated_credits']:
         raise RuntimeError('Az ElevenLabs fiók becsült maradék kerete nem elég ehhez a feladathoz. A TTS nem indult el.')
@@ -499,8 +557,17 @@ def run_job(job):
     if not shutil.which('ffmpeg') or not shutil.which('ffprobe'):
         raise RuntimeError('FFmpeg/FFprobe nem elérhető; frissítsd a report server telepítését.')
     state.log(jid, 'Generálás indul; a kész fájlok és cache újrahasználhatók.')
-    doc = load_prompts(spec, keys, jid)
-    preflight(job, spec, doc, keys)
+    subscription = None
+    def before_ai():
+        nonlocal subscription
+        if spec.provider == 'elevenlabs' and subscription is None:
+            if not keys.get('elevenlabs_key'):
+                raise RuntimeError('Hiányzik az ElevenLabs API-kulcs')
+            state.log(jid, 'ElevenLabs hozzáférés ellenőrzése az új szövegfeldolgozás előtt.')
+            subscription = request('https://api.elevenlabs.io/v1/user/subscription',
+                                   headers={'xi-api-key':keys['elevenlabs_key']},json_result=True)
+    doc = load_prompts(spec, keys, jid, before_ai=before_ai)
+    preflight(job, spec, doc, keys, subscription=subscription)
     selected = [p for p in doc['prompts'] if job['mode'] != 'preview' or p['file'] in ('A004.mp3','A005.mp3')]
     for index, p in enumerate(selected):
         check(jid)

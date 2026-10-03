@@ -45,6 +45,15 @@ Retries reserve budget again, as a conservative safeguard. The displayed
 reserved credit amount is an estimate, not an invoice. Translation and text
 rewriting use OpenAI separately and are not covered by the ElevenLabs limit.
 
+ElevenLabs keys need the permissions used by this builder: Text to Speech,
+Voices Read, Models Read, and User Read for the subscription/quota check.
+Before new ElevenLabs-job translation or rewriting, the builder verifies the
+subscription endpoint; an access failure stops before OpenAI processing.
+Saved job scripts and translation/style caches remain reusable. The final
+budget and model checks still run before speech generation. Provider errors
+identify the operation and translate known reason codes into actionable hints;
+raw provider messages, URLs, headers and credentials are never displayed.
+
 All 97 E* error messages keep their localized wording and natural provider
 settings. The 104 other lines can be rewritten; unchanged or source-plus-joke
 outputs are rejected and repaired. Text chunks survive interrupted translation.
