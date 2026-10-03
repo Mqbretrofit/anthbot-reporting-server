@@ -163,8 +163,13 @@ def _init_db() -> None:
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     _init_db()
-    from voice_builder_state import jobs, launch_worker
-    if any(j['status'] in ('running', 'queued') for j in jobs()):
+    from voice_builder_review import scan_and_quarantine
+    try:
+        await asyncio.to_thread(scan_and_quarantine)
+    except (HTTPException, OSError, ValueError, sqlite3.Error):
+        print('Voice Builder: a korábbi feltöltések felülvizsgálata nem futott le; az adminfelületen újrapróbálható.')
+    from voice_builder_state import pending_work, launch_worker
+    if pending_work():
         launch_worker()
     yield
 
@@ -1678,4 +1683,3 @@ def delete_installation(installation_id: UUID) -> dict[str, Any]:
     if cursor.rowcount == 0:
         raise HTTPException(status_code=404, detail="installation not found")
     return {"deleted": True, "installation_id": value}
-

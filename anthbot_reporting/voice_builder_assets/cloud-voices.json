@@ -1,0 +1,4232 @@
+{
+  "source": "NabuCasa hass-nabucasa voice_data.py",
+  "source_commit": "225509708d0e3a037064bb7531b09a04f6be9c69",
+  "voices": [
+    {
+      "id": "AdriNeural",
+      "name": "Adri",
+      "gender": "unknown",
+      "locale": "af-ZA",
+      "language": "Afrikaans (Suid-Afrika)",
+      "variants": []
+    },
+    {
+      "id": "WillemNeural",
+      "name": "Willem",
+      "gender": "unknown",
+      "locale": "af-ZA",
+      "language": "Afrikaans (Suid-Afrika)",
+      "variants": []
+    },
+    {
+      "id": "AmehaNeural",
+      "name": "Ameha",
+      "gender": "unknown",
+      "locale": "am-ET",
+      "language": "አማርኛ (ኢትዮጵያ)",
+      "variants": []
+    },
+    {
+      "id": "MekdesNeural",
+      "name": "Mekdes",
+      "gender": "unknown",
+      "locale": "am-ET",
+      "language": "አማርኛ (ኢትዮጵያ)",
+      "variants": []
+    },
+    {
+      "id": "FatimaNeural",
+      "name": "Fatima",
+      "gender": "unknown",
+      "locale": "ar-AE",
+      "language": "العربية (الإمارات العربية المتحدة)",
+      "variants": []
+    },
+    {
+      "id": "HamdanNeural",
+      "name": "Hamdan",
+      "gender": "unknown",
+      "locale": "ar-AE",
+      "language": "العربية (الإمارات العربية المتحدة)",
+      "variants": []
+    },
+    {
+      "id": "AliNeural",
+      "name": "Ali",
+      "gender": "unknown",
+      "locale": "ar-BH",
+      "language": "العربية (البحرين)",
+      "variants": []
+    },
+    {
+      "id": "LailaNeural",
+      "name": "Laila",
+      "gender": "unknown",
+      "locale": "ar-BH",
+      "language": "العربية (البحرين)",
+      "variants": []
+    },
+    {
+      "id": "AminaNeural",
+      "name": "Amina",
+      "gender": "unknown",
+      "locale": "ar-DZ",
+      "language": "العربية (الجزائر)",
+      "variants": []
+    },
+    {
+      "id": "IsmaelNeural",
+      "name": "Ismael",
+      "gender": "unknown",
+      "locale": "ar-DZ",
+      "language": "العربية (الجزائر)",
+      "variants": []
+    },
+    {
+      "id": "SalmaNeural",
+      "name": "Salma",
+      "gender": "unknown",
+      "locale": "ar-EG",
+      "language": "العربية (مصر)",
+      "variants": []
+    },
+    {
+      "id": "ShakirNeural",
+      "name": "Shakir",
+      "gender": "unknown",
+      "locale": "ar-EG",
+      "language": "العربية (مصر)",
+      "variants": []
+    },
+    {
+      "id": "BasselNeural",
+      "name": "Bassel",
+      "gender": "unknown",
+      "locale": "ar-IQ",
+      "language": "العربية (العراق)",
+      "variants": []
+    },
+    {
+      "id": "RanaNeural",
+      "name": "Rana",
+      "gender": "unknown",
+      "locale": "ar-IQ",
+      "language": "العربية (العراق)",
+      "variants": []
+    },
+    {
+      "id": "SanaNeural",
+      "name": "Sana",
+      "gender": "unknown",
+      "locale": "ar-JO",
+      "language": "العربية (الأردن)",
+      "variants": []
+    },
+    {
+      "id": "TaimNeural",
+      "name": "Taim",
+      "gender": "unknown",
+      "locale": "ar-JO",
+      "language": "العربية (الأردن)",
+      "variants": []
+    },
+    {
+      "id": "FahedNeural",
+      "name": "Fahed",
+      "gender": "unknown",
+      "locale": "ar-KW",
+      "language": "العربية (الكويت)",
+      "variants": []
+    },
+    {
+      "id": "NouraNeural",
+      "name": "Noura",
+      "gender": "unknown",
+      "locale": "ar-KW",
+      "language": "العربية (الكويت)",
+      "variants": []
+    },
+    {
+      "id": "LaylaNeural",
+      "name": "Layla",
+      "gender": "unknown",
+      "locale": "ar-LB",
+      "language": "العربية (لبنان)",
+      "variants": []
+    },
+    {
+      "id": "RamiNeural",
+      "name": "Rami",
+      "gender": "unknown",
+      "locale": "ar-LB",
+      "language": "العربية (لبنان)",
+      "variants": []
+    },
+    {
+      "id": "ImanNeural",
+      "name": "Iman",
+      "gender": "unknown",
+      "locale": "ar-LY",
+      "language": "العربية (ليبيا)",
+      "variants": []
+    },
+    {
+      "id": "OmarNeural",
+      "name": "Omar",
+      "gender": "unknown",
+      "locale": "ar-LY",
+      "language": "العربية (ليبيا)",
+      "variants": []
+    },
+    {
+      "id": "JamalNeural",
+      "name": "Jamal",
+      "gender": "unknown",
+      "locale": "ar-MA",
+      "language": "العربية (المغرب)",
+      "variants": []
+    },
+    {
+      "id": "MounaNeural",
+      "name": "Mouna",
+      "gender": "unknown",
+      "locale": "ar-MA",
+      "language": "العربية (المغرب)",
+      "variants": []
+    },
+    {
+      "id": "AbdullahNeural",
+      "name": "Abdullah",
+      "gender": "unknown",
+      "locale": "ar-OM",
+      "language": "العربية (عُمان)",
+      "variants": []
+    },
+    {
+      "id": "AyshaNeural",
+      "name": "Aysha",
+      "gender": "unknown",
+      "locale": "ar-OM",
+      "language": "العربية (عُمان)",
+      "variants": []
+    },
+    {
+      "id": "AmalNeural",
+      "name": "Amal",
+      "gender": "unknown",
+      "locale": "ar-QA",
+      "language": "العربية (قطر)",
+      "variants": []
+    },
+    {
+      "id": "MoazNeural",
+      "name": "Moaz",
+      "gender": "unknown",
+      "locale": "ar-QA",
+      "language": "العربية (قطر)",
+      "variants": []
+    },
+    {
+      "id": "HamedNeural",
+      "name": "Hamed",
+      "gender": "unknown",
+      "locale": "ar-SA",
+      "language": "العربية (المملكة العربية السعودية)",
+      "variants": []
+    },
+    {
+      "id": "ZariyahNeural",
+      "name": "Zariyah",
+      "gender": "unknown",
+      "locale": "ar-SA",
+      "language": "العربية (المملكة العربية السعودية)",
+      "variants": []
+    },
+    {
+      "id": "AmanyNeural",
+      "name": "Amany",
+      "gender": "unknown",
+      "locale": "ar-SY",
+      "language": "العربية (سوريا)",
+      "variants": []
+    },
+    {
+      "id": "LaithNeural",
+      "name": "Laith",
+      "gender": "unknown",
+      "locale": "ar-SY",
+      "language": "العربية (سوريا)",
+      "variants": []
+    },
+    {
+      "id": "HediNeural",
+      "name": "Hedi",
+      "gender": "unknown",
+      "locale": "ar-TN",
+      "language": "العربية (تونس)",
+      "variants": []
+    },
+    {
+      "id": "ReemNeural",
+      "name": "Reem",
+      "gender": "unknown",
+      "locale": "ar-TN",
+      "language": "العربية (تونس)",
+      "variants": []
+    },
+    {
+      "id": "MaryamNeural",
+      "name": "Maryam",
+      "gender": "unknown",
+      "locale": "ar-YE",
+      "language": "العربية (اليمن)",
+      "variants": []
+    },
+    {
+      "id": "SalehNeural",
+      "name": "Saleh",
+      "gender": "unknown",
+      "locale": "ar-YE",
+      "language": "العربية (اليمن)",
+      "variants": []
+    },
+    {
+      "id": "PriyomNeural",
+      "name": "Priyom",
+      "gender": "unknown",
+      "locale": "as-IN",
+      "language": "অসমীয়া (ভাৰত)",
+      "variants": []
+    },
+    {
+      "id": "YashicaNeural",
+      "name": "Yashica",
+      "gender": "unknown",
+      "locale": "as-IN",
+      "language": "অসমীয়া (ভাৰত)",
+      "variants": []
+    },
+    {
+      "id": "BabekNeural",
+      "name": "Babek",
+      "gender": "unknown",
+      "locale": "az-AZ",
+      "language": "azərbaycan (Azərbaycan)",
+      "variants": []
+    },
+    {
+      "id": "BanuNeural",
+      "name": "Banu",
+      "gender": "unknown",
+      "locale": "az-AZ",
+      "language": "azərbaycan (Azərbaycan)",
+      "variants": []
+    },
+    {
+      "id": "BorislavNeural",
+      "name": "Borislav",
+      "gender": "unknown",
+      "locale": "bg-BG",
+      "language": "български (България)",
+      "variants": []
+    },
+    {
+      "id": "KalinaNeural",
+      "name": "Kalina",
+      "gender": "unknown",
+      "locale": "bg-BG",
+      "language": "български (България)",
+      "variants": []
+    },
+    {
+      "id": "NabanitaNeural",
+      "name": "Nabanita",
+      "gender": "unknown",
+      "locale": "bn-BD",
+      "language": "বাংলা (বাংলাদেশ)",
+      "variants": []
+    },
+    {
+      "id": "PradeepNeural",
+      "name": "Pradeep",
+      "gender": "unknown",
+      "locale": "bn-BD",
+      "language": "বাংলা (বাংলাদেশ)",
+      "variants": []
+    },
+    {
+      "id": "BashkarNeural",
+      "name": "Bashkar",
+      "gender": "unknown",
+      "locale": "bn-IN",
+      "language": "বাংলা (ভারত)",
+      "variants": []
+    },
+    {
+      "id": "TanishaaNeural",
+      "name": "Tanishaa",
+      "gender": "unknown",
+      "locale": "bn-IN",
+      "language": "বাংলা (ভারত)",
+      "variants": []
+    },
+    {
+      "id": "GoranNeural",
+      "name": "Goran",
+      "gender": "unknown",
+      "locale": "bs-BA",
+      "language": "bosanski (Bosna i Hercegovina)",
+      "variants": []
+    },
+    {
+      "id": "VesnaNeural",
+      "name": "Vesna",
+      "gender": "unknown",
+      "locale": "bs-BA",
+      "language": "bosanski (Bosna i Hercegovina)",
+      "variants": []
+    },
+    {
+      "id": "AlbaNeural",
+      "name": "Alba",
+      "gender": "unknown",
+      "locale": "ca-ES",
+      "language": "català (Espanya)",
+      "variants": []
+    },
+    {
+      "id": "EnricNeural",
+      "name": "Enric",
+      "gender": "unknown",
+      "locale": "ca-ES",
+      "language": "català (Espanya)",
+      "variants": []
+    },
+    {
+      "id": "JoanaNeural",
+      "name": "Joana",
+      "gender": "unknown",
+      "locale": "ca-ES",
+      "language": "català (Espanya)",
+      "variants": []
+    },
+    {
+      "id": "AntoninNeural",
+      "name": "Antonin",
+      "gender": "male",
+      "locale": "cs-CZ",
+      "language": "Čeština",
+      "variants": []
+    },
+    {
+      "id": "VlastaNeural",
+      "name": "Vlasta",
+      "gender": "female",
+      "locale": "cs-CZ",
+      "language": "Čeština",
+      "variants": []
+    },
+    {
+      "id": "AledNeural",
+      "name": "Aled",
+      "gender": "unknown",
+      "locale": "cy-GB",
+      "language": "Cymraeg (Y Deyrnas Unedig)",
+      "variants": []
+    },
+    {
+      "id": "NiaNeural",
+      "name": "Nia",
+      "gender": "unknown",
+      "locale": "cy-GB",
+      "language": "Cymraeg (Y Deyrnas Unedig)",
+      "variants": []
+    },
+    {
+      "id": "ChristelNeural",
+      "name": "Christel",
+      "gender": "unknown",
+      "locale": "da-DK",
+      "language": "dansk (Danmark)",
+      "variants": []
+    },
+    {
+      "id": "JeppeNeural",
+      "name": "Jeppe",
+      "gender": "unknown",
+      "locale": "da-DK",
+      "language": "dansk (Danmark)",
+      "variants": []
+    },
+    {
+      "id": "IngridNeural",
+      "name": "Ingrid",
+      "gender": "unknown",
+      "locale": "de-AT",
+      "language": "Deutsch (Österreich)",
+      "variants": []
+    },
+    {
+      "id": "JonasNeural",
+      "name": "Jonas",
+      "gender": "unknown",
+      "locale": "de-AT",
+      "language": "Deutsch (Österreich)",
+      "variants": []
+    },
+    {
+      "id": "JanNeural",
+      "name": "Jan",
+      "gender": "unknown",
+      "locale": "de-CH",
+      "language": "Deutsch (Schweiz)",
+      "variants": []
+    },
+    {
+      "id": "LeniNeural",
+      "name": "Leni",
+      "gender": "unknown",
+      "locale": "de-CH",
+      "language": "Deutsch (Schweiz)",
+      "variants": []
+    },
+    {
+      "id": "AmalaNeural",
+      "name": "Amala",
+      "gender": "unknown",
+      "locale": "de-DE",
+      "language": "Deutsch (Deutschland)",
+      "variants": []
+    },
+    {
+      "id": "BerndNeural",
+      "name": "Bernd",
+      "gender": "unknown",
+      "locale": "de-DE",
+      "language": "Deutsch (Deutschland)",
+      "variants": []
+    },
+    {
+      "id": "ChristophNeural",
+      "name": "Christoph",
+      "gender": "unknown",
+      "locale": "de-DE",
+      "language": "Deutsch (Deutschland)",
+      "variants": []
+    },
+    {
+      "id": "ConradNeural",
+      "name": "Conrad",
+      "gender": "male",
+      "locale": "de-DE",
+      "language": "Deutsch (Deutschland)",
+      "variants": [
+        "cheerful",
+        "sad"
+      ]
+    },
+    {
+      "id": "ElkeNeural",
+      "name": "Elke",
+      "gender": "unknown",
+      "locale": "de-DE",
+      "language": "Deutsch (Deutschland)",
+      "variants": []
+    },
+    {
+      "id": "GiselaNeural",
+      "name": "Gisela",
+      "gender": "unknown",
+      "locale": "de-DE",
+      "language": "Deutsch (Deutschland)",
+      "variants": []
+    },
+    {
+      "id": "KasperNeural",
+      "name": "Kasper",
+      "gender": "unknown",
+      "locale": "de-DE",
+      "language": "Deutsch (Deutschland)",
+      "variants": []
+    },
+    {
+      "id": "KatjaNeural",
+      "name": "Katja",
+      "gender": "female",
+      "locale": "de-DE",
+      "language": "Deutsch (Deutschland)",
+      "variants": []
+    },
+    {
+      "id": "KillianNeural",
+      "name": "Killian",
+      "gender": "unknown",
+      "locale": "de-DE",
+      "language": "Deutsch (Deutschland)",
+      "variants": []
+    },
+    {
+      "id": "KlarissaNeural",
+      "name": "Klarissa",
+      "gender": "unknown",
+      "locale": "de-DE",
+      "language": "Deutsch (Deutschland)",
+      "variants": []
+    },
+    {
+      "id": "KlausNeural",
+      "name": "Klaus",
+      "gender": "unknown",
+      "locale": "de-DE",
+      "language": "Deutsch (Deutschland)",
+      "variants": []
+    },
+    {
+      "id": "LouisaNeural",
+      "name": "Louisa",
+      "gender": "unknown",
+      "locale": "de-DE",
+      "language": "Deutsch (Deutschland)",
+      "variants": []
+    },
+    {
+      "id": "MajaNeural",
+      "name": "Maja",
+      "gender": "unknown",
+      "locale": "de-DE",
+      "language": "Deutsch (Deutschland)",
+      "variants": []
+    },
+    {
+      "id": "RalfNeural",
+      "name": "Ralf",
+      "gender": "unknown",
+      "locale": "de-DE",
+      "language": "Deutsch (Deutschland)",
+      "variants": []
+    },
+    {
+      "id": "TanjaNeural",
+      "name": "Tanja",
+      "gender": "unknown",
+      "locale": "de-DE",
+      "language": "Deutsch (Deutschland)",
+      "variants": []
+    },
+    {
+      "id": "AthinaNeural",
+      "name": "Athina",
+      "gender": "unknown",
+      "locale": "el-GR",
+      "language": "Ελληνικά (Ελλάδα)",
+      "variants": []
+    },
+    {
+      "id": "NestorasNeural",
+      "name": "Nestoras",
+      "gender": "unknown",
+      "locale": "el-GR",
+      "language": "Ελληνικά (Ελλάδα)",
+      "variants": []
+    },
+    {
+      "id": "AnnetteNeural",
+      "name": "Annette",
+      "gender": "unknown",
+      "locale": "en-AU",
+      "language": "Australian English",
+      "variants": []
+    },
+    {
+      "id": "CarlyNeural",
+      "name": "Carly",
+      "gender": "unknown",
+      "locale": "en-AU",
+      "language": "Australian English",
+      "variants": []
+    },
+    {
+      "id": "DarrenNeural",
+      "name": "Darren",
+      "gender": "unknown",
+      "locale": "en-AU",
+      "language": "Australian English",
+      "variants": []
+    },
+    {
+      "id": "DuncanNeural",
+      "name": "Duncan",
+      "gender": "unknown",
+      "locale": "en-AU",
+      "language": "Australian English",
+      "variants": []
+    },
+    {
+      "id": "ElsieNeural",
+      "name": "Elsie",
+      "gender": "unknown",
+      "locale": "en-AU",
+      "language": "Australian English",
+      "variants": []
+    },
+    {
+      "id": "FreyaNeural",
+      "name": "Freya",
+      "gender": "unknown",
+      "locale": "en-AU",
+      "language": "Australian English",
+      "variants": []
+    },
+    {
+      "id": "JoanneNeural",
+      "name": "Joanne",
+      "gender": "unknown",
+      "locale": "en-AU",
+      "language": "Australian English",
+      "variants": []
+    },
+    {
+      "id": "KenNeural",
+      "name": "Ken",
+      "gender": "unknown",
+      "locale": "en-AU",
+      "language": "Australian English",
+      "variants": []
+    },
+    {
+      "id": "KimNeural",
+      "name": "Kim",
+      "gender": "unknown",
+      "locale": "en-AU",
+      "language": "Australian English",
+      "variants": []
+    },
+    {
+      "id": "NatashaNeural",
+      "name": "Natasha",
+      "gender": "unknown",
+      "locale": "en-AU",
+      "language": "Australian English",
+      "variants": []
+    },
+    {
+      "id": "NeilNeural",
+      "name": "Neil",
+      "gender": "unknown",
+      "locale": "en-AU",
+      "language": "Australian English",
+      "variants": []
+    },
+    {
+      "id": "TimNeural",
+      "name": "Tim",
+      "gender": "unknown",
+      "locale": "en-AU",
+      "language": "Australian English",
+      "variants": []
+    },
+    {
+      "id": "TinaNeural",
+      "name": "Tina",
+      "gender": "unknown",
+      "locale": "en-AU",
+      "language": "Australian English",
+      "variants": []
+    },
+    {
+      "id": "WilliamNeural",
+      "name": "William",
+      "gender": "unknown",
+      "locale": "en-AU",
+      "language": "Australian English",
+      "variants": []
+    },
+    {
+      "id": "ClaraNeural",
+      "name": "Clara",
+      "gender": "unknown",
+      "locale": "en-CA",
+      "language": "Canadian English",
+      "variants": []
+    },
+    {
+      "id": "LiamNeural",
+      "name": "Liam",
+      "gender": "unknown",
+      "locale": "en-CA",
+      "language": "Canadian English",
+      "variants": []
+    },
+    {
+      "id": "AbbiNeural",
+      "name": "Abbi",
+      "gender": "unknown",
+      "locale": "en-GB",
+      "language": "British English",
+      "variants": []
+    },
+    {
+      "id": "AlfieNeural",
+      "name": "Alfie",
+      "gender": "unknown",
+      "locale": "en-GB",
+      "language": "British English",
+      "variants": []
+    },
+    {
+      "id": "BellaNeural",
+      "name": "Bella",
+      "gender": "unknown",
+      "locale": "en-GB",
+      "language": "British English",
+      "variants": []
+    },
+    {
+      "id": "ElliotNeural",
+      "name": "Elliot",
+      "gender": "unknown",
+      "locale": "en-GB",
+      "language": "British English",
+      "variants": []
+    },
+    {
+      "id": "EthanNeural",
+      "name": "Ethan",
+      "gender": "unknown",
+      "locale": "en-GB",
+      "language": "British English",
+      "variants": []
+    },
+    {
+      "id": "HollieNeural",
+      "name": "Hollie",
+      "gender": "unknown",
+      "locale": "en-GB",
+      "language": "British English",
+      "variants": []
+    },
+    {
+      "id": "LibbyNeural",
+      "name": "Libby",
+      "gender": "unknown",
+      "locale": "en-GB",
+      "language": "British English",
+      "variants": []
+    },
+    {
+      "id": "MaisieNeural",
+      "name": "Maisie",
+      "gender": "unknown",
+      "locale": "en-GB",
+      "language": "British English",
+      "variants": []
+    },
+    {
+      "id": "NoahNeural",
+      "name": "Noah",
+      "gender": "unknown",
+      "locale": "en-GB",
+      "language": "British English",
+      "variants": []
+    },
+    {
+      "id": "OliverNeural",
+      "name": "Oliver",
+      "gender": "unknown",
+      "locale": "en-GB",
+      "language": "British English",
+      "variants": []
+    },
+    {
+      "id": "OliviaNeural",
+      "name": "Olivia",
+      "gender": "unknown",
+      "locale": "en-GB",
+      "language": "British English",
+      "variants": []
+    },
+    {
+      "id": "RyanNeural",
+      "name": "Ryan",
+      "gender": "unknown",
+      "locale": "en-GB",
+      "language": "British English",
+      "variants": [
+        "cheerful",
+        "chat",
+        "whispering",
+        "sad"
+      ]
+    },
+    {
+      "id": "SoniaNeural",
+      "name": "Sonia",
+      "gender": "unknown",
+      "locale": "en-GB",
+      "language": "British English",
+      "variants": [
+        "cheerful",
+        "sad"
+      ]
+    },
+    {
+      "id": "ThomasNeural",
+      "name": "Thomas",
+      "gender": "unknown",
+      "locale": "en-GB",
+      "language": "British English",
+      "variants": []
+    },
+    {
+      "id": "SamNeural",
+      "name": "Sam",
+      "gender": "unknown",
+      "locale": "en-HK",
+      "language": "English (Hong Kong SAR China)",
+      "variants": []
+    },
+    {
+      "id": "YanNeural",
+      "name": "Yan",
+      "gender": "unknown",
+      "locale": "en-HK",
+      "language": "English (Hong Kong SAR China)",
+      "variants": []
+    },
+    {
+      "id": "ConnorNeural",
+      "name": "Connor",
+      "gender": "unknown",
+      "locale": "en-IE",
+      "language": "English (Ireland)",
+      "variants": []
+    },
+    {
+      "id": "EmilyNeural",
+      "name": "Emily",
+      "gender": "unknown",
+      "locale": "en-IE",
+      "language": "English (Ireland)",
+      "variants": []
+    },
+    {
+      "id": "AaravNeural",
+      "name": "Aarav",
+      "gender": "unknown",
+      "locale": "en-IN",
+      "language": "English (India)",
+      "variants": []
+    },
+    {
+      "id": "AartiNeural",
+      "name": "Aarti",
+      "gender": "unknown",
+      "locale": "en-IN",
+      "language": "English (India)",
+      "variants": []
+    },
+    {
+      "id": "AashiNeural",
+      "name": "Aashi",
+      "gender": "unknown",
+      "locale": "en-IN",
+      "language": "English (India)",
+      "variants": []
+    },
+    {
+      "id": "AnanyaNeural",
+      "name": "Ananya",
+      "gender": "unknown",
+      "locale": "en-IN",
+      "language": "English (India)",
+      "variants": []
+    },
+    {
+      "id": "ArjunNeural",
+      "name": "Arjun",
+      "gender": "unknown",
+      "locale": "en-IN",
+      "language": "English (India)",
+      "variants": []
+    },
+    {
+      "id": "KavyaNeural",
+      "name": "Kavya",
+      "gender": "unknown",
+      "locale": "en-IN",
+      "language": "English (India)",
+      "variants": []
+    },
+    {
+      "id": "KunalNeural",
+      "name": "Kunal",
+      "gender": "unknown",
+      "locale": "en-IN",
+      "language": "English (India)",
+      "variants": []
+    },
+    {
+      "id": "NeerjaNeural",
+      "name": "Neerja",
+      "gender": "unknown",
+      "locale": "en-IN",
+      "language": "English (India)",
+      "variants": [
+        "newscast",
+        "cheerful",
+        "empathetic"
+      ]
+    },
+    {
+      "id": "PrabhatNeural",
+      "name": "Prabhat",
+      "gender": "unknown",
+      "locale": "en-IN",
+      "language": "English (India)",
+      "variants": []
+    },
+    {
+      "id": "RehaanNeural",
+      "name": "Rehaan",
+      "gender": "unknown",
+      "locale": "en-IN",
+      "language": "English (India)",
+      "variants": []
+    },
+    {
+      "id": "AsiliaNeural",
+      "name": "Asilia",
+      "gender": "unknown",
+      "locale": "en-KE",
+      "language": "English (Kenya)",
+      "variants": []
+    },
+    {
+      "id": "ChilembaNeural",
+      "name": "Chilemba",
+      "gender": "unknown",
+      "locale": "en-KE",
+      "language": "English (Kenya)",
+      "variants": []
+    },
+    {
+      "id": "AbeoNeural",
+      "name": "Abeo",
+      "gender": "unknown",
+      "locale": "en-NG",
+      "language": "English (Nigeria)",
+      "variants": []
+    },
+    {
+      "id": "EzinneNeural",
+      "name": "Ezinne",
+      "gender": "unknown",
+      "locale": "en-NG",
+      "language": "English (Nigeria)",
+      "variants": []
+    },
+    {
+      "id": "MitchellNeural",
+      "name": "Mitchell",
+      "gender": "unknown",
+      "locale": "en-NZ",
+      "language": "English (New Zealand)",
+      "variants": []
+    },
+    {
+      "id": "MollyNeural",
+      "name": "Molly",
+      "gender": "unknown",
+      "locale": "en-NZ",
+      "language": "English (New Zealand)",
+      "variants": []
+    },
+    {
+      "id": "JamesNeural",
+      "name": "James",
+      "gender": "unknown",
+      "locale": "en-PH",
+      "language": "English (Philippines)",
+      "variants": []
+    },
+    {
+      "id": "RosaNeural",
+      "name": "Rosa",
+      "gender": "unknown",
+      "locale": "en-PH",
+      "language": "English (Philippines)",
+      "variants": []
+    },
+    {
+      "id": "LunaNeural",
+      "name": "Luna",
+      "gender": "unknown",
+      "locale": "en-SG",
+      "language": "English (Singapore)",
+      "variants": []
+    },
+    {
+      "id": "WayneNeural",
+      "name": "Wayne",
+      "gender": "unknown",
+      "locale": "en-SG",
+      "language": "English (Singapore)",
+      "variants": []
+    },
+    {
+      "id": "ElimuNeural",
+      "name": "Elimu",
+      "gender": "unknown",
+      "locale": "en-TZ",
+      "language": "English (Tanzania)",
+      "variants": []
+    },
+    {
+      "id": "ImaniNeural",
+      "name": "Imani",
+      "gender": "unknown",
+      "locale": "en-TZ",
+      "language": "English (Tanzania)",
+      "variants": []
+    },
+    {
+      "id": "AmberNeural",
+      "name": "Amber",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": []
+    },
+    {
+      "id": "AnaNeural",
+      "name": "Ana",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": []
+    },
+    {
+      "id": "AndrewNeural",
+      "name": "Andrew",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": []
+    },
+    {
+      "id": "AriaNeural",
+      "name": "Aria",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": [
+        "chat",
+        "customerservice",
+        "narration-professional",
+        "newscast-casual",
+        "newscast-formal",
+        "cheerful",
+        "empathetic",
+        "angry",
+        "sad",
+        "excited",
+        "friendly",
+        "terrified",
+        "shouting",
+        "unfriendly",
+        "whispering",
+        "hopeful"
+      ]
+    },
+    {
+      "id": "AshleyNeural",
+      "name": "Ashley",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": []
+    },
+    {
+      "id": "AvaNeural",
+      "name": "Ava",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": []
+    },
+    {
+      "id": "BrandonNeural",
+      "name": "Brandon",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": []
+    },
+    {
+      "id": "BrianNeural",
+      "name": "Brian",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": []
+    },
+    {
+      "id": "ChristopherNeural",
+      "name": "Christopher",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": []
+    },
+    {
+      "id": "CoraNeural",
+      "name": "Cora",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": []
+    },
+    {
+      "id": "DavisNeural",
+      "name": "Davis",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": [
+        "chat",
+        "angry",
+        "cheerful",
+        "excited",
+        "friendly",
+        "hopeful",
+        "sad",
+        "shouting",
+        "terrified",
+        "unfriendly",
+        "whispering"
+      ]
+    },
+    {
+      "id": "ElizabethNeural",
+      "name": "Elizabeth",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": []
+    },
+    {
+      "id": "EmmaNeural",
+      "name": "Emma",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": []
+    },
+    {
+      "id": "EricNeural",
+      "name": "Eric",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": []
+    },
+    {
+      "id": "GuyNeural",
+      "name": "Guy",
+      "gender": "male",
+      "locale": "en-US",
+      "language": "English",
+      "variants": [
+        "newscast",
+        "angry",
+        "cheerful",
+        "sad",
+        "excited",
+        "friendly",
+        "terrified",
+        "shouting",
+        "unfriendly",
+        "whispering",
+        "hopeful"
+      ]
+    },
+    {
+      "id": "JacobNeural",
+      "name": "Jacob",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": []
+    },
+    {
+      "id": "JaneNeural",
+      "name": "Jane",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": [
+        "angry",
+        "cheerful",
+        "excited",
+        "friendly",
+        "hopeful",
+        "sad",
+        "shouting",
+        "terrified",
+        "unfriendly",
+        "whispering"
+      ]
+    },
+    {
+      "id": "JasonNeural",
+      "name": "Jason",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": [
+        "angry",
+        "cheerful",
+        "excited",
+        "friendly",
+        "hopeful",
+        "sad",
+        "shouting",
+        "terrified",
+        "unfriendly",
+        "whispering"
+      ]
+    },
+    {
+      "id": "JennyNeural",
+      "name": "Jenny",
+      "gender": "female",
+      "locale": "en-US",
+      "language": "English",
+      "variants": [
+        "assistant",
+        "chat",
+        "customerservice",
+        "newscast",
+        "angry",
+        "cheerful",
+        "sad",
+        "excited",
+        "friendly",
+        "terrified",
+        "shouting",
+        "unfriendly",
+        "whispering",
+        "hopeful"
+      ]
+    },
+    {
+      "id": "KaiNeural",
+      "name": "Kai",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": [
+        "conversation"
+      ]
+    },
+    {
+      "id": "LunaNeural",
+      "name": "Luna",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": [
+        "conversation"
+      ]
+    },
+    {
+      "id": "MichelleNeural",
+      "name": "Michelle",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": []
+    },
+    {
+      "id": "MonicaNeural",
+      "name": "Monica",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": []
+    },
+    {
+      "id": "NancyNeural",
+      "name": "Nancy",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": [
+        "angry",
+        "cheerful",
+        "excited",
+        "friendly",
+        "hopeful",
+        "sad",
+        "shouting",
+        "terrified",
+        "unfriendly",
+        "whispering"
+      ]
+    },
+    {
+      "id": "RogerNeural",
+      "name": "Roger",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": []
+    },
+    {
+      "id": "SaraNeural",
+      "name": "Sara",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": [
+        "angry",
+        "cheerful",
+        "excited",
+        "friendly",
+        "hopeful",
+        "sad",
+        "shouting",
+        "terrified",
+        "unfriendly",
+        "whispering"
+      ]
+    },
+    {
+      "id": "SteffanNeural",
+      "name": "Steffan",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": []
+    },
+    {
+      "id": "TonyNeural",
+      "name": "Tony",
+      "gender": "unknown",
+      "locale": "en-US",
+      "language": "English",
+      "variants": [
+        "angry",
+        "cheerful",
+        "excited",
+        "friendly",
+        "hopeful",
+        "sad",
+        "shouting",
+        "terrified",
+        "unfriendly",
+        "whispering"
+      ]
+    },
+    {
+      "id": "LeahNeural",
+      "name": "Leah",
+      "gender": "unknown",
+      "locale": "en-ZA",
+      "language": "English (South Africa)",
+      "variants": []
+    },
+    {
+      "id": "LukeNeural",
+      "name": "Luke",
+      "gender": "unknown",
+      "locale": "en-ZA",
+      "language": "English (South Africa)",
+      "variants": []
+    },
+    {
+      "id": "ElenaNeural",
+      "name": "Elena",
+      "gender": "unknown",
+      "locale": "es-AR",
+      "language": "español (Argentina)",
+      "variants": []
+    },
+    {
+      "id": "TomasNeural",
+      "name": "Tomas",
+      "gender": "unknown",
+      "locale": "es-AR",
+      "language": "español (Argentina)",
+      "variants": []
+    },
+    {
+      "id": "MarceloNeural",
+      "name": "Marcelo",
+      "gender": "unknown",
+      "locale": "es-BO",
+      "language": "español (Bolivia)",
+      "variants": []
+    },
+    {
+      "id": "SofiaNeural",
+      "name": "Sofia",
+      "gender": "unknown",
+      "locale": "es-BO",
+      "language": "español (Bolivia)",
+      "variants": []
+    },
+    {
+      "id": "CatalinaNeural",
+      "name": "Catalina",
+      "gender": "unknown",
+      "locale": "es-CL",
+      "language": "español (Chile)",
+      "variants": []
+    },
+    {
+      "id": "LorenzoNeural",
+      "name": "Lorenzo",
+      "gender": "unknown",
+      "locale": "es-CL",
+      "language": "español (Chile)",
+      "variants": []
+    },
+    {
+      "id": "GonzaloNeural",
+      "name": "Gonzalo",
+      "gender": "unknown",
+      "locale": "es-CO",
+      "language": "español (Colombia)",
+      "variants": []
+    },
+    {
+      "id": "SalomeNeural",
+      "name": "Salome",
+      "gender": "unknown",
+      "locale": "es-CO",
+      "language": "español (Colombia)",
+      "variants": []
+    },
+    {
+      "id": "JuanNeural",
+      "name": "Juan",
+      "gender": "unknown",
+      "locale": "es-CR",
+      "language": "español (Costa Rica)",
+      "variants": []
+    },
+    {
+      "id": "MariaNeural",
+      "name": "Maria",
+      "gender": "unknown",
+      "locale": "es-CR",
+      "language": "español (Costa Rica)",
+      "variants": []
+    },
+    {
+      "id": "BelkysNeural",
+      "name": "Belkys",
+      "gender": "unknown",
+      "locale": "es-CU",
+      "language": "español (Cuba)",
+      "variants": []
+    },
+    {
+      "id": "ManuelNeural",
+      "name": "Manuel",
+      "gender": "unknown",
+      "locale": "es-CU",
+      "language": "español (Cuba)",
+      "variants": []
+    },
+    {
+      "id": "EmilioNeural",
+      "name": "Emilio",
+      "gender": "unknown",
+      "locale": "es-DO",
+      "language": "español (República Dominicana)",
+      "variants": []
+    },
+    {
+      "id": "RamonaNeural",
+      "name": "Ramona",
+      "gender": "unknown",
+      "locale": "es-DO",
+      "language": "español (República Dominicana)",
+      "variants": []
+    },
+    {
+      "id": "AndreaNeural",
+      "name": "Andrea",
+      "gender": "unknown",
+      "locale": "es-EC",
+      "language": "español (Ecuador)",
+      "variants": []
+    },
+    {
+      "id": "LuisNeural",
+      "name": "Luis",
+      "gender": "unknown",
+      "locale": "es-EC",
+      "language": "español (Ecuador)",
+      "variants": []
+    },
+    {
+      "id": "AbrilNeural",
+      "name": "Abril",
+      "gender": "unknown",
+      "locale": "es-ES",
+      "language": "Español",
+      "variants": []
+    },
+    {
+      "id": "AlvaroNeural",
+      "name": "Alvaro",
+      "gender": "male",
+      "locale": "es-ES",
+      "language": "Español",
+      "variants": [
+        "cheerful",
+        "sad"
+      ]
+    },
+    {
+      "id": "ArnauNeural",
+      "name": "Arnau",
+      "gender": "unknown",
+      "locale": "es-ES",
+      "language": "Español",
+      "variants": []
+    },
+    {
+      "id": "DarioNeural",
+      "name": "Dario",
+      "gender": "unknown",
+      "locale": "es-ES",
+      "language": "Español",
+      "variants": []
+    },
+    {
+      "id": "EliasNeural",
+      "name": "Elias",
+      "gender": "unknown",
+      "locale": "es-ES",
+      "language": "Español",
+      "variants": []
+    },
+    {
+      "id": "ElviraNeural",
+      "name": "Elvira",
+      "gender": "female",
+      "locale": "es-ES",
+      "language": "Español",
+      "variants": []
+    },
+    {
+      "id": "EstrellaNeural",
+      "name": "Estrella",
+      "gender": "unknown",
+      "locale": "es-ES",
+      "language": "Español",
+      "variants": []
+    },
+    {
+      "id": "IreneNeural",
+      "name": "Irene",
+      "gender": "unknown",
+      "locale": "es-ES",
+      "language": "Español",
+      "variants": []
+    },
+    {
+      "id": "LaiaNeural",
+      "name": "Laia",
+      "gender": "unknown",
+      "locale": "es-ES",
+      "language": "Español",
+      "variants": []
+    },
+    {
+      "id": "LiaNeural",
+      "name": "Lia",
+      "gender": "unknown",
+      "locale": "es-ES",
+      "language": "Español",
+      "variants": []
+    },
+    {
+      "id": "NilNeural",
+      "name": "Nil",
+      "gender": "unknown",
+      "locale": "es-ES",
+      "language": "Español",
+      "variants": []
+    },
+    {
+      "id": "SaulNeural",
+      "name": "Saul",
+      "gender": "unknown",
+      "locale": "es-ES",
+      "language": "Español",
+      "variants": []
+    },
+    {
+      "id": "TeoNeural",
+      "name": "Teo",
+      "gender": "unknown",
+      "locale": "es-ES",
+      "language": "Español",
+      "variants": []
+    },
+    {
+      "id": "TrianaNeural",
+      "name": "Triana",
+      "gender": "unknown",
+      "locale": "es-ES",
+      "language": "Español",
+      "variants": []
+    },
+    {
+      "id": "VeraNeural",
+      "name": "Vera",
+      "gender": "unknown",
+      "locale": "es-ES",
+      "language": "Español",
+      "variants": []
+    },
+    {
+      "id": "XimenaNeural",
+      "name": "Ximena",
+      "gender": "unknown",
+      "locale": "es-ES",
+      "language": "Español",
+      "variants": []
+    },
+    {
+      "id": "JavierNeural",
+      "name": "Javier",
+      "gender": "unknown",
+      "locale": "es-GQ",
+      "language": "español (Guinea Ecuatorial)",
+      "variants": []
+    },
+    {
+      "id": "TeresaNeural",
+      "name": "Teresa",
+      "gender": "unknown",
+      "locale": "es-GQ",
+      "language": "español (Guinea Ecuatorial)",
+      "variants": []
+    },
+    {
+      "id": "AndresNeural",
+      "name": "Andres",
+      "gender": "unknown",
+      "locale": "es-GT",
+      "language": "español (Guatemala)",
+      "variants": []
+    },
+    {
+      "id": "MartaNeural",
+      "name": "Marta",
+      "gender": "unknown",
+      "locale": "es-GT",
+      "language": "español (Guatemala)",
+      "variants": []
+    },
+    {
+      "id": "CarlosNeural",
+      "name": "Carlos",
+      "gender": "unknown",
+      "locale": "es-HN",
+      "language": "español (Honduras)",
+      "variants": []
+    },
+    {
+      "id": "KarlaNeural",
+      "name": "Karla",
+      "gender": "unknown",
+      "locale": "es-HN",
+      "language": "español (Honduras)",
+      "variants": []
+    },
+    {
+      "id": "BeatrizNeural",
+      "name": "Beatriz",
+      "gender": "unknown",
+      "locale": "es-MX",
+      "language": "español de México",
+      "variants": []
+    },
+    {
+      "id": "CandelaNeural",
+      "name": "Candela",
+      "gender": "unknown",
+      "locale": "es-MX",
+      "language": "español de México",
+      "variants": []
+    },
+    {
+      "id": "CarlotaNeural",
+      "name": "Carlota",
+      "gender": "unknown",
+      "locale": "es-MX",
+      "language": "español de México",
+      "variants": []
+    },
+    {
+      "id": "CecilioNeural",
+      "name": "Cecilio",
+      "gender": "unknown",
+      "locale": "es-MX",
+      "language": "español de México",
+      "variants": []
+    },
+    {
+      "id": "DaliaNeural",
+      "name": "Dalia",
+      "gender": "unknown",
+      "locale": "es-MX",
+      "language": "español de México",
+      "variants": [
+        "cheerful",
+        "sad",
+        "whispering"
+      ]
+    },
+    {
+      "id": "GerardoNeural",
+      "name": "Gerardo",
+      "gender": "unknown",
+      "locale": "es-MX",
+      "language": "español de México",
+      "variants": []
+    },
+    {
+      "id": "JorgeNeural",
+      "name": "Jorge",
+      "gender": "unknown",
+      "locale": "es-MX",
+      "language": "español de México",
+      "variants": [
+        "cheerful",
+        "chat",
+        "whispering",
+        "sad",
+        "excited"
+      ]
+    },
+    {
+      "id": "LarissaNeural",
+      "name": "Larissa",
+      "gender": "unknown",
+      "locale": "es-MX",
+      "language": "español de México",
+      "variants": []
+    },
+    {
+      "id": "LibertoNeural",
+      "name": "Liberto",
+      "gender": "unknown",
+      "locale": "es-MX",
+      "language": "español de México",
+      "variants": []
+    },
+    {
+      "id": "LucianoNeural",
+      "name": "Luciano",
+      "gender": "unknown",
+      "locale": "es-MX",
+      "language": "español de México",
+      "variants": []
+    },
+    {
+      "id": "MarinaNeural",
+      "name": "Marina",
+      "gender": "unknown",
+      "locale": "es-MX",
+      "language": "español de México",
+      "variants": []
+    },
+    {
+      "id": "NuriaNeural",
+      "name": "Nuria",
+      "gender": "unknown",
+      "locale": "es-MX",
+      "language": "español de México",
+      "variants": []
+    },
+    {
+      "id": "PelayoNeural",
+      "name": "Pelayo",
+      "gender": "unknown",
+      "locale": "es-MX",
+      "language": "español de México",
+      "variants": []
+    },
+    {
+      "id": "RenataNeural",
+      "name": "Renata",
+      "gender": "unknown",
+      "locale": "es-MX",
+      "language": "español de México",
+      "variants": []
+    },
+    {
+      "id": "YagoNeural",
+      "name": "Yago",
+      "gender": "unknown",
+      "locale": "es-MX",
+      "language": "español de México",
+      "variants": []
+    },
+    {
+      "id": "FedericoNeural",
+      "name": "Federico",
+      "gender": "unknown",
+      "locale": "es-NI",
+      "language": "español (Nicaragua)",
+      "variants": []
+    },
+    {
+      "id": "YolandaNeural",
+      "name": "Yolanda",
+      "gender": "unknown",
+      "locale": "es-NI",
+      "language": "español (Nicaragua)",
+      "variants": []
+    },
+    {
+      "id": "MargaritaNeural",
+      "name": "Margarita",
+      "gender": "unknown",
+      "locale": "es-PA",
+      "language": "español (Panamá)",
+      "variants": []
+    },
+    {
+      "id": "RobertoNeural",
+      "name": "Roberto",
+      "gender": "unknown",
+      "locale": "es-PA",
+      "language": "español (Panamá)",
+      "variants": []
+    },
+    {
+      "id": "AlexNeural",
+      "name": "Alex",
+      "gender": "unknown",
+      "locale": "es-PE",
+      "language": "español (Perú)",
+      "variants": []
+    },
+    {
+      "id": "CamilaNeural",
+      "name": "Camila",
+      "gender": "unknown",
+      "locale": "es-PE",
+      "language": "español (Perú)",
+      "variants": []
+    },
+    {
+      "id": "KarinaNeural",
+      "name": "Karina",
+      "gender": "unknown",
+      "locale": "es-PR",
+      "language": "español (Puerto Rico)",
+      "variants": []
+    },
+    {
+      "id": "VictorNeural",
+      "name": "Victor",
+      "gender": "unknown",
+      "locale": "es-PR",
+      "language": "español (Puerto Rico)",
+      "variants": []
+    },
+    {
+      "id": "MarioNeural",
+      "name": "Mario",
+      "gender": "unknown",
+      "locale": "es-PY",
+      "language": "español (Paraguay)",
+      "variants": []
+    },
+    {
+      "id": "TaniaNeural",
+      "name": "Tania",
+      "gender": "unknown",
+      "locale": "es-PY",
+      "language": "español (Paraguay)",
+      "variants": []
+    },
+    {
+      "id": "LorenaNeural",
+      "name": "Lorena",
+      "gender": "unknown",
+      "locale": "es-SV",
+      "language": "español (El Salvador)",
+      "variants": []
+    },
+    {
+      "id": "RodrigoNeural",
+      "name": "Rodrigo",
+      "gender": "unknown",
+      "locale": "es-SV",
+      "language": "español (El Salvador)",
+      "variants": []
+    },
+    {
+      "id": "AlonsoNeural",
+      "name": "Alonso",
+      "gender": "unknown",
+      "locale": "es-US",
+      "language": "español (Estados Unidos)",
+      "variants": []
+    },
+    {
+      "id": "PalomaNeural",
+      "name": "Paloma",
+      "gender": "unknown",
+      "locale": "es-US",
+      "language": "español (Estados Unidos)",
+      "variants": []
+    },
+    {
+      "id": "MateoNeural",
+      "name": "Mateo",
+      "gender": "unknown",
+      "locale": "es-UY",
+      "language": "español (Uruguay)",
+      "variants": []
+    },
+    {
+      "id": "ValentinaNeural",
+      "name": "Valentina",
+      "gender": "unknown",
+      "locale": "es-UY",
+      "language": "español (Uruguay)",
+      "variants": []
+    },
+    {
+      "id": "PaolaNeural",
+      "name": "Paola",
+      "gender": "unknown",
+      "locale": "es-VE",
+      "language": "español (Venezuela)",
+      "variants": []
+    },
+    {
+      "id": "SebastianNeural",
+      "name": "Sebastian",
+      "gender": "unknown",
+      "locale": "es-VE",
+      "language": "español (Venezuela)",
+      "variants": []
+    },
+    {
+      "id": "AnuNeural",
+      "name": "Anu",
+      "gender": "unknown",
+      "locale": "et-EE",
+      "language": "eesti (Eesti)",
+      "variants": []
+    },
+    {
+      "id": "KertNeural",
+      "name": "Kert",
+      "gender": "unknown",
+      "locale": "et-EE",
+      "language": "eesti (Eesti)",
+      "variants": []
+    },
+    {
+      "id": "AinhoaNeural",
+      "name": "Ainhoa",
+      "gender": "unknown",
+      "locale": "eu-ES",
+      "language": "euskara (Espainia)",
+      "variants": []
+    },
+    {
+      "id": "AnderNeural",
+      "name": "Ander",
+      "gender": "unknown",
+      "locale": "eu-ES",
+      "language": "euskara (Espainia)",
+      "variants": []
+    },
+    {
+      "id": "DilaraNeural",
+      "name": "Dilara",
+      "gender": "unknown",
+      "locale": "fa-IR",
+      "language": "فارسی (ایران)",
+      "variants": []
+    },
+    {
+      "id": "FaridNeural",
+      "name": "Farid",
+      "gender": "unknown",
+      "locale": "fa-IR",
+      "language": "فارسی (ایران)",
+      "variants": []
+    },
+    {
+      "id": "HarriNeural",
+      "name": "Harri",
+      "gender": "unknown",
+      "locale": "fi-FI",
+      "language": "suomi (Suomi)",
+      "variants": []
+    },
+    {
+      "id": "NooraNeural",
+      "name": "Noora",
+      "gender": "unknown",
+      "locale": "fi-FI",
+      "language": "suomi (Suomi)",
+      "variants": []
+    },
+    {
+      "id": "SelmaNeural",
+      "name": "Selma",
+      "gender": "unknown",
+      "locale": "fi-FI",
+      "language": "suomi (Suomi)",
+      "variants": []
+    },
+    {
+      "id": "AngeloNeural",
+      "name": "Angelo",
+      "gender": "unknown",
+      "locale": "fil-PH",
+      "language": "Filipino (Pilipinas)",
+      "variants": []
+    },
+    {
+      "id": "BlessicaNeural",
+      "name": "Blessica",
+      "gender": "unknown",
+      "locale": "fil-PH",
+      "language": "Filipino (Pilipinas)",
+      "variants": []
+    },
+    {
+      "id": "CharlineNeural",
+      "name": "Charline",
+      "gender": "unknown",
+      "locale": "fr-BE",
+      "language": "français (Belgique)",
+      "variants": []
+    },
+    {
+      "id": "GerardNeural",
+      "name": "Gerard",
+      "gender": "unknown",
+      "locale": "fr-BE",
+      "language": "français (Belgique)",
+      "variants": []
+    },
+    {
+      "id": "AntoineNeural",
+      "name": "Antoine",
+      "gender": "unknown",
+      "locale": "fr-CA",
+      "language": "français canadien",
+      "variants": []
+    },
+    {
+      "id": "JeanNeural",
+      "name": "Jean",
+      "gender": "unknown",
+      "locale": "fr-CA",
+      "language": "français canadien",
+      "variants": []
+    },
+    {
+      "id": "SylvieNeural",
+      "name": "Sylvie",
+      "gender": "unknown",
+      "locale": "fr-CA",
+      "language": "français canadien",
+      "variants": []
+    },
+    {
+      "id": "ThierryNeural",
+      "name": "Thierry",
+      "gender": "unknown",
+      "locale": "fr-CA",
+      "language": "français canadien",
+      "variants": []
+    },
+    {
+      "id": "ArianeNeural",
+      "name": "Ariane",
+      "gender": "unknown",
+      "locale": "fr-CH",
+      "language": "français suisse",
+      "variants": []
+    },
+    {
+      "id": "FabriceNeural",
+      "name": "Fabrice",
+      "gender": "unknown",
+      "locale": "fr-CH",
+      "language": "français suisse",
+      "variants": []
+    },
+    {
+      "id": "AlainNeural",
+      "name": "Alain",
+      "gender": "unknown",
+      "locale": "fr-FR",
+      "language": "Français",
+      "variants": []
+    },
+    {
+      "id": "BrigitteNeural",
+      "name": "Brigitte",
+      "gender": "unknown",
+      "locale": "fr-FR",
+      "language": "Français",
+      "variants": []
+    },
+    {
+      "id": "CelesteNeural",
+      "name": "Celeste",
+      "gender": "unknown",
+      "locale": "fr-FR",
+      "language": "Français",
+      "variants": []
+    },
+    {
+      "id": "ClaudeNeural",
+      "name": "Claude",
+      "gender": "unknown",
+      "locale": "fr-FR",
+      "language": "Français",
+      "variants": []
+    },
+    {
+      "id": "CoralieNeural",
+      "name": "Coralie",
+      "gender": "unknown",
+      "locale": "fr-FR",
+      "language": "Français",
+      "variants": []
+    },
+    {
+      "id": "DeniseNeural",
+      "name": "Denise",
+      "gender": "female",
+      "locale": "fr-FR",
+      "language": "Français",
+      "variants": [
+        "cheerful",
+        "sad",
+        "whispering",
+        "excited"
+      ]
+    },
+    {
+      "id": "EloiseNeural",
+      "name": "Eloise",
+      "gender": "unknown",
+      "locale": "fr-FR",
+      "language": "Français",
+      "variants": []
+    },
+    {
+      "id": "HenriNeural",
+      "name": "Henri",
+      "gender": "male",
+      "locale": "fr-FR",
+      "language": "Français",
+      "variants": [
+        "cheerful",
+        "sad",
+        "whispering",
+        "excited"
+      ]
+    },
+    {
+      "id": "JacquelineNeural",
+      "name": "Jacqueline",
+      "gender": "unknown",
+      "locale": "fr-FR",
+      "language": "Français",
+      "variants": []
+    },
+    {
+      "id": "JeromeNeural",
+      "name": "Jerome",
+      "gender": "unknown",
+      "locale": "fr-FR",
+      "language": "Français",
+      "variants": []
+    },
+    {
+      "id": "JosephineNeural",
+      "name": "Josephine",
+      "gender": "unknown",
+      "locale": "fr-FR",
+      "language": "Français",
+      "variants": []
+    },
+    {
+      "id": "MauriceNeural",
+      "name": "Maurice",
+      "gender": "unknown",
+      "locale": "fr-FR",
+      "language": "Français",
+      "variants": []
+    },
+    {
+      "id": "YvesNeural",
+      "name": "Yves",
+      "gender": "unknown",
+      "locale": "fr-FR",
+      "language": "Français",
+      "variants": []
+    },
+    {
+      "id": "YvetteNeural",
+      "name": "Yvette",
+      "gender": "unknown",
+      "locale": "fr-FR",
+      "language": "Français",
+      "variants": []
+    },
+    {
+      "id": "ColmNeural",
+      "name": "Colm",
+      "gender": "unknown",
+      "locale": "ga-IE",
+      "language": "Gaeilge (Éire)",
+      "variants": []
+    },
+    {
+      "id": "OrlaNeural",
+      "name": "Orla",
+      "gender": "unknown",
+      "locale": "ga-IE",
+      "language": "Gaeilge (Éire)",
+      "variants": []
+    },
+    {
+      "id": "RoiNeural",
+      "name": "Roi",
+      "gender": "unknown",
+      "locale": "gl-ES",
+      "language": "galego (España)",
+      "variants": []
+    },
+    {
+      "id": "SabelaNeural",
+      "name": "Sabela",
+      "gender": "unknown",
+      "locale": "gl-ES",
+      "language": "galego (España)",
+      "variants": []
+    },
+    {
+      "id": "DhwaniNeural",
+      "name": "Dhwani",
+      "gender": "unknown",
+      "locale": "gu-IN",
+      "language": "ગુજરાતી (ભારત)",
+      "variants": []
+    },
+    {
+      "id": "NiranjanNeural",
+      "name": "Niranjan",
+      "gender": "unknown",
+      "locale": "gu-IN",
+      "language": "ગુજરાતી (ભારત)",
+      "variants": []
+    },
+    {
+      "id": "AvriNeural",
+      "name": "Avri",
+      "gender": "unknown",
+      "locale": "he-IL",
+      "language": "עברית (ישראל)",
+      "variants": []
+    },
+    {
+      "id": "HilaNeural",
+      "name": "Hila",
+      "gender": "unknown",
+      "locale": "he-IL",
+      "language": "עברית (ישראל)",
+      "variants": []
+    },
+    {
+      "id": "AaravNeural",
+      "name": "Aarav",
+      "gender": "unknown",
+      "locale": "hi-IN",
+      "language": "हिन्दी (भारत)",
+      "variants": []
+    },
+    {
+      "id": "AartiNeural",
+      "name": "Aarti",
+      "gender": "unknown",
+      "locale": "hi-IN",
+      "language": "हिन्दी (भारत)",
+      "variants": []
+    },
+    {
+      "id": "AnanyaNeural",
+      "name": "Ananya",
+      "gender": "unknown",
+      "locale": "hi-IN",
+      "language": "हिन्दी (भारत)",
+      "variants": []
+    },
+    {
+      "id": "ArjunNeural",
+      "name": "Arjun",
+      "gender": "unknown",
+      "locale": "hi-IN",
+      "language": "हिन्दी (भारत)",
+      "variants": []
+    },
+    {
+      "id": "KavyaNeural",
+      "name": "Kavya",
+      "gender": "unknown",
+      "locale": "hi-IN",
+      "language": "हिन्दी (भारत)",
+      "variants": []
+    },
+    {
+      "id": "KunalNeural",
+      "name": "Kunal",
+      "gender": "unknown",
+      "locale": "hi-IN",
+      "language": "हिन्दी (भारत)",
+      "variants": []
+    },
+    {
+      "id": "MadhurNeural",
+      "name": "Madhur",
+      "gender": "unknown",
+      "locale": "hi-IN",
+      "language": "हिन्दी (भारत)",
+      "variants": []
+    },
+    {
+      "id": "RehaanNeural",
+      "name": "Rehaan",
+      "gender": "unknown",
+      "locale": "hi-IN",
+      "language": "हिन्दी (भारत)",
+      "variants": []
+    },
+    {
+      "id": "SwaraNeural",
+      "name": "Swara",
+      "gender": "unknown",
+      "locale": "hi-IN",
+      "language": "हिन्दी (भारत)",
+      "variants": [
+        "newscast",
+        "cheerful",
+        "empathetic"
+      ]
+    },
+    {
+      "id": "GabrijelaNeural",
+      "name": "Gabrijela",
+      "gender": "unknown",
+      "locale": "hr-HR",
+      "language": "hrvatski (Hrvatska)",
+      "variants": []
+    },
+    {
+      "id": "SreckoNeural",
+      "name": "Srecko",
+      "gender": "unknown",
+      "locale": "hr-HR",
+      "language": "hrvatski (Hrvatska)",
+      "variants": []
+    },
+    {
+      "id": "NoemiNeural",
+      "name": "Noemi",
+      "gender": "female",
+      "locale": "hu-HU",
+      "language": "Magyar",
+      "variants": []
+    },
+    {
+      "id": "TamasNeural",
+      "name": "Tamas",
+      "gender": "male",
+      "locale": "hu-HU",
+      "language": "Magyar",
+      "variants": []
+    },
+    {
+      "id": "AnahitNeural",
+      "name": "Anahit",
+      "gender": "unknown",
+      "locale": "hy-AM",
+      "language": "հայերեն (Հայաստան)",
+      "variants": []
+    },
+    {
+      "id": "HaykNeural",
+      "name": "Hayk",
+      "gender": "unknown",
+      "locale": "hy-AM",
+      "language": "հայերեն (Հայաստան)",
+      "variants": []
+    },
+    {
+      "id": "ArdiNeural",
+      "name": "Ardi",
+      "gender": "unknown",
+      "locale": "id-ID",
+      "language": "Indonesia (Indonesia)",
+      "variants": []
+    },
+    {
+      "id": "GadisNeural",
+      "name": "Gadis",
+      "gender": "unknown",
+      "locale": "id-ID",
+      "language": "Indonesia (Indonesia)",
+      "variants": []
+    },
+    {
+      "id": "GudrunNeural",
+      "name": "Gudrun",
+      "gender": "unknown",
+      "locale": "is-IS",
+      "language": "íslenska (Ísland)",
+      "variants": []
+    },
+    {
+      "id": "GunnarNeural",
+      "name": "Gunnar",
+      "gender": "unknown",
+      "locale": "is-IS",
+      "language": "íslenska (Ísland)",
+      "variants": []
+    },
+    {
+      "id": "BenignoNeural",
+      "name": "Benigno",
+      "gender": "unknown",
+      "locale": "it-IT",
+      "language": "Italiano",
+      "variants": []
+    },
+    {
+      "id": "CalimeroNeural",
+      "name": "Calimero",
+      "gender": "unknown",
+      "locale": "it-IT",
+      "language": "Italiano",
+      "variants": []
+    },
+    {
+      "id": "CataldoNeural",
+      "name": "Cataldo",
+      "gender": "unknown",
+      "locale": "it-IT",
+      "language": "Italiano",
+      "variants": []
+    },
+    {
+      "id": "DiegoNeural",
+      "name": "Diego",
+      "gender": "male",
+      "locale": "it-IT",
+      "language": "Italiano",
+      "variants": [
+        "cheerful",
+        "sad",
+        "excited"
+      ]
+    },
+    {
+      "id": "ElsaNeural",
+      "name": "Elsa",
+      "gender": "female",
+      "locale": "it-IT",
+      "language": "Italiano",
+      "variants": []
+    },
+    {
+      "id": "FabiolaNeural",
+      "name": "Fabiola",
+      "gender": "unknown",
+      "locale": "it-IT",
+      "language": "Italiano",
+      "variants": []
+    },
+    {
+      "id": "FiammaNeural",
+      "name": "Fiamma",
+      "gender": "unknown",
+      "locale": "it-IT",
+      "language": "Italiano",
+      "variants": []
+    },
+    {
+      "id": "GianniNeural",
+      "name": "Gianni",
+      "gender": "unknown",
+      "locale": "it-IT",
+      "language": "Italiano",
+      "variants": []
+    },
+    {
+      "id": "GiuseppeNeural",
+      "name": "Giuseppe",
+      "gender": "unknown",
+      "locale": "it-IT",
+      "language": "Italiano",
+      "variants": []
+    },
+    {
+      "id": "ImeldaNeural",
+      "name": "Imelda",
+      "gender": "unknown",
+      "locale": "it-IT",
+      "language": "Italiano",
+      "variants": []
+    },
+    {
+      "id": "IrmaNeural",
+      "name": "Irma",
+      "gender": "unknown",
+      "locale": "it-IT",
+      "language": "Italiano",
+      "variants": []
+    },
+    {
+      "id": "IsabellaNeural",
+      "name": "Isabella",
+      "gender": "unknown",
+      "locale": "it-IT",
+      "language": "Italiano",
+      "variants": [
+        "cheerful",
+        "chat",
+        "whispering",
+        "sad",
+        "excited"
+      ]
+    },
+    {
+      "id": "LisandroNeural",
+      "name": "Lisandro",
+      "gender": "unknown",
+      "locale": "it-IT",
+      "language": "Italiano",
+      "variants": []
+    },
+    {
+      "id": "PalmiraNeural",
+      "name": "Palmira",
+      "gender": "unknown",
+      "locale": "it-IT",
+      "language": "Italiano",
+      "variants": []
+    },
+    {
+      "id": "PierinaNeural",
+      "name": "Pierina",
+      "gender": "unknown",
+      "locale": "it-IT",
+      "language": "Italiano",
+      "variants": []
+    },
+    {
+      "id": "RinaldoNeural",
+      "name": "Rinaldo",
+      "gender": "unknown",
+      "locale": "it-IT",
+      "language": "Italiano",
+      "variants": []
+    },
+    {
+      "id": "SiqiniqNeural",
+      "name": "Siqiniq",
+      "gender": "unknown",
+      "locale": "iu-Cans-CA",
+      "language": "Inuktitut (Unified Canadian Aboriginal Syllabics, Canada)",
+      "variants": []
+    },
+    {
+      "id": "TaqqiqNeural",
+      "name": "Taqqiq",
+      "gender": "unknown",
+      "locale": "iu-Cans-CA",
+      "language": "Inuktitut (Unified Canadian Aboriginal Syllabics, Canada)",
+      "variants": []
+    },
+    {
+      "id": "SiqiniqNeural",
+      "name": "Siqiniq",
+      "gender": "unknown",
+      "locale": "iu-Latn-CA",
+      "language": "Inuktitut (Latin, Canada)",
+      "variants": []
+    },
+    {
+      "id": "TaqqiqNeural",
+      "name": "Taqqiq",
+      "gender": "unknown",
+      "locale": "iu-Latn-CA",
+      "language": "Inuktitut (Latin, Canada)",
+      "variants": []
+    },
+    {
+      "id": "AoiNeural",
+      "name": "Aoi",
+      "gender": "unknown",
+      "locale": "ja-JP",
+      "language": "日本語 (日本)",
+      "variants": []
+    },
+    {
+      "id": "DaichiNeural",
+      "name": "Daichi",
+      "gender": "unknown",
+      "locale": "ja-JP",
+      "language": "日本語 (日本)",
+      "variants": []
+    },
+    {
+      "id": "KeitaNeural",
+      "name": "Keita",
+      "gender": "unknown",
+      "locale": "ja-JP",
+      "language": "日本語 (日本)",
+      "variants": []
+    },
+    {
+      "id": "MayuNeural",
+      "name": "Mayu",
+      "gender": "unknown",
+      "locale": "ja-JP",
+      "language": "日本語 (日本)",
+      "variants": []
+    },
+    {
+      "id": "NanamiNeural",
+      "name": "Nanami",
+      "gender": "unknown",
+      "locale": "ja-JP",
+      "language": "日本語 (日本)",
+      "variants": [
+        "chat",
+        "customerservice",
+        "cheerful"
+      ]
+    },
+    {
+      "id": "NaokiNeural",
+      "name": "Naoki",
+      "gender": "unknown",
+      "locale": "ja-JP",
+      "language": "日本語 (日本)",
+      "variants": []
+    },
+    {
+      "id": "ShioriNeural",
+      "name": "Shiori",
+      "gender": "unknown",
+      "locale": "ja-JP",
+      "language": "日本語 (日本)",
+      "variants": []
+    },
+    {
+      "id": "DimasNeural",
+      "name": "Dimas",
+      "gender": "unknown",
+      "locale": "jv-ID",
+      "language": "Jawa (Indonésia)",
+      "variants": []
+    },
+    {
+      "id": "SitiNeural",
+      "name": "Siti",
+      "gender": "unknown",
+      "locale": "jv-ID",
+      "language": "Jawa (Indonésia)",
+      "variants": []
+    },
+    {
+      "id": "EkaNeural",
+      "name": "Eka",
+      "gender": "unknown",
+      "locale": "ka-GE",
+      "language": "ქართული (საქართველო)",
+      "variants": []
+    },
+    {
+      "id": "GiorgiNeural",
+      "name": "Giorgi",
+      "gender": "unknown",
+      "locale": "ka-GE",
+      "language": "ქართული (საქართველო)",
+      "variants": []
+    },
+    {
+      "id": "AigulNeural",
+      "name": "Aigul",
+      "gender": "unknown",
+      "locale": "kk-KZ",
+      "language": "қазақ тілі (Қазақстан)",
+      "variants": []
+    },
+    {
+      "id": "DauletNeural",
+      "name": "Daulet",
+      "gender": "unknown",
+      "locale": "kk-KZ",
+      "language": "қазақ тілі (Қазақстан)",
+      "variants": []
+    },
+    {
+      "id": "PisethNeural",
+      "name": "Piseth",
+      "gender": "unknown",
+      "locale": "km-KH",
+      "language": "ខ្មែរ (កម្ពុជា)",
+      "variants": []
+    },
+    {
+      "id": "SreymomNeural",
+      "name": "Sreymom",
+      "gender": "unknown",
+      "locale": "km-KH",
+      "language": "ខ្មែរ (កម្ពុជា)",
+      "variants": []
+    },
+    {
+      "id": "GaganNeural",
+      "name": "Gagan",
+      "gender": "unknown",
+      "locale": "kn-IN",
+      "language": "ಕನ್ನಡ (ಭಾರತ)",
+      "variants": []
+    },
+    {
+      "id": "SapnaNeural",
+      "name": "Sapna",
+      "gender": "unknown",
+      "locale": "kn-IN",
+      "language": "ಕನ್ನಡ (ಭಾರತ)",
+      "variants": []
+    },
+    {
+      "id": "BongJinNeural",
+      "name": "BongJin",
+      "gender": "unknown",
+      "locale": "ko-KR",
+      "language": "한국어(대한민국)",
+      "variants": []
+    },
+    {
+      "id": "GookMinNeural",
+      "name": "GookMin",
+      "gender": "unknown",
+      "locale": "ko-KR",
+      "language": "한국어(대한민국)",
+      "variants": []
+    },
+    {
+      "id": "HyunsuNeural",
+      "name": "Hyunsu",
+      "gender": "unknown",
+      "locale": "ko-KR",
+      "language": "한국어(대한민국)",
+      "variants": []
+    },
+    {
+      "id": "InJoonNeural",
+      "name": "InJoon",
+      "gender": "unknown",
+      "locale": "ko-KR",
+      "language": "한국어(대한민국)",
+      "variants": [
+        "sad"
+      ]
+    },
+    {
+      "id": "JiMinNeural",
+      "name": "JiMin",
+      "gender": "unknown",
+      "locale": "ko-KR",
+      "language": "한국어(대한민국)",
+      "variants": []
+    },
+    {
+      "id": "SeoHyeonNeural",
+      "name": "SeoHyeon",
+      "gender": "unknown",
+      "locale": "ko-KR",
+      "language": "한국어(대한민국)",
+      "variants": []
+    },
+    {
+      "id": "SoonBokNeural",
+      "name": "SoonBok",
+      "gender": "unknown",
+      "locale": "ko-KR",
+      "language": "한국어(대한민국)",
+      "variants": []
+    },
+    {
+      "id": "SunHiNeural",
+      "name": "Sun-Hi",
+      "gender": "unknown",
+      "locale": "ko-KR",
+      "language": "한국어(대한민국)",
+      "variants": []
+    },
+    {
+      "id": "YuJinNeural",
+      "name": "YuJin",
+      "gender": "unknown",
+      "locale": "ko-KR",
+      "language": "한국어(대한민국)",
+      "variants": []
+    },
+    {
+      "id": "ChanthavongNeural",
+      "name": "Chanthavong",
+      "gender": "unknown",
+      "locale": "lo-LA",
+      "language": "ລາວ (ລາວ)",
+      "variants": []
+    },
+    {
+      "id": "KeomanyNeural",
+      "name": "Keomany",
+      "gender": "unknown",
+      "locale": "lo-LA",
+      "language": "ລາວ (ລາວ)",
+      "variants": []
+    },
+    {
+      "id": "LeonasNeural",
+      "name": "Leonas",
+      "gender": "unknown",
+      "locale": "lt-LT",
+      "language": "lietuvių (Lietuva)",
+      "variants": []
+    },
+    {
+      "id": "OnaNeural",
+      "name": "Ona",
+      "gender": "unknown",
+      "locale": "lt-LT",
+      "language": "lietuvių (Lietuva)",
+      "variants": []
+    },
+    {
+      "id": "EveritaNeural",
+      "name": "Everita",
+      "gender": "unknown",
+      "locale": "lv-LV",
+      "language": "latviešu (Latvija)",
+      "variants": []
+    },
+    {
+      "id": "NilsNeural",
+      "name": "Nils",
+      "gender": "unknown",
+      "locale": "lv-LV",
+      "language": "latviešu (Latvija)",
+      "variants": []
+    },
+    {
+      "id": "AleksandarNeural",
+      "name": "Aleksandar",
+      "gender": "unknown",
+      "locale": "mk-MK",
+      "language": "македонски (Северна Македонија)",
+      "variants": []
+    },
+    {
+      "id": "MarijaNeural",
+      "name": "Marija",
+      "gender": "unknown",
+      "locale": "mk-MK",
+      "language": "македонски (Северна Македонија)",
+      "variants": []
+    },
+    {
+      "id": "MidhunNeural",
+      "name": "Midhun",
+      "gender": "unknown",
+      "locale": "ml-IN",
+      "language": "മലയാളം (ഇന്ത്യ)",
+      "variants": []
+    },
+    {
+      "id": "SobhanaNeural",
+      "name": "Sobhana",
+      "gender": "unknown",
+      "locale": "ml-IN",
+      "language": "മലയാളം (ഇന്ത്യ)",
+      "variants": []
+    },
+    {
+      "id": "BataaNeural",
+      "name": "Bataa",
+      "gender": "unknown",
+      "locale": "mn-MN",
+      "language": "монгол (Монгол)",
+      "variants": []
+    },
+    {
+      "id": "YesuiNeural",
+      "name": "Yesui",
+      "gender": "unknown",
+      "locale": "mn-MN",
+      "language": "монгол (Монгол)",
+      "variants": []
+    },
+    {
+      "id": "AarohiNeural",
+      "name": "Aarohi",
+      "gender": "unknown",
+      "locale": "mr-IN",
+      "language": "मराठी (भारत)",
+      "variants": []
+    },
+    {
+      "id": "ManoharNeural",
+      "name": "Manohar",
+      "gender": "unknown",
+      "locale": "mr-IN",
+      "language": "मराठी (भारत)",
+      "variants": []
+    },
+    {
+      "id": "OsmanNeural",
+      "name": "Osman",
+      "gender": "unknown",
+      "locale": "ms-MY",
+      "language": "Melayu (Malaysia)",
+      "variants": []
+    },
+    {
+      "id": "YasminNeural",
+      "name": "Yasmin",
+      "gender": "unknown",
+      "locale": "ms-MY",
+      "language": "Melayu (Malaysia)",
+      "variants": []
+    },
+    {
+      "id": "GraceNeural",
+      "name": "Grace",
+      "gender": "unknown",
+      "locale": "mt-MT",
+      "language": "Malti (Malta)",
+      "variants": []
+    },
+    {
+      "id": "JosephNeural",
+      "name": "Joseph",
+      "gender": "unknown",
+      "locale": "mt-MT",
+      "language": "Malti (Malta)",
+      "variants": []
+    },
+    {
+      "id": "NilarNeural",
+      "name": "Nilar",
+      "gender": "unknown",
+      "locale": "my-MM",
+      "language": "မြန်မာ (မြန်မာ)",
+      "variants": []
+    },
+    {
+      "id": "ThihaNeural",
+      "name": "Thiha",
+      "gender": "unknown",
+      "locale": "my-MM",
+      "language": "မြန်မာ (မြန်မာ)",
+      "variants": []
+    },
+    {
+      "id": "FinnNeural",
+      "name": "Finn",
+      "gender": "unknown",
+      "locale": "nb-NO",
+      "language": "norsk bokmål (Norge)",
+      "variants": []
+    },
+    {
+      "id": "IselinNeural",
+      "name": "Iselin",
+      "gender": "unknown",
+      "locale": "nb-NO",
+      "language": "norsk bokmål (Norge)",
+      "variants": []
+    },
+    {
+      "id": "PernilleNeural",
+      "name": "Pernille",
+      "gender": "unknown",
+      "locale": "nb-NO",
+      "language": "norsk bokmål (Norge)",
+      "variants": []
+    },
+    {
+      "id": "HemkalaNeural",
+      "name": "Hemkala",
+      "gender": "unknown",
+      "locale": "ne-NP",
+      "language": "नेपाली (नेपाल)",
+      "variants": []
+    },
+    {
+      "id": "SagarNeural",
+      "name": "Sagar",
+      "gender": "unknown",
+      "locale": "ne-NP",
+      "language": "नेपाली (नेपाल)",
+      "variants": []
+    },
+    {
+      "id": "ArnaudNeural",
+      "name": "Arnaud",
+      "gender": "unknown",
+      "locale": "nl-BE",
+      "language": "Vlaams",
+      "variants": []
+    },
+    {
+      "id": "DenaNeural",
+      "name": "Dena",
+      "gender": "unknown",
+      "locale": "nl-BE",
+      "language": "Vlaams",
+      "variants": []
+    },
+    {
+      "id": "ColetteNeural",
+      "name": "Colette",
+      "gender": "unknown",
+      "locale": "nl-NL",
+      "language": "Nederlands (Nederland)",
+      "variants": []
+    },
+    {
+      "id": "FennaNeural",
+      "name": "Fenna",
+      "gender": "unknown",
+      "locale": "nl-NL",
+      "language": "Nederlands (Nederland)",
+      "variants": []
+    },
+    {
+      "id": "MaartenNeural",
+      "name": "Maarten",
+      "gender": "unknown",
+      "locale": "nl-NL",
+      "language": "Nederlands (Nederland)",
+      "variants": []
+    },
+    {
+      "id": "SubhasiniNeural",
+      "name": "Subhasini",
+      "gender": "unknown",
+      "locale": "or-IN",
+      "language": "ଓଡ଼ିଆ (ଭାରତ)",
+      "variants": []
+    },
+    {
+      "id": "SukantNeural",
+      "name": "Sukant",
+      "gender": "unknown",
+      "locale": "or-IN",
+      "language": "ଓଡ଼ିଆ (ଭାରତ)",
+      "variants": []
+    },
+    {
+      "id": "OjasNeural",
+      "name": "Ojas",
+      "gender": "unknown",
+      "locale": "pa-IN",
+      "language": "ਪੰਜਾਬੀ (ਭਾਰਤ)",
+      "variants": []
+    },
+    {
+      "id": "VaaniNeural",
+      "name": "Vaani",
+      "gender": "unknown",
+      "locale": "pa-IN",
+      "language": "ਪੰਜਾਬੀ (ਭਾਰਤ)",
+      "variants": []
+    },
+    {
+      "id": "AgnieszkaNeural",
+      "name": "Agnieszka",
+      "gender": "female",
+      "locale": "pl-PL",
+      "language": "Polski",
+      "variants": []
+    },
+    {
+      "id": "MarekNeural",
+      "name": "Marek",
+      "gender": "male",
+      "locale": "pl-PL",
+      "language": "Polski",
+      "variants": []
+    },
+    {
+      "id": "ZofiaNeural",
+      "name": "Zofia",
+      "gender": "unknown",
+      "locale": "pl-PL",
+      "language": "Polski",
+      "variants": []
+    },
+    {
+      "id": "GulNawazNeural",
+      "name": "Gul Nawaz",
+      "gender": "unknown",
+      "locale": "ps-AF",
+      "language": "پښتو (افغانستان)",
+      "variants": []
+    },
+    {
+      "id": "LatifaNeural",
+      "name": "Latifa",
+      "gender": "unknown",
+      "locale": "ps-AF",
+      "language": "پښتو (افغانستان)",
+      "variants": []
+    },
+    {
+      "id": "AntonioNeural",
+      "name": "Antonio",
+      "gender": "unknown",
+      "locale": "pt-BR",
+      "language": "português (Brasil)",
+      "variants": []
+    },
+    {
+      "id": "BrendaNeural",
+      "name": "Brenda",
+      "gender": "unknown",
+      "locale": "pt-BR",
+      "language": "português (Brasil)",
+      "variants": []
+    },
+    {
+      "id": "DonatoNeural",
+      "name": "Donato",
+      "gender": "unknown",
+      "locale": "pt-BR",
+      "language": "português (Brasil)",
+      "variants": []
+    },
+    {
+      "id": "ElzaNeural",
+      "name": "Elza",
+      "gender": "unknown",
+      "locale": "pt-BR",
+      "language": "português (Brasil)",
+      "variants": []
+    },
+    {
+      "id": "FabioNeural",
+      "name": "Fabio",
+      "gender": "unknown",
+      "locale": "pt-BR",
+      "language": "português (Brasil)",
+      "variants": []
+    },
+    {
+      "id": "FranciscaNeural",
+      "name": "Francisca",
+      "gender": "unknown",
+      "locale": "pt-BR",
+      "language": "português (Brasil)",
+      "variants": [
+        "calm"
+      ]
+    },
+    {
+      "id": "GiovannaNeural",
+      "name": "Giovanna",
+      "gender": "unknown",
+      "locale": "pt-BR",
+      "language": "português (Brasil)",
+      "variants": []
+    },
+    {
+      "id": "HumbertoNeural",
+      "name": "Humberto",
+      "gender": "unknown",
+      "locale": "pt-BR",
+      "language": "português (Brasil)",
+      "variants": []
+    },
+    {
+      "id": "JulioNeural",
+      "name": "Julio",
+      "gender": "unknown",
+      "locale": "pt-BR",
+      "language": "português (Brasil)",
+      "variants": []
+    },
+    {
+      "id": "LeilaNeural",
+      "name": "Leila",
+      "gender": "unknown",
+      "locale": "pt-BR",
+      "language": "português (Brasil)",
+      "variants": []
+    },
+    {
+      "id": "LeticiaNeural",
+      "name": "Leticia",
+      "gender": "unknown",
+      "locale": "pt-BR",
+      "language": "português (Brasil)",
+      "variants": []
+    },
+    {
+      "id": "ManuelaNeural",
+      "name": "Manuela",
+      "gender": "unknown",
+      "locale": "pt-BR",
+      "language": "português (Brasil)",
+      "variants": []
+    },
+    {
+      "id": "NicolauNeural",
+      "name": "Nicolau",
+      "gender": "unknown",
+      "locale": "pt-BR",
+      "language": "português (Brasil)",
+      "variants": []
+    },
+    {
+      "id": "ThalitaNeural",
+      "name": "Thalita",
+      "gender": "unknown",
+      "locale": "pt-BR",
+      "language": "português (Brasil)",
+      "variants": []
+    },
+    {
+      "id": "ValerioNeural",
+      "name": "Valerio",
+      "gender": "unknown",
+      "locale": "pt-BR",
+      "language": "português (Brasil)",
+      "variants": []
+    },
+    {
+      "id": "YaraNeural",
+      "name": "Yara",
+      "gender": "unknown",
+      "locale": "pt-BR",
+      "language": "português (Brasil)",
+      "variants": []
+    },
+    {
+      "id": "DuarteNeural",
+      "name": "Duarte",
+      "gender": "unknown",
+      "locale": "pt-PT",
+      "language": "português europeu",
+      "variants": []
+    },
+    {
+      "id": "FernandaNeural",
+      "name": "Fernanda",
+      "gender": "unknown",
+      "locale": "pt-PT",
+      "language": "português europeu",
+      "variants": []
+    },
+    {
+      "id": "RaquelNeural",
+      "name": "Raquel",
+      "gender": "unknown",
+      "locale": "pt-PT",
+      "language": "português europeu",
+      "variants": [
+        "sad",
+        "whispering"
+      ]
+    },
+    {
+      "id": "AlinaNeural",
+      "name": "Alina",
+      "gender": "unknown",
+      "locale": "ro-RO",
+      "language": "română (România)",
+      "variants": []
+    },
+    {
+      "id": "EmilNeural",
+      "name": "Emil",
+      "gender": "unknown",
+      "locale": "ro-RO",
+      "language": "română (România)",
+      "variants": []
+    },
+    {
+      "id": "DariyaNeural",
+      "name": "Dariya",
+      "gender": "unknown",
+      "locale": "ru-RU",
+      "language": "русский (Россия)",
+      "variants": []
+    },
+    {
+      "id": "DmitryNeural",
+      "name": "Dmitry",
+      "gender": "unknown",
+      "locale": "ru-RU",
+      "language": "русский (Россия)",
+      "variants": []
+    },
+    {
+      "id": "SvetlanaNeural",
+      "name": "Svetlana",
+      "gender": "unknown",
+      "locale": "ru-RU",
+      "language": "русский (Россия)",
+      "variants": []
+    },
+    {
+      "id": "SameeraNeural",
+      "name": "Sameera",
+      "gender": "unknown",
+      "locale": "si-LK",
+      "language": "සිංහල (ශ්‍රී ලංකාව)",
+      "variants": []
+    },
+    {
+      "id": "ThiliniNeural",
+      "name": "Thilini",
+      "gender": "unknown",
+      "locale": "si-LK",
+      "language": "සිංහල (ශ්‍රී ලංකාව)",
+      "variants": []
+    },
+    {
+      "id": "LukasNeural",
+      "name": "Lukas",
+      "gender": "male",
+      "locale": "sk-SK",
+      "language": "Slovenčina",
+      "variants": []
+    },
+    {
+      "id": "ViktoriaNeural",
+      "name": "Viktoria",
+      "gender": "female",
+      "locale": "sk-SK",
+      "language": "Slovenčina",
+      "variants": []
+    },
+    {
+      "id": "PetraNeural",
+      "name": "Petra",
+      "gender": "unknown",
+      "locale": "sl-SI",
+      "language": "slovenščina (Slovenija)",
+      "variants": []
+    },
+    {
+      "id": "RokNeural",
+      "name": "Rok",
+      "gender": "unknown",
+      "locale": "sl-SI",
+      "language": "slovenščina (Slovenija)",
+      "variants": []
+    },
+    {
+      "id": "MuuseNeural",
+      "name": "Muuse",
+      "gender": "unknown",
+      "locale": "so-SO",
+      "language": "Soomaali (Soomaaliya)",
+      "variants": []
+    },
+    {
+      "id": "UbaxNeural",
+      "name": "Ubax",
+      "gender": "unknown",
+      "locale": "so-SO",
+      "language": "Soomaali (Soomaaliya)",
+      "variants": []
+    },
+    {
+      "id": "AnilaNeural",
+      "name": "Anila",
+      "gender": "unknown",
+      "locale": "sq-AL",
+      "language": "shqip (Shqipëri)",
+      "variants": []
+    },
+    {
+      "id": "IlirNeural",
+      "name": "Ilir",
+      "gender": "unknown",
+      "locale": "sq-AL",
+      "language": "shqip (Shqipëri)",
+      "variants": []
+    },
+    {
+      "id": "NicholasNeural",
+      "name": "Nicholas",
+      "gender": "unknown",
+      "locale": "sr-Latn-RS",
+      "language": "srpski (latinica, Srbija)",
+      "variants": []
+    },
+    {
+      "id": "SophieNeural",
+      "name": "Sophie",
+      "gender": "unknown",
+      "locale": "sr-Latn-RS",
+      "language": "srpski (latinica, Srbija)",
+      "variants": []
+    },
+    {
+      "id": "NicholasNeural",
+      "name": "Nicholas",
+      "gender": "unknown",
+      "locale": "sr-RS",
+      "language": "српски (Србија)",
+      "variants": []
+    },
+    {
+      "id": "SophieNeural",
+      "name": "Sophie",
+      "gender": "unknown",
+      "locale": "sr-RS",
+      "language": "српски (Србија)",
+      "variants": []
+    },
+    {
+      "id": "JajangNeural",
+      "name": "Jajang",
+      "gender": "unknown",
+      "locale": "su-ID",
+      "language": "Basa Sunda (Indonesia)",
+      "variants": []
+    },
+    {
+      "id": "TutiNeural",
+      "name": "Tuti",
+      "gender": "unknown",
+      "locale": "su-ID",
+      "language": "Basa Sunda (Indonesia)",
+      "variants": []
+    },
+    {
+      "id": "HilleviNeural",
+      "name": "Hillevi",
+      "gender": "unknown",
+      "locale": "sv-SE",
+      "language": "svenska (Sverige)",
+      "variants": []
+    },
+    {
+      "id": "MattiasNeural",
+      "name": "Mattias",
+      "gender": "unknown",
+      "locale": "sv-SE",
+      "language": "svenska (Sverige)",
+      "variants": []
+    },
+    {
+      "id": "SofieNeural",
+      "name": "Sofie",
+      "gender": "unknown",
+      "locale": "sv-SE",
+      "language": "svenska (Sverige)",
+      "variants": []
+    },
+    {
+      "id": "RafikiNeural",
+      "name": "Rafiki",
+      "gender": "unknown",
+      "locale": "sw-KE",
+      "language": "Kiswahili (Kenya)",
+      "variants": []
+    },
+    {
+      "id": "ZuriNeural",
+      "name": "Zuri",
+      "gender": "unknown",
+      "locale": "sw-KE",
+      "language": "Kiswahili (Kenya)",
+      "variants": []
+    },
+    {
+      "id": "DaudiNeural",
+      "name": "Daudi",
+      "gender": "unknown",
+      "locale": "sw-TZ",
+      "language": "Kiswahili (Tanzania)",
+      "variants": []
+    },
+    {
+      "id": "RehemaNeural",
+      "name": "Rehema",
+      "gender": "unknown",
+      "locale": "sw-TZ",
+      "language": "Kiswahili (Tanzania)",
+      "variants": []
+    },
+    {
+      "id": "PallaviNeural",
+      "name": "Pallavi",
+      "gender": "unknown",
+      "locale": "ta-IN",
+      "language": "தமிழ் (இந்தியா)",
+      "variants": []
+    },
+    {
+      "id": "ValluvarNeural",
+      "name": "Valluvar",
+      "gender": "unknown",
+      "locale": "ta-IN",
+      "language": "தமிழ் (இந்தியா)",
+      "variants": []
+    },
+    {
+      "id": "KumarNeural",
+      "name": "Kumar",
+      "gender": "unknown",
+      "locale": "ta-LK",
+      "language": "தமிழ் (இலங்கை)",
+      "variants": []
+    },
+    {
+      "id": "SaranyaNeural",
+      "name": "Saranya",
+      "gender": "unknown",
+      "locale": "ta-LK",
+      "language": "தமிழ் (இலங்கை)",
+      "variants": []
+    },
+    {
+      "id": "KaniNeural",
+      "name": "Kani",
+      "gender": "unknown",
+      "locale": "ta-MY",
+      "language": "தமிழ் (மலேசியா)",
+      "variants": []
+    },
+    {
+      "id": "SuryaNeural",
+      "name": "Surya",
+      "gender": "unknown",
+      "locale": "ta-MY",
+      "language": "தமிழ் (மலேசியா)",
+      "variants": []
+    },
+    {
+      "id": "AnbuNeural",
+      "name": "Anbu",
+      "gender": "unknown",
+      "locale": "ta-SG",
+      "language": "தமிழ் (சிங்கப்பூர்)",
+      "variants": []
+    },
+    {
+      "id": "VenbaNeural",
+      "name": "Venba",
+      "gender": "unknown",
+      "locale": "ta-SG",
+      "language": "தமிழ் (சிங்கப்பூர்)",
+      "variants": []
+    },
+    {
+      "id": "MohanNeural",
+      "name": "Mohan",
+      "gender": "unknown",
+      "locale": "te-IN",
+      "language": "తెలుగు (భారతదేశం)",
+      "variants": []
+    },
+    {
+      "id": "ShrutiNeural",
+      "name": "Shruti",
+      "gender": "unknown",
+      "locale": "te-IN",
+      "language": "తెలుగు (భారతదేశం)",
+      "variants": []
+    },
+    {
+      "id": "AcharaNeural",
+      "name": "Achara",
+      "gender": "unknown",
+      "locale": "th-TH",
+      "language": "ไทย (ไทย)",
+      "variants": []
+    },
+    {
+      "id": "NiwatNeural",
+      "name": "Niwat",
+      "gender": "unknown",
+      "locale": "th-TH",
+      "language": "ไทย (ไทย)",
+      "variants": []
+    },
+    {
+      "id": "PremwadeeNeural",
+      "name": "Premwadee",
+      "gender": "unknown",
+      "locale": "th-TH",
+      "language": "ไทย (ไทย)",
+      "variants": []
+    },
+    {
+      "id": "AhmetNeural",
+      "name": "Ahmet",
+      "gender": "unknown",
+      "locale": "tr-TR",
+      "language": "Türkçe (Türkiye)",
+      "variants": []
+    },
+    {
+      "id": "EmelNeural",
+      "name": "Emel",
+      "gender": "unknown",
+      "locale": "tr-TR",
+      "language": "Türkçe (Türkiye)",
+      "variants": []
+    },
+    {
+      "id": "OstapNeural",
+      "name": "Ostap",
+      "gender": "unknown",
+      "locale": "uk-UA",
+      "language": "українська (Україна)",
+      "variants": []
+    },
+    {
+      "id": "PolinaNeural",
+      "name": "Polina",
+      "gender": "unknown",
+      "locale": "uk-UA",
+      "language": "українська (Україна)",
+      "variants": []
+    },
+    {
+      "id": "GulNeural",
+      "name": "Gul",
+      "gender": "unknown",
+      "locale": "ur-IN",
+      "language": "اردو (بھارت)",
+      "variants": []
+    },
+    {
+      "id": "SalmanNeural",
+      "name": "Salman",
+      "gender": "unknown",
+      "locale": "ur-IN",
+      "language": "اردو (بھارت)",
+      "variants": []
+    },
+    {
+      "id": "AsadNeural",
+      "name": "Asad",
+      "gender": "unknown",
+      "locale": "ur-PK",
+      "language": "اردو (پاکستان)",
+      "variants": []
+    },
+    {
+      "id": "UzmaNeural",
+      "name": "Uzma",
+      "gender": "unknown",
+      "locale": "ur-PK",
+      "language": "اردو (پاکستان)",
+      "variants": []
+    },
+    {
+      "id": "MadinaNeural",
+      "name": "Madina",
+      "gender": "unknown",
+      "locale": "uz-UZ",
+      "language": "o‘zbek (Oʻzbekiston)",
+      "variants": []
+    },
+    {
+      "id": "SardorNeural",
+      "name": "Sardor",
+      "gender": "unknown",
+      "locale": "uz-UZ",
+      "language": "o‘zbek (Oʻzbekiston)",
+      "variants": []
+    },
+    {
+      "id": "HoaiMyNeural",
+      "name": "HoaiMy",
+      "gender": "unknown",
+      "locale": "vi-VN",
+      "language": "Tiếng Việt (Việt Nam)",
+      "variants": []
+    },
+    {
+      "id": "NamMinhNeural",
+      "name": "NamMinh",
+      "gender": "unknown",
+      "locale": "vi-VN",
+      "language": "Tiếng Việt (Việt Nam)",
+      "variants": []
+    },
+    {
+      "id": "XiaotongNeural",
+      "name": "Xiaotong",
+      "gender": "unknown",
+      "locale": "wuu-CN",
+      "language": "Wu Chinese (China)",
+      "variants": []
+    },
+    {
+      "id": "YunzheNeural",
+      "name": "Yunzhe",
+      "gender": "unknown",
+      "locale": "wuu-CN",
+      "language": "Wu Chinese (China)",
+      "variants": []
+    },
+    {
+      "id": "XiaoMinNeural",
+      "name": "XiaoMin",
+      "gender": "unknown",
+      "locale": "yue-CN",
+      "language": "粤语 (中国)",
+      "variants": []
+    },
+    {
+      "id": "YunSongNeural",
+      "name": "YunSong",
+      "gender": "unknown",
+      "locale": "yue-CN",
+      "language": "粤语 (中国)",
+      "variants": []
+    },
+    {
+      "id": "XiaochenNeural",
+      "name": "Xiaochen",
+      "gender": "unknown",
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "variants": [
+        "livecommercial"
+      ]
+    },
+    {
+      "id": "XiaohanNeural",
+      "name": "Xiaohan",
+      "gender": "unknown",
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "variants": [
+        "calm",
+        "fearful",
+        "cheerful",
+        "disgruntled",
+        "serious",
+        "angry",
+        "sad",
+        "gentle",
+        "affectionate",
+        "embarrassed"
+      ]
+    },
+    {
+      "id": "XiaomengNeural",
+      "name": "Xiaomeng",
+      "gender": "unknown",
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "variants": [
+        "chat"
+      ]
+    },
+    {
+      "id": "XiaomoNeural",
+      "name": "Xiaomo",
+      "gender": "unknown",
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "variants": [
+        "embarrassed",
+        "calm",
+        "fearful",
+        "cheerful",
+        "disgruntled",
+        "serious",
+        "angry",
+        "sad",
+        "depressed",
+        "affectionate",
+        "gentle",
+        "envious"
+      ]
+    },
+    {
+      "id": "XiaoqiuNeural",
+      "name": "Xiaoqiu",
+      "gender": "unknown",
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "variants": []
+    },
+    {
+      "id": "XiaorouNeural",
+      "name": "Xiaorou",
+      "gender": "unknown",
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "variants": []
+    },
+    {
+      "id": "XiaoruiNeural",
+      "name": "Xiaorui",
+      "gender": "unknown",
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "variants": [
+        "calm",
+        "fearful",
+        "angry",
+        "sad"
+      ]
+    },
+    {
+      "id": "XiaoshuangNeural",
+      "name": "Xiaoshuang",
+      "gender": "unknown",
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "variants": [
+        "chat"
+      ]
+    },
+    {
+      "id": "XiaoxiaoNeural",
+      "name": "Xiaoxiao",
+      "gender": "unknown",
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "variants": [
+        "assistant",
+        "chat",
+        "customerservice",
+        "newscast",
+        "affectionate",
+        "angry",
+        "calm",
+        "cheerful",
+        "disgruntled",
+        "fearful",
+        "gentle",
+        "lyrical",
+        "sad",
+        "serious",
+        "poetry-reading",
+        "friendly",
+        "chat-casual",
+        "whispering",
+        "sorry",
+        "excited"
+      ]
+    },
+    {
+      "id": "XiaoxiaoDialectsNeural",
+      "name": "Xiaoxiao Dialects",
+      "gender": "unknown",
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "variants": []
+    },
+    {
+      "id": "XiaoyanNeural",
+      "name": "Xiaoyan",
+      "gender": "unknown",
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "variants": []
+    },
+    {
+      "id": "XiaoyiNeural",
+      "name": "Xiaoyi",
+      "gender": "unknown",
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "variants": [
+        "angry",
+        "disgruntled",
+        "affectionate",
+        "cheerful",
+        "fearful",
+        "sad",
+        "embarrassed",
+        "serious",
+        "gentle"
+      ]
+    },
+    {
+      "id": "XiaoyouNeural",
+      "name": "Xiaoyou",
+      "gender": "unknown",
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "variants": []
+    },
+    {
+      "id": "XiaozhenNeural",
+      "name": "Xiaozhen",
+      "gender": "unknown",
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "variants": [
+        "angry",
+        "disgruntled",
+        "cheerful",
+        "fearful",
+        "sad",
+        "serious"
+      ]
+    },
+    {
+      "id": "YunfengNeural",
+      "name": "Yunfeng",
+      "gender": "unknown",
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "variants": [
+        "angry",
+        "disgruntled",
+        "cheerful",
+        "fearful",
+        "sad",
+        "serious",
+        "depressed"
+      ]
+    },
+    {
+      "id": "YunhaoNeural",
+      "name": "Yunhao",
+      "gender": "unknown",
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "variants": [
+        "advertisement-upbeat"
+      ]
+    },
+    {
+      "id": "YunjianNeural",
+      "name": "Yunjian",
+      "gender": "unknown",
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "variants": [
+        "narration-relaxed",
+        "sports-commentary",
+        "sports-commentary-excited",
+        "angry",
+        "disgruntled",
+        "cheerful",
+        "sad",
+        "serious",
+        "depressed",
+        "documentary-narration"
+      ]
+    },
+    {
+      "id": "YunjieNeural",
+      "name": "Yunjie",
+      "gender": "unknown",
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "variants": []
+    },
+    {
+      "id": "YunxiNeural",
+      "name": "Yunxi",
+      "gender": "unknown",
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "variants": [
+        "narration-relaxed",
+        "embarrassed",
+        "fearful",
+        "cheerful",
+        "disgruntled",
+        "serious",
+        "angry",
+        "sad",
+        "depressed",
+        "chat",
+        "assistant",
+        "newscast"
+      ]
+    },
+    {
+      "id": "YunxiaNeural",
+      "name": "Yunxia",
+      "gender": "unknown",
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "variants": [
+        "calm",
+        "fearful",
+        "cheerful",
+        "angry",
+        "sad"
+      ]
+    },
+    {
+      "id": "YunyangNeural",
+      "name": "Yunyang",
+      "gender": "unknown",
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "variants": [
+        "customerservice",
+        "narration-professional",
+        "newscast-casual"
+      ]
+    },
+    {
+      "id": "YunyeNeural",
+      "name": "Yunye",
+      "gender": "unknown",
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "variants": [
+        "embarrassed",
+        "calm",
+        "fearful",
+        "cheerful",
+        "disgruntled",
+        "serious",
+        "angry",
+        "sad"
+      ]
+    },
+    {
+      "id": "YunzeNeural",
+      "name": "Yunze",
+      "gender": "unknown",
+      "locale": "zh-CN",
+      "language": "中文（中国）",
+      "variants": [
+        "calm",
+        "fearful",
+        "cheerful",
+        "disgruntled",
+        "serious",
+        "angry",
+        "sad",
+        "depressed",
+        "documentary-narration"
+      ]
+    },
+    {
+      "id": "YundengNeural",
+      "name": "Yundeng",
+      "gender": "unknown",
+      "locale": "zh-CN-henan",
+      "language": "中文（中国，HENAN）",
+      "variants": []
+    },
+    {
+      "id": "YunxiangNeural",
+      "name": "Yunxiang",
+      "gender": "unknown",
+      "locale": "zh-CN-shandong",
+      "language": "中文（中国，SHANDONG）",
+      "variants": []
+    },
+    {
+      "id": "HiuGaaiNeural",
+      "name": "HiuGaai",
+      "gender": "unknown",
+      "locale": "zh-HK",
+      "language": "中文（中國香港特別行政區）",
+      "variants": []
+    },
+    {
+      "id": "HiuMaanNeural",
+      "name": "HiuMaan",
+      "gender": "unknown",
+      "locale": "zh-HK",
+      "language": "中文（中國香港特別行政區）",
+      "variants": []
+    },
+    {
+      "id": "WanLungNeural",
+      "name": "WanLung",
+      "gender": "unknown",
+      "locale": "zh-HK",
+      "language": "中文（中國香港特別行政區）",
+      "variants": []
+    },
+    {
+      "id": "HsiaoChenNeural",
+      "name": "HsiaoChen",
+      "gender": "unknown",
+      "locale": "zh-TW",
+      "language": "中文（台灣）",
+      "variants": []
+    },
+    {
+      "id": "HsiaoYuNeural",
+      "name": "HsiaoYu",
+      "gender": "unknown",
+      "locale": "zh-TW",
+      "language": "中文（台灣）",
+      "variants": []
+    },
+    {
+      "id": "YunJheNeural",
+      "name": "YunJhe",
+      "gender": "unknown",
+      "locale": "zh-TW",
+      "language": "中文（台灣）",
+      "variants": []
+    },
+    {
+      "id": "ThandoNeural",
+      "name": "Thando",
+      "gender": "unknown",
+      "locale": "zu-ZA",
+      "language": "isiZulu (iNingizimu Afrika)",
+      "variants": []
+    },
+    {
+      "id": "ThembaNeural",
+      "name": "Themba",
+      "gender": "unknown",
+      "locale": "zu-ZA",
+      "language": "isiZulu (iNingizimu Afrika)",
+      "variants": []
+    }
+  ]
+}

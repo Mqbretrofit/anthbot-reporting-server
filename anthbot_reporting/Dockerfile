@@ -56,6 +56,10 @@ COPY voice_builder_state.py ./voice_builder_state.py
 COPY voice_builder_engine.py ./voice_builder_engine.py
 COPY voice_builder_api.py ./voice_builder_api.py
 COPY voice_builder_worker.py ./voice_builder_worker.py
+COPY voice_builder_publish.py ./voice_builder_publish.py
+COPY voice_builder_text.py ./voice_builder_text.py
+COPY voice_builder_review.py ./voice_builder_review.py
+COPY voice_builder_catalog.py ./voice_builder_catalog.py
 COPY voice_builder.html ./voice_builder.html
 COPY voice_builder_assets ./voice_builder_assets
 COPY announcements.py ./announcements.py
@@ -66,4 +70,3 @@ RUN chmod a+x /run.sh
 EXPOSE 8080
 
 CMD ["/run.sh"]
-

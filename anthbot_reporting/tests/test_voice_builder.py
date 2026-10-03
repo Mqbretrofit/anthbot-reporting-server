@@ -18,6 +18,8 @@ import voice_builder_state as state
 import voice_builder_engine as engine
 import voice_builder_api as api_module
 import voice_builder_worker as worker
+import voice_builder_publish as publisher
+import voice_builder_text as text_engine
 
 
 class VoiceBuilderTests(unittest.TestCase):
@@ -72,7 +74,8 @@ class VoiceBuilderTests(unittest.TestCase):
 
     def run_fast(self,job):
         with patch.object(engine,'probe',side_effect=self.probe),patch.object(engine,'normalize',side_effect=self.normalize),\
-             patch.object(engine,'audio_request',return_value=(self.audio,True)) as audio:
+             patch.object(engine,'audio_request',return_value=(self.audio,True)) as audio,\
+             patch.object(state,'credentials',return_value={'openai_key':'fake-test-key'}):
             engine.run_job(job)
             return audio.call_count
 
@@ -102,7 +105,7 @@ class VoiceBuilderTests(unittest.TestCase):
             state.Spec(provider='openai',voice_id='coral',locale=entry['locale'],language=entry['language'])
         self.assertIn('language-search',r.text)
         self.assertEqual(len(cat['effects']),9)
-        self.assertEqual(len(self.api('/voices/ha_cloud').json()['items']),18)
+        self.assertEqual(len(self.api('/voices/ha_cloud').json()['items']),489)
         self.client.post('/dashboard/login',data={'token':'test-admin'})
         self.assertIn('Voice Builder',self.client.get('/dashboard').text)
 
@@ -172,7 +175,8 @@ class VoiceBuilderTests(unittest.TestCase):
         def pause(sig,keys):
             state.update(job['id'],status='paused')
             return self.audio,True
-        with patch.object(engine,'probe',side_effect=self.probe),patch.object(engine,'audio_request',side_effect=pause):
+        with patch.object(engine,'probe',side_effect=self.probe),patch.object(engine,'audio_request',side_effect=pause),\
+             patch.object(state,'credentials',return_value={'openai_key':'fake-test-key'}):
             with self.assertRaises(engine.Paused):
                 engine.run_job(job)
         self.assertEqual(self.api('/jobs/'+job['id']+'/resume','POST',json={}).status_code,200)
@@ -216,21 +220,54 @@ class VoiceBuilderTests(unittest.TestCase):
     def test_styles_rewrite_104_rows_keep_97_errors_exact_and_reuse_text_cache(self):
         spec=self.spec.model_copy(update={'text_style':'funny'})
         job=self.job(spec)
-        def rewrite(rows,*a):
+        def rewrite(rows,*a,**kw):
+            if kw.get('qa'):
+                return [{'file':p['file'],'corrected_text':p['candidate'],'grammar_ok':True,'meaning_ok':True,
+                         'character_ok':True,'review_required':False,'note':''} for p in rows]
             return [{'file':p['file'],'text':'Kertkaland! '+p['file']} for p in rows]
-        with patch.object(engine,'chat_rows',side_effect=rewrite) as chat:
+        with patch.object(text_engine,'responses_rows',side_effect=rewrite) as chat:
             doc=engine.load_prompts(spec,{},job['id'])
         source={p['file']:p['text'] for p in state.load_asset('prompts/hu-HU.json')['prompts']}
         self.assertEqual(sum(p['file'].startswith('E') for p in doc['prompts']),97)
-        self.assertEqual(len(chat.call_args[0][0]),104)
+        self.assertEqual(chat.call_count,2)  # draft, independent full 201-row QA
+        self.assertEqual(len(chat.call_args[0][0]),201)
+        self.assertEqual(doc['character_rewrite_changed_count'],104)
+        self.assertEqual(doc['style_verification'],text_engine.VERIFICATION)
         for p in doc['prompts']:
             if p['file'].startswith('E'):
                 self.assertEqual(p['text'],source[p['file']])
             else:
                 self.assertNotEqual(p['text'],source[p['file']])
-        with patch.object(engine,'chat_rows',side_effect=AssertionError('Repeat translation')):
+        with patch.object(text_engine,'responses_rows',side_effect=AssertionError('Repeat translation or QA')):
             engine.load_prompts(spec,{},self.job(spec)['id'])
         self.assertFalse(engine.fresh_text('Hello world.','Hello world. Ha ha!'))
+
+    def test_translation_and_style_cache_shared_between_voices_and_effects(self):
+        first=state.Spec(provider='openai',voice_id='coral',locale='ro-RO',language='Română',text_style='funny')
+        effect=next(x['id'] for x in state.load_asset('character-effects.json')['effects'] if x['id']!='none')
+        second=first.model_copy(update={'voice_id':'onyx','character_effect':effect})
+        def rows(items,instruction,*a,**kw):
+            if kw.get('qa'):
+                return [{'file':p['file'],'corrected_text':p['candidate'],'grammar_ok':True,'meaning_ok':True,
+                         'character_ok':True,'review_required':False,'note':''} for p in items]
+            prefix='Kertkaland' if 'copywriter' in instruction else 'Traducere'
+            return [{'file':p['file'],'text':prefix+' '+p['file']} for p in items]
+        with patch.object(text_engine,'responses_rows',side_effect=rows) as chat:
+            original=engine.load_prompts(first,{},self.job(first)['id'])
+            self.assertEqual(chat.call_count,3)
+        with patch.object(text_engine,'responses_rows',side_effect=AssertionError('Duplicate translation/style/QA')):
+            reused=engine.load_prompts(second,{},self.job(second)['id'])
+        self.assertEqual(original,reused)
+
+    def test_resume_keeps_finished_audio_and_generates_only_missing_files(self):
+        job=self.job(mode='preview')
+        directory=state.job_dir(job['id'])/'audio'
+        directory.mkdir(parents=True)
+        (directory/'A004.mp3').write_bytes(self.audio)
+        self.assertEqual(self.run_fast(job),1)
+        self.assertEqual((directory/'A004.mp3').read_bytes(),self.audio)
+        state.update(job['id'],status='running')
+        self.assertEqual(self.run_fast(state.get_job(job['id'])),0)
 
     def test_text_chunks_survive_partial_translation_failure(self):
         job=self.job()
@@ -240,7 +277,7 @@ class VoiceBuilderTests(unittest.TestCase):
             nonlocal count
             count+=1
             if count==2:
-                raise engine.ProviderError(503)
+                raise engine.ProviderError(401)
             return {'choices':[{'message':{'content':body['messages'][1]['content']}}]}
         with patch.object(engine,'request',side_effect=chat):
             with self.assertRaises(engine.ProviderError):
@@ -274,6 +311,76 @@ class VoiceBuilderTests(unittest.TestCase):
                 engine.request(url)
         self.assertNotIn('SECRET',str(raised.exception))
         self.assertEqual(raised.exception.status,403)
+
+    def test_ambiguous_paid_request_never_repeats_on_resume(self):
+        for status in (0,500,502,503,504):
+            with self.subTest(status=status):
+                path=state.root()/'test-paid'/str(status)
+                with patch.object(engine,'request',side_effect=engine.ProviderError(status)) as call:
+                    fetch=lambda: engine.request('https://api.openai.com/v1/chat/completions')
+                    with self.assertRaisesRegex(RuntimeError,'bizonytalan'):
+                        engine.paid_once({'test':status},fetch,path)
+                    with self.assertRaisesRegex(RuntimeError,'nem küldjük újra'):
+                        engine.paid_once({'test':status},fetch,path)
+                self.assertEqual(call.call_count,1)
+
+    def test_paid_response_survives_processing_failure_without_second_charge(self):
+        path=state.root()/'test-paid'/'reply.json'
+        with patch.object(engine,'request',return_value={'result':'already-paid'}) as call:
+            fetch=lambda: engine.request('https://api.openai.com/v1/chat/completions')
+            first=engine.paid_once({'test':'saved'},fetch,path)
+            second=engine.paid_once({'test':'saved'},fetch,path)
+        self.assertEqual(first,second)
+        self.assertEqual(call.call_count,1)
+
+    def test_paid_request_interrupted_after_send_does_not_repeat(self):
+        path=state.root()/'test-paid'/'interrupted.json'
+        with patch.object(engine,'request',side_effect=SystemExit('process stopped')) as call:
+            fetch=lambda: engine.request('https://api.openai.com/v1/chat/completions')
+            with self.assertRaises(SystemExit):
+                engine.paid_once({'test':'crash'},fetch,path)
+            with self.assertRaisesRegex(RuntimeError,'nem küldjük újra'):
+                engine.paid_once({'test':'crash'},fetch,path)
+        self.assertEqual(call.call_count,1)
+
+    def test_explicit_rejection_can_retry_after_credentials_are_fixed(self):
+        path=state.root()/'test-paid'/'rejected.json'
+        with patch.object(engine,'request',side_effect=[engine.ProviderError(401),{'ok':True}]) as call:
+            fetch=lambda: engine.request('https://api.openai.com/v1/chat/completions')
+            with self.assertRaises(engine.ProviderError):
+                engine.paid_once({'test':'rejected'},fetch,path)
+            self.assertEqual(engine.paid_once({'test':'rejected'},fetch,path),{'ok':True})
+        self.assertEqual(call.call_count,2)
+
+    def test_ambiguous_tts_is_not_billed_again_by_another_job(self):
+        with patch.object(engine,'probe',side_effect=self.probe),\
+             patch.object(state,'credentials',return_value={'openai_key':'fake-test-key'}),\
+             patch.object(engine,'audio_request',side_effect=engine.ProviderError()) as call:
+            for _ in range(2):
+                with self.assertRaises(RuntimeError):
+                    engine.run_job(self.job(mode='preview'))
+        self.assertEqual(call.call_count,1)
+
+    def test_invalid_paid_text_response_is_not_requested_again(self):
+        job=self.job()
+        rows=state.load_asset('prompts/en-US.json')['prompts'][:1]
+        with patch.object(engine,'request',return_value={'choices':[]}) as call:
+            for _ in range(2):
+                with self.assertRaisesRegex(RuntimeError,'érvényes szövegkönyvet'):
+                    engine.chat_rows(rows,'Translate',self.spec,{'openai_key':'fake-test-key'},job['id'])
+        self.assertEqual(call.call_count,1)
+
+    def test_budget_rejection_before_sending_does_not_leave_paid_intent(self):
+        path=state.root()/'test-paid'/'budget.json'
+        with patch.object(engine,'request',return_value={'ok':True}) as call:
+            fetch=lambda: engine.request('https://api.openai.com/v1/chat/completions')
+            def budget():
+                raise RuntimeError('budget exhausted before send')
+            with self.assertRaisesRegex(RuntimeError,'budget exhausted'):
+                engine.paid_once({'test':'budget'},fetch,path,before_send=budget)
+            call.assert_not_called()
+            self.assertEqual(engine.paid_once({'test':'budget'},fetch,path),{'ok':True})
+        self.assertEqual(call.call_count,1)
 
     def test_elevenlabs_access_failure_stops_before_paid_text_processing(self):
         spec=state.Spec(provider='elevenlabs',voice_id='abc',text_style='funny')
@@ -358,6 +465,83 @@ class VoiceBuilderTests(unittest.TestCase):
         self.assertEqual(record['price_amount'],799)
         self.assertFalse(record['store_hidden'])
         self.assertEqual(r.json()['assigned_version'],result['assigned_version'])
+        self.assertEqual(len(core._uploaded_voice_pack_registry()['packs']),1)
+
+    def test_worker_automatically_uploads_builds_but_not_previews(self):
+        build=state.create_jobs([self.spec],'build',10000)[0]
+        preview=state.create_jobs([self.spec],'preview',10000)[0]
+        with patch.object(worker,'run_job',side_effect=self.run_fast),patch.object(worker.time,'sleep'):
+            worker.main()
+        uploaded=state.get_job(build)
+        self.assertEqual(uploaded['status'],'completed')
+        self.assertTrue(uploaded['published']['uploaded'])
+        self.assertTrue(uploaded['published']['pack']['store_hidden'])
+        self.assertEqual(uploaded['error'],'')
+        self.assertIsNone(state.get_job(preview)['published'])
+        self.assertEqual(len(core._uploaded_voice_pack_registry()['packs']),1)
+        self.assertFalse(state.pending_work())
+
+    def test_worker_recovers_completed_upload_after_restart_without_generation(self):
+        job=self.job()
+        self.run_fast(job)
+        self.assertTrue(state.pending_work())
+        with patch.object(worker,'run_job',side_effect=AssertionError('Repeated generation')),patch.object(worker.time,'sleep'):
+            worker.main()
+            worker.main()
+        result=state.get_job(job['id'])['published']
+        self.assertIsNotNone(result)
+        self.assertEqual(len(core._uploaded_voice_pack_registry()['packs']),1)
+        self.assertEqual(self.api('/jobs/'+job['id']+'/publish','POST').json(),result)
+
+    def test_automatic_upload_failure_retains_complete_output_and_can_retry(self):
+        job=self.job()
+        self.run_fast(job)
+        with patch.object(publisher,'publish_job',side_effect=OSError('SECRET details')) as publish,\
+             patch.object(worker,'run_job',side_effect=AssertionError('Repeated generation')),patch.object(worker.time,'sleep'):
+            worker.main()
+        self.assertEqual(publish.call_count,1)
+        failed=state.get_job(job['id'])
+        self.assertEqual(failed['status'],'completed')
+        self.assertIn('feltöltés',failed['error'])
+        self.assertNotIn('SECRET',failed['error'])
+        self.assertFalse(state.pending_work())
+        self.assertEqual(self.api('/jobs/'+job['id']+'/files/pack.tar.gz').status_code,200)
+        result=self.api('/jobs/'+job['id']+'/publish','POST')
+        self.assertEqual(result.status_code,200,result.text)
+        self.assertEqual(state.get_job(job['id'])['error'],'')
+
+    def test_automatic_republish_preserves_existing_store_price_and_visibility(self):
+        first=self.job()
+        self.run_fast(first)
+        worker.publish_completed(first['id'])
+        registry=core._uploaded_voice_pack_registry()
+        registry['packs'][0].update(access='paid',price_amount=799,store_hidden=False)
+        core._write_uploaded_voice_registry(registry)
+        second=self.job()
+        self.run_fast(second)
+        worker.publish_completed(second['id'])
+        record=core._uploaded_voice_pack_registry()['packs'][0]
+        self.assertEqual(record['access'],'paid')
+        self.assertEqual(record['price_amount'],799)
+        self.assertFalse(record['store_hidden'])
+
+    def test_retry_after_upload_committed_does_not_allocate_another_version(self):
+        job=self.job()
+        self.run_fast(job)
+        original=state.atomic
+        def interrupted(path,data):
+            if path.name=='manifest.json':
+                raise OSError('Interrupted after upload')
+            original(path,data)
+        with patch.object(state,'atomic',side_effect=interrupted):
+            worker.publish_completed(job['id'])
+        previous=core._uploaded_voice_pack_registry()['packs'][0]
+        self.assertIsNone(state.get_job(job['id'])['published'])
+        self.assertEqual(state.get_job(job['id'])['status'],'completed')
+        self.assertTrue(previous['store_hidden'])
+        result=self.api('/jobs/'+job['id']+'/publish','POST')
+        self.assertEqual(result.status_code,200,result.text)
+        self.assertEqual(result.json()['assigned_version'],previous['version'])
         self.assertEqual(len(core._uploaded_voice_pack_registry()['packs']),1)
 
     def test_audio_import_rejects_traversal_duplicate_unknown_and_wrong_fixed_sound(self):
