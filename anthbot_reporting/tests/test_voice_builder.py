@@ -91,7 +91,16 @@ class VoiceBuilderTests(unittest.TestCase):
         self.assertEqual(r.status_code,200)
         self.assertIn('Korábbi Builder cache',r.text)
         cat=self.api('/catalog').json()
-        self.assertEqual(len(cat['languages']),9)
+        locales={x['locale']:x for x in cat['languages']}
+        self.assertEqual(len(locales),len(cat['languages']))
+        self.assertEqual(len(locales),150)
+        self.assertTrue({'hu-HU','en-US','de-DE','fr-FR','es-ES','it-IT','cs-CZ','sk-SK','pl-PL'} <= locales.keys())
+        self.assertEqual(locales['de-AT']['language'],'Deutsch (Österreich)')
+        self.assertEqual(locales['de-DE']['language'],'Deutsch (Deutschland)')
+        self.assertIn('portugál',locales['pt-BR']['search_name'])
+        for entry in cat['languages']:
+            state.Spec(provider='openai',voice_id='coral',locale=entry['locale'],language=entry['language'])
+        self.assertIn('language-search',r.text)
         self.assertEqual(len(cat['effects']),9)
         self.assertEqual(len(self.api('/voices/ha_cloud').json()['items']),18)
         self.client.post('/dashboard/login',data={'token':'test-admin'})

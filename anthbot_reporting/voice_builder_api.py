@@ -62,10 +62,8 @@ def page():
 
 @router.get(PREFIX + '/catalog')
 def catalog():
-    profiles = state.load_asset('profiles.json')['tts_profiles']
     return {'builder_version':'7.20.11 / server-1.0',
-            'languages':list({p['language_code']: {'locale':p['language_code'],'language':p['language']}
-                              for p in profiles if p.get('enabled')}.values()),
+            'languages':state.load_asset('languages.json')['languages'],
             'providers':state.load_asset('tts-providers.json'),
             'text_styles':state.load_asset('text-styles.json')['styles'],
             'delivery_styles':state.load_asset('delivery-styles.json')['styles'],
