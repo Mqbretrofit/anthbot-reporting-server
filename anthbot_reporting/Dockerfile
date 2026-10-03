@@ -17,6 +17,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY requirements.txt ./requirements.txt
+RUN apk add --no-cache ffmpeg
 RUN pip3 install --no-cache-dir -r requirements.txt
 
 COPY app.py ./app.py
@@ -51,6 +52,12 @@ COPY developer_agent_dashboard.py ./developer_agent_dashboard.py
 COPY developer_agent_dashboard.html ./developer_agent_dashboard.html
 COPY diagnostics_dashboard.py ./diagnostics_dashboard.py
 COPY diagnostic_detail.html ./diagnostic_detail.html
+COPY voice_builder_state.py ./voice_builder_state.py
+COPY voice_builder_engine.py ./voice_builder_engine.py
+COPY voice_builder_api.py ./voice_builder_api.py
+COPY voice_builder_worker.py ./voice_builder_worker.py
+COPY voice_builder.html ./voice_builder.html
+COPY voice_builder_assets ./voice_builder_assets
 COPY announcements.py ./announcements.py
 COPY announcements_dashboard.html ./announcements_dashboard.html
 COPY run.sh /run.sh
@@ -59,3 +66,4 @@ RUN chmod a+x /run.sh
 EXPOSE 8080
 
 CMD ["/run.sh"]
+

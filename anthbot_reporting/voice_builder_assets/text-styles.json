@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "builder_version": "0.1.0-alpha.7.20.11",
+  "styles": [
+    {
+      "id": "standard",
+      "display_name": "Standard / eredeti",
+      "short_name": "Standard",
+      "description": "A jóváhagyott vagy ChatGPT-vel lokalizált ANTHBOT szöveg változatlanul marad.",
+      "rewrite_text": false,
+      "provider_style_preference": [],
+      "commercial_tier": "standard",
+      "license_required": true,
+      "sellable": true,
+      "rewrite_strength": "none",
+      "elevenlabs_audio_tag": "",
+      "fish_audio_tag": ""
+    },
+    {
+      "id": "funny",
+      "display_name": "Vicces / karakteres",
+      "short_name": "Vicces",
+      "description": "Minden nem-error beszédsor ténylegesen vicces, emlékezetes és cél-nyelven természetes. Nem csak néhány státuszsor kap poént: az A/C/P/S/W sorok mind humoros újrafogalmazást kapnak, miközben a robot eseménye, figyelmeztetése és szükséges teendője egyértelmű marad.",
+      "rewrite_text": true,
+      "provider_style_preference": [
+        "cheerful",
+        "excited"
+      ],
+      "commercial_tier": "premium",
+      "license_required": true,
+      "sellable": true,
+      "rewrite_strength": "mandatory_all_non_error",
+      "elevenlabs_audio_tag": "[mischievously]",
+      "fish_audio_tag": "[chuckling]"
+    },
+    {
+      "id": "wild_funny",
+      "display_name": "Elborult / nagyon vicces",
+      "short_name": "Elborult",
+      "description": "Minden nem-error beszédsor erősen vicces, abszurdabb és emlékezetes robot-humort kap. Az A/C/P/S/W sorok mind átíródnak; a tényleges esemény, figyelmeztetés és teendő továbbra is világos. Csak az E*.mp3 error sorok maradnak komolyak.",
+      "rewrite_text": true,
+      "rewrite_strength": "mandatory_all_non_error_very_strong",
+      "provider_style_preference": [
+        "cheerful",
+        "excited"
+      ],
+      "commercial_tier": "premium",
+      "license_required": true,
+      "sellable": true,
+      "elevenlabs_audio_tag": "[laughs] [mischievously]",
+      "fish_audio_tag": "[laughing] [excited]"
+    },
+    {
+      "id": "sarcastic",
+      "display_name": "Szarkasztikus",
+      "short_name": "Szarkasztikus",
+      "description": "Jól hallhatóan száraz, csípős szarkazmus természetes cél-nyelvi megfogalmazással; karakteresebb lehet, de ne legyen sértő vagy félreérthető.",
+      "rewrite_text": true,
+      "provider_style_preference": [],
+      "commercial_tier": "premium",
+      "license_required": true,
+      "sellable": true,
+      "rewrite_strength": "strong",
+      "elevenlabs_audio_tag": "[dryly, sarcastically]",
+      "fish_audio_tag": "[emphasis]"
+    },
+    {
+      "id": "flirty",
+      "display_name": "Kacér / érzéki",
+      "short_name": "Kacér",
+      "description": "Játékos, kacér, felnőttesen érzéki hangvétel. Lehet lágyabb, csábítóbb, rövid plusz fordulattal vagy szünetekkel, de maradjon ízléses és nem explicit.",
+      "rewrite_text": true,
+      "provider_style_preference": [
+        "whispering",
+        "friendly"
+      ],
+      "commercial_tier": "premium",
+      "license_required": true,
+      "sellable": true,
+      "rewrite_strength": "strong",
+      "elevenlabs_audio_tag": "[mischievously]",
+      "fish_audio_tag": "[breathy] [soft]"
+    },
+    {
+      "id": "cute",
+      "display_name": "Cuki / kedves",
+      "short_name": "Cuki",
+      "description": "Kifejezetten kedves, szerethető, játékos megszólalás; természetes cél-nyelvi fordulatokkal és rövid személyiséggel.",
+      "rewrite_text": true,
+      "provider_style_preference": [
+        "friendly",
+        "cheerful"
+      ],
+      "commercial_tier": "premium",
+      "license_required": true,
+      "sellable": true,
+      "rewrite_strength": "medium",
+      "elevenlabs_audio_tag": "[playfully]",
+      "fish_audio_tag": "[soft] [excited]"
+    }
+  ]
+}

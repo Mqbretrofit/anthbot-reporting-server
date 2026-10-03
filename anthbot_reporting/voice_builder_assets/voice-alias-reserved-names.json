@@ -1,0 +1,319 @@
+{
+  "schema_version": 1,
+  "builder_version": "0.1.0-alpha.7.20.11",
+  "source": "Existing 247 Standard Hangbolt catalog snapshot; reserved only to avoid new ElevenLabs public-alias collisions.",
+  "count": 247,
+  "languages": {
+    "es": [
+      "abril",
+      "alvaro",
+      "arnau",
+      "beatriz",
+      "candela",
+      "carlota",
+      "cecilio",
+      "dalia",
+      "dario",
+      "elias",
+      "elvira",
+      "estrella",
+      "gerardo",
+      "irene",
+      "jorge",
+      "laia",
+      "larissa",
+      "lia",
+      "liberto",
+      "luciano",
+      "marina",
+      "nil",
+      "nuria",
+      "pelayo",
+      "renata",
+      "saul",
+      "teo",
+      "triana",
+      "vera",
+      "ximena",
+      "yago"
+    ],
+    "et": [
+      "anu",
+      "kert"
+    ],
+    "fr": [
+      "alain",
+      "ariane",
+      "brigitte",
+      "celeste",
+      "charline",
+      "claude",
+      "coralie",
+      "denise",
+      "eloise",
+      "fabrice",
+      "gerard",
+      "henri",
+      "jacqueline",
+      "jerome",
+      "josephine",
+      "maurice",
+      "yves",
+      "yvette"
+    ],
+    "hr": [
+      "gabrijela",
+      "srecko"
+    ],
+    "hu": [
+      "noemi",
+      "tamas"
+    ],
+    "ja": [
+      "aoi",
+      "daichi",
+      "keita",
+      "mayu",
+      "nanami",
+      "naoki",
+      "shiori"
+    ],
+    "ko": [
+      "bongjin",
+      "gookmin",
+      "hyunsu",
+      "injoon",
+      "jimin",
+      "seohyeon",
+      "soonbok",
+      "sunhi",
+      "yujin"
+    ],
+    "lt": [
+      "leonas",
+      "ona"
+    ],
+    "lv": [
+      "everita",
+      "nils"
+    ],
+    "mt": [
+      "grace",
+      "joseph"
+    ],
+    "nb": [
+      "finn",
+      "iselin",
+      "pernille"
+    ],
+    "nl": [
+      "arnaud",
+      "colette",
+      "dena",
+      "fenna",
+      "maarten"
+    ],
+    "pl": [
+      "agnieszka",
+      "marek",
+      "zofia"
+    ],
+    "pt": [
+      "antonio",
+      "brenda",
+      "donato",
+      "duarte",
+      "elza",
+      "fabio",
+      "fernanda",
+      "francisca",
+      "giovanna",
+      "humberto",
+      "julio",
+      "leila",
+      "leticia",
+      "manuela",
+      "nicolau",
+      "raquel",
+      "thalita",
+      "valerio",
+      "yara"
+    ],
+    "ro": [
+      "alina",
+      "emil"
+    ],
+    "ru": [
+      "dariya",
+      "dmitry",
+      "svetlana"
+    ],
+    "sk": [
+      "lukas",
+      "viktoria"
+    ],
+    "sl": [
+      "petra",
+      "rok"
+    ],
+    "sr": [
+      "nicholas",
+      "sophie"
+    ],
+    "sv": [
+      "hillevi",
+      "mattias",
+      "sofie"
+    ],
+    "th": [
+      "achara",
+      "niwat",
+      "premwadee"
+    ],
+    "tr": [
+      "ahmet",
+      "emel"
+    ],
+    "uk": [
+      "ostap",
+      "polina"
+    ],
+    "vi": [
+      "hoaimy",
+      "namminh"
+    ],
+    "zh": [
+      "hiugaai",
+      "hiumaan",
+      "hsiaochen",
+      "hsiaoyu",
+      "wanlung",
+      "xiaochen",
+      "xiaohan",
+      "xiaomeng",
+      "xiaomo",
+      "xiaoqiu",
+      "xiaorou",
+      "xiaorui",
+      "xiaoshuang",
+      "xiaoxiao",
+      "xiaoxiaodialects",
+      "xiaoyan",
+      "xiaoyi",
+      "xiaoyou",
+      "xiaozhen",
+      "yunfeng",
+      "yunhao",
+      "yunjhe",
+      "yunjian",
+      "yunjie",
+      "yunxi",
+      "yunxia",
+      "yunyang",
+      "yunye",
+      "yunze"
+    ],
+    "bg": [
+      "borislav",
+      "kalina"
+    ],
+    "ca": [
+      "alba",
+      "enric",
+      "joana"
+    ],
+    "cs": [
+      "antonin",
+      "vlasta"
+    ],
+    "da": [
+      "christel",
+      "jeppe"
+    ],
+    "de": [
+      "amala",
+      "bernd",
+      "christoph",
+      "conrad",
+      "elke",
+      "gisela",
+      "ingrid",
+      "jan",
+      "jonas",
+      "kasper",
+      "katja",
+      "killian",
+      "klarissa",
+      "klaus",
+      "leni",
+      "louisa",
+      "maja",
+      "ralf",
+      "tanja"
+    ],
+    "el": [
+      "athina",
+      "nestoras"
+    ],
+    "en": [
+      "abbi",
+      "alfie",
+      "amber",
+      "ana",
+      "andrew",
+      "annette",
+      "aria",
+      "ashley",
+      "ava",
+      "bella",
+      "brandon",
+      "brian",
+      "carly",
+      "christopher",
+      "clara",
+      "cora",
+      "darren",
+      "davis",
+      "duncan",
+      "elizabeth",
+      "elliot",
+      "elsie",
+      "emma",
+      "eric",
+      "ethan",
+      "freya",
+      "guy",
+      "hollie",
+      "jacob",
+      "jane",
+      "jason",
+      "jenny",
+      "joanne",
+      "kai",
+      "ken",
+      "kim",
+      "liam",
+      "libby",
+      "luna",
+      "maisie",
+      "michelle",
+      "monica",
+      "nancy",
+      "natasha",
+      "neil",
+      "noah",
+      "oliver",
+      "olivia",
+      "roger",
+      "ryan",
+      "sara",
+      "sonia",
+      "steffan",
+      "thomas",
+      "tim",
+      "tina",
+      "tony",
+      "william"
+    ]
+  }
+}

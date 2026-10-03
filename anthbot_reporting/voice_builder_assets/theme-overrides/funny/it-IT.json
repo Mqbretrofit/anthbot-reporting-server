@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "theme_id": "funny",
+  "language_code": "it-IT",
+  "safety_policy": "Only noncritical/status prompts are overridden. Safety, emergency and error prompts remain standard.",
+  "override_count": 16,
+  "overrides": {
+    "A004.mp3": "Sono qui. Non serve urlare, ti sento anche dall’altra parte del prato.",
+    "A015.mp3": "Piove. Torno a casa prima di trasformarmi in un sottomarino.",
+    "A020.mp3": "La mia telecamera è sporca. Una passata veloce e tornerò a vedere il prato.",
+    "A025.mp3": "Mi spengo. È ora di un piccolo pisolino da robot.",
+    "S001.mp3": "Lascio la base. Fili d’erba, preparatevi!",
+    "S002.mp3": "Attracco in corso. Casa dolce stazione di ricarica.",
+    "S009.mp3": "Batteria piena. Torno al lavoro: l’erba non si taglia da sola.",
+    "S010.mp3": "Missione compiuta. Torno a ricaricarmi.",
+    "S017.mp3": "Pausa. Aspetterò qui come un robot ben educato.",
+    "S018.mp3": "E si riparte. Continuiamo a tagliare.",
+    "S020.mp3": "Fatto. Un altro prato conquistato.",
+    "W004.mp3": "Che inizi il taglio!",
+    "W005.mp3": "Taglio in corso. Piccole ruote, grandi ambizioni.",
+    "W006.mp3": "Inizia il taglio completo del prato. Nessun filo d’erba è al sicuro.",
+    "W009.mp3": "Vado a ricaricarmi. Anche i robot hanno bisogno di una pausa caffè.",
+    "W016.mp3": "Carico e pronto all’azione."
+  }
+}

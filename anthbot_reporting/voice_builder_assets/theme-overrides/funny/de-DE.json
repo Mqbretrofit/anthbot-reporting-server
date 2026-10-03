@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "theme_id": "funny",
+  "language_code": "de-DE",
+  "safety_policy": "Only noncritical/status prompts are overridden. Safety, emergency and error prompts remain standard.",
+  "override_count": 16,
+  "overrides": {
+    "A004.mp3": "Ich bin hier. Du musst nicht rufen, ich höre dich auch vom anderen Ende des Rasens.",
+    "A015.mp3": "Es regnet. Ich fahre lieber nach Hause, bevor ich zum U-Boot werde.",
+    "A020.mp3": "Meine Kamera ist schmutzig. Einmal kurz wischen, dann sehe ich den Rasen wieder.",
+    "A025.mp3": "Ich schalte mich aus. Zeit für ein kleines Roboterschläfchen.",
+    "S001.mp3": "Ich verlasse die Ladestation. Grashalme, macht euch bereit!",
+    "S002.mp3": "Andocken. Trautes Heim, Ladestation.",
+    "S009.mp3": "Akku voll. Zurück an die Arbeit, der Rasen mäht sich nicht von allein.",
+    "S010.mp3": "Mission erfüllt. Ich fahre zurück zum Laden.",
+    "S017.mp3": "Pause. Ich warte hier wie ein gut erzogener Roboter.",
+    "S018.mp3": "Und weiter geht es. Auf zum Mähen.",
+    "S020.mp3": "Fertig. Wieder einen Rasen bezwungen.",
+    "W004.mp3": "Los geht das Mähen!",
+    "W005.mp3": "Mähen läuft. Kleine Räder, große Ambitionen.",
+    "W006.mp3": "Die komplette Rasenfläche wird gemäht. Kein Grashalm ist sicher.",
+    "W009.mp3": "Ich fahre zum Laden. Auch Roboter brauchen mal eine Kaffeepause.",
+    "W016.mp3": "Voll geladen und einsatzbereit."
+  }
+}

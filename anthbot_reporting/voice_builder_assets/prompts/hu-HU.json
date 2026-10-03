@@ -1,0 +1,819 @@
+{
+  "schema_version": 2,
+  "language": "Magyar",
+  "language_code": "hu-HU",
+  "source": "Existing ANTHBOT Hungarian Noemi script / ANTHBOT girl_en-1.2.2 master alignment",
+  "translation_status": "existing_working_reference",
+  "prompt_count": 201,
+  "fixed_non_speech_files": [
+    "A001.mp3",
+    "A003.mp3",
+    "A030.mp3"
+  ],
+  "prompts": [
+    {
+      "file": "A004.mp3",
+      "text": "Itt vagyok."
+    },
+    {
+      "file": "A005.mp3",
+      "text": "Üdvözöljük! Első lépésként állítson be egy négyjegyű PIN-kódot a robothoz."
+    },
+    {
+      "file": "A006.mp3",
+      "text": "A vészleállítás aktiválódott. A feladat folytatásához először nyomja meg a MOW, majd az OK gombot."
+    },
+    {
+      "file": "A007.mp3",
+      "text": "Adja meg a PIN-kódot."
+    },
+    {
+      "file": "A008.mp3",
+      "text": "Alacsony az akkumulátor töltöttsége. Próbálja újra, miután a robot teljesen feltöltődött."
+    },
+    {
+      "file": "A009.mp3",
+      "text": "Alacsony az akkumulátor töltöttsége. A robot hamarosan kikapcsol. Töltse fel időben."
+    },
+    {
+      "file": "A010.mp3",
+      "text": "A robot a levegőben van. Ügyeljen rá, hogy a kamerák ne sérüljenek."
+    },
+    {
+      "file": "A011.mp3",
+      "text": "A robotot felemelték. Az indításhoz helyezze a talajra."
+    },
+    {
+      "file": "A012.mp3",
+      "text": "A robot megdőlt. Ügyeljen rá, hogy a kamerák ne sérüljenek."
+    },
+    {
+      "file": "A013.mp3",
+      "text": "A robot nem érte el a kijelölt helyet. Az aktuális feladat véget ért. Töltse fel a robotot."
+    },
+    {
+      "file": "A014.mp3",
+      "text": "Gyenge a helymeghatározási jel. Töltse fel a robotot."
+    },
+    {
+      "file": "A015.mp3",
+      "text": "Esik az eső. Küldje a robotot a töltőállomásra."
+    },
+    {
+      "file": "A016.mp3",
+      "text": "A robotot elmozdították. Helyezze vissza a töltőállomásra."
+    },
+    {
+      "file": "A017.mp3",
+      "text": "Az esővédelmi mód aktív. Próbálja újra három óra múlva, vagy kapcsolja ki az esőérzékelést az alkalmazásban."
+    },
+    {
+      "file": "A018.mp3",
+      "text": "Újrapozicionálás folyamatban. Tartsa a robotot a térképen belül, legalább 1,5 méterre a határvonaltól."
+    },
+    {
+      "file": "A019.mp3",
+      "text": "A robot belépett a biztonsági területre."
+    },
+    {
+      "file": "A020.mp3",
+      "text": "A kamera lencséje szennyezett."
+    },
+    {
+      "file": "A021.mp3",
+      "text": "A lökhárító ismét működőképes."
+    },
+    {
+      "file": "A022.mp3",
+      "text": "Sík talajon indítsa el a robotot."
+    },
+    {
+      "file": "A023.mp3",
+      "text": "A pontnyírás elindításához helyezze a robotot nyílt területre."
+    },
+    {
+      "file": "A024.mp3",
+      "text": "A robot nem éri el a kijelölt területet. Ellenőrizze, hogy a terület megközelíthető-e."
+    },
+    {
+      "file": "A025.mp3",
+      "text": "Kikapcsolás."
+    },
+    {
+      "file": "A026.mp3",
+      "text": "Gyenge a GPS-jel. Akkor próbálja újra elindítani a robotot, amikor a jel stabilizálódott."
+    },
+    {
+      "file": "A027.mp3",
+      "text": "A hiba elhárítása után próbálja újra elindítani a robotot."
+    },
+    {
+      "file": "A028.mp3",
+      "text": "A robot sötét környezetben nem tud dolgozni."
+    },
+    {
+      "file": "A029.mp3",
+      "text": "A késtárcsa működik. Ügyeljen a biztonságára."
+    },
+    {
+      "file": "A031.mp3",
+      "text": "Helyezze a robotot nyílt területre az inicializáláshoz, majd próbálja újra."
+    },
+    {
+      "file": "C001.mp3",
+      "text": "A térkép létrehozása sikerült."
+    },
+    {
+      "file": "C002.mp3",
+      "text": "A térképezés sikertelen. Próbálja újra."
+    },
+    {
+      "file": "C003.mp3",
+      "text": "A létrehozás sikerült."
+    },
+    {
+      "file": "C004.mp3",
+      "text": "A létrehozás sikertelen."
+    },
+    {
+      "file": "C005.mp3",
+      "text": "Megkezdődik a térkép bővítése."
+    },
+    {
+      "file": "C006.mp3",
+      "text": "A térkép bővítése sikerült."
+    },
+    {
+      "file": "C007.mp3",
+      "text": "A térkép bővítése sikertelen."
+    },
+    {
+      "file": "C008.mp3",
+      "text": "A térképkészítés megkezdéséhez irányítsa távolról a robotot."
+    },
+    {
+      "file": "C009.mp3",
+      "text": "Térképezés folyamatban. Próbálja újra később."
+    },
+    {
+      "file": "C010.mp3",
+      "text": "Belépés az ACC automatikus térképezési módba. Ez csak egyértelmű határú gyephez alkalmas. A megerősítéshez nyomja meg az OK gombot."
+    },
+    {
+      "file": "C011.mp3",
+      "text": "Megkezdődik az ACC automatikus térképezés."
+    },
+    {
+      "file": "C012.mp3",
+      "text": "Helyezze a robotot a töltőállomásra, majd indítsa el."
+    },
+    {
+      "file": "C013.mp3",
+      "text": "A térképezési terület meghaladja a megengedett méretet. A megadott tartományon belül készítse el a térképet."
+    },
+    {
+      "file": "C014.mp3",
+      "text": "Az RTK bázisállomás elmozdult. A megoldást az alkalmazásban találja."
+    },
+    {
+      "file": "C015.mp3",
+      "text": "Megkezdődik a tiltott zónák létrehozása."
+    },
+    {
+      "file": "C016.mp3",
+      "text": "A tiltott zóna létrehozása sikertelen."
+    },
+    {
+      "file": "C017.mp3",
+      "text": "Térképezés előtt a töltőállomáson indítsa el a robotot."
+    },
+    {
+      "file": "C018.mp3",
+      "text": "A térkép bővítése előtt a térkép határán belül indítsa el a robotot."
+    },
+    {
+      "file": "E001.mp3",
+      "text": "Megkezdődik a töltés. A robot teljes feltöltés után folytatja a munkát."
+    },
+    {
+      "file": "E002.mp3",
+      "text": "Nem sikerült visszatérni a töltőállomásra. A megoldást az alkalmazásban találja."
+    },
+    {
+      "file": "E003.mp3",
+      "text": "Akkumulátorhiba. A megoldást az alkalmazásban találja."
+    },
+    {
+      "file": "E004.mp3",
+      "text": "Nem sikerült megtisztítani a lencsét. A megoldást az alkalmazásban találja."
+    },
+    {
+      "file": "E005.mp3",
+      "text": "Térképhiba. A megoldást az alkalmazásban találja."
+    },
+    {
+      "file": "E006.mp3",
+      "text": "Érzékelőhiba. A megoldást az alkalmazásban találja."
+    },
+    {
+      "file": "E007.mp3",
+      "text": "Az akkumulátor túlmelegedett. A megoldást az alkalmazásban találja."
+    },
+    {
+      "file": "E008.mp3",
+      "text": "Az akkumulátor hőmérséklete túl alacsony. A megoldást az alkalmazásban találja."
+    },
+    {
+      "file": "E009.mp3",
+      "text": "A bal hátsó kerék hibás. A megoldást az alkalmazásban találja."
+    },
+    {
+      "file": "E010.mp3",
+      "text": "A jobb hátsó kerék hibás. A megoldást az alkalmazásban találja."
+    },
+    {
+      "file": "E011.mp3",
+      "text": "Késtárcsahiba. A megoldást az alkalmazásban találja."
+    },
+    {
+      "file": "E012.mp3",
+      "text": "A robot elakadt. Segítsen kiszabadítani."
+    },
+    {
+      "file": "E013.mp3",
+      "text": "A robot nem érzékeli a töltőállomást. Az alkalmazással segítse vissza a töltőállomásra."
+    },
+    {
+      "file": "E014.mp3",
+      "text": "Lökhárítóhiba. A megoldást az alkalmazásban találja."
+    },
+    {
+      "file": "E015.mp3",
+      "text": "A firmware-frissítés sikertelen. Próbálja újra később."
+    },
+    {
+      "file": "E016.mp3",
+      "text": "A robot a levegőben van. Ellenőrizze, hogy nem szorult-e be."
+    },
+    {
+      "file": "E017.mp3",
+      "text": "Az újrapozicionálás sikertelen. Helyezze a robotot a térképen belül, legalább 1,5 méterre a határvonaltól, majd próbálja újra."
+    },
+    {
+      "file": "E018.mp3",
+      "text": "Gyenge a helymeghatározási jel. A robot most nem tud mozogni. A megoldást az alkalmazásban találja."
+    },
+    {
+      "file": "E019.mp3",
+      "text": "Helymeghatározási hiba. Ellenőrizze, hogy a robot a jel lefedettségi területén van-e."
+    },
+    {
+      "file": "E020.mp3",
+      "text": "Lökhárító-érzékelő hiba. Ellenőrizze, hogy az érzékelő nem szorult-e be."
+    },
+    {
+      "file": "E021.mp3",
+      "text": "Elsőkerék-hiba. Ellenőrizze az első kereket."
+    },
+    {
+      "file": "E022.mp3",
+      "text": "Esőérzékelő-hiba. Forduljon az ügyfélszolgálathoz."
+    },
+    {
+      "file": "E023.mp3",
+      "text": "A robot elakadt. Segítsen kiszabadítani."
+    },
+    {
+      "file": "E024.mp3",
+      "text": "Kommunikációs hiba. Forduljon az ügyfélszolgálathoz."
+    },
+    {
+      "file": "E025.mp3",
+      "text": "A robot tiltott zónába került. A lehető leghamarabb helyezze át onnan."
+    },
+    {
+      "file": "E026.mp3",
+      "text": "A robot a határvonalon kívül van. Helyezze a munkaterületen belülre."
+    },
+    {
+      "file": "E101.mp3",
+      "text": "RTK-hiba."
+    },
+    {
+      "file": "E102.mp3",
+      "text": "Kommunikációs hiba. Forduljon az ügyfélszolgálathoz."
+    },
+    {
+      "file": "E103.mp3",
+      "text": "Az RTK inicializálása sikertelen."
+    },
+    {
+      "file": "E104.mp3",
+      "text": "A LoRa nincs párosítva. Használat előtt párosítsa a használati útmutató szerint."
+    },
+    {
+      "file": "E105.mp3",
+      "text": "Alaplap-inicializálási hiba."
+    },
+    {
+      "file": "E201.mp3",
+      "text": "A lökhárító-érzékelő beszorult."
+    },
+    {
+      "file": "E202.mp3",
+      "text": "IMU-adathiba."
+    },
+    {
+      "file": "E203.mp3",
+      "text": "Esőérzékelő-hiba."
+    },
+    {
+      "file": "E204.mp3",
+      "text": "A robot a levegőben van."
+    },
+    {
+      "file": "E205.mp3",
+      "text": "A kések leestek. Ellenőrizze, hogy megfelelően vannak-e felszerelve."
+    },
+    {
+      "file": "E301.mp3",
+      "text": "Nem sikerült visszatérni a töltőállomásra."
+    },
+    {
+      "file": "E302.mp3",
+      "text": "A robot elakadt."
+    },
+    {
+      "file": "E303.mp3",
+      "text": "A robotot lejtőn indították el. Helyezze sík talajra, majd próbálja újra."
+    },
+    {
+      "file": "E304.mp3",
+      "text": "Az újrapozicionálás sikertelen."
+    },
+    {
+      "file": "E305.mp3",
+      "text": "Helymeghatározási hiba. Ellenőrizze, hogy a robot a jel lefedettségi területén van-e."
+    },
+    {
+      "file": "E306.mp3",
+      "text": "A robot a határvonalon kívül van. Helyezze a munkaterületen belülre, majd próbálja újra."
+    },
+    {
+      "file": "E307.mp3",
+      "text": "A térképezés sikertelen. Próbálja újra."
+    },
+    {
+      "file": "E400.mp3",
+      "text": "Bal oldali kerékhiba."
+    },
+    {
+      "file": "E401.mp3",
+      "text": "A bal oldali kerékmotor túlfeszültsége."
+    },
+    {
+      "file": "E402.mp3",
+      "text": "A bal oldali kerékmotor feszültsége túl alacsony."
+    },
+    {
+      "file": "E403.mp3",
+      "text": "A bal oldali kerékmotor túlárama."
+    },
+    {
+      "file": "E404.mp3",
+      "text": "A bal oldali kerékmotor megszorult."
+    },
+    {
+      "file": "E405.mp3",
+      "text": "A bal oldali kerékmotor fázisvezetéke szakadt."
+    },
+    {
+      "file": "E406.mp3",
+      "text": "A bal oldali kerékmotor fázisvezetéke rövidzárlatos."
+    },
+    {
+      "file": "E407.mp3",
+      "text": "A bal oldali kerékmotor túlterhelődött."
+    },
+    {
+      "file": "E408.mp3",
+      "text": "A bal oldali kerékmotor Hall-érzékelőjének hibája."
+    },
+    {
+      "file": "E409.mp3",
+      "text": "A bal oldali kerékmotor hőmérsékleti hibája."
+    },
+    {
+      "file": "E410.mp3",
+      "text": "Jobb oldali kerékhiba."
+    },
+    {
+      "file": "E411.mp3",
+      "text": "A jobb oldali kerékmotor túlfeszültsége."
+    },
+    {
+      "file": "E412.mp3",
+      "text": "A jobb oldali kerékmotor feszültsége túl alacsony."
+    },
+    {
+      "file": "E413.mp3",
+      "text": "A jobb oldali kerékmotor túlárama."
+    },
+    {
+      "file": "E414.mp3",
+      "text": "A jobb oldali kerékmotor megszorult."
+    },
+    {
+      "file": "E415.mp3",
+      "text": "A jobb oldali kerékmotor fázisvezetéke szakadt."
+    },
+    {
+      "file": "E416.mp3",
+      "text": "A jobb oldali kerékmotor fázisvezetéke rövidzárlatos."
+    },
+    {
+      "file": "E417.mp3",
+      "text": "A jobb oldali kerékmotor túlterhelődött."
+    },
+    {
+      "file": "E418.mp3",
+      "text": "A jobb oldali kerékmotor Hall-érzékelőjének hibája."
+    },
+    {
+      "file": "E419.mp3",
+      "text": "A jobb oldali kerékmotor hőmérsékleti hibája."
+    },
+    {
+      "file": "E420.mp3",
+      "text": "Emelőmotorhiba."
+    },
+    {
+      "file": "E421.mp3",
+      "text": "Az emelőmotor megszorult."
+    },
+    {
+      "file": "E422.mp3",
+      "text": "Az emelőmotor túláramvédelme aktiválódott."
+    },
+    {
+      "file": "E423.mp3",
+      "text": "Az emelőmotor elakadásvédelme aktiválódott."
+    },
+    {
+      "file": "E424.mp3",
+      "text": "Az emelőmotor áramköre szakadt vagy rövidzárlatos."
+    },
+    {
+      "file": "E430.mp3",
+      "text": "Késtárcsamotor-hiba."
+    },
+    {
+      "file": "E431.mp3",
+      "text": "A késtárcsa motorja megszorult."
+    },
+    {
+      "file": "E432.mp3",
+      "text": "A késtárcsa motorjának elakadásvédelme aktiválódott."
+    },
+    {
+      "file": "E433.mp3",
+      "text": "A késtárcsa motorjának áramköre szakadt vagy rövidzárlatos."
+    },
+    {
+      "file": "E434.mp3",
+      "text": "A késtárcsa motorjának inicializálása sikertelen."
+    },
+    {
+      "file": "E435.mp3",
+      "text": "A késtárcsa motorjának túlfeszültség-védelme aktiválódott."
+    },
+    {
+      "file": "E436.mp3",
+      "text": "A késtárcsa motorjának alacsonyfeszültség-védelme aktiválódott."
+    },
+    {
+      "file": "E437.mp3",
+      "text": "A késtárcsa motorjának túláramvédelme aktiválódott."
+    },
+    {
+      "file": "E440.mp3",
+      "text": "Törlőmotorhiba."
+    },
+    {
+      "file": "E441.mp3",
+      "text": "Az első törlőmotor túlárama."
+    },
+    {
+      "file": "E442.mp3",
+      "text": "Az első törlőmotor rövidzárlatos."
+    },
+    {
+      "file": "E443.mp3",
+      "text": "Az oldalsó törlőmotor túlárama."
+    },
+    {
+      "file": "E444.mp3",
+      "text": "Az oldalsó törlőmotor rövidzárlatos."
+    },
+    {
+      "file": "E501.mp3",
+      "text": "Akkumulátorhiba töltés közben."
+    },
+    {
+      "file": "E502.mp3",
+      "text": "Az akkumulátor túlmelegedett. A megoldást az alkalmazásban találja."
+    },
+    {
+      "file": "E503.mp3",
+      "text": "Az akkumulátor hőmérséklete túl alacsony. A megoldást az alkalmazásban találja."
+    },
+    {
+      "file": "E504.mp3",
+      "text": "Az akkumulátor túlfeszültség-védelme aktiválódott."
+    },
+    {
+      "file": "E505.mp3",
+      "text": "Az akkumulátor alacsonyfeszültség-védelme aktiválódott."
+    },
+    {
+      "file": "E506.mp3",
+      "text": "Az akkumulátor túláramvédelme aktiválódott."
+    },
+    {
+      "file": "E507.mp3",
+      "text": "Az akkumulátor töltésvédelme aktiválódott."
+    },
+    {
+      "file": "E601.mp3",
+      "text": "A bal első lencse szennyezett. Tisztítsa meg mielőbb."
+    },
+    {
+      "file": "E602.mp3",
+      "text": "A jobb első lencse szennyezett. Tisztítsa meg mielőbb."
+    },
+    {
+      "file": "E603.mp3",
+      "text": "A bal oldalsó lencse szennyezett. Tisztítsa meg mielőbb."
+    },
+    {
+      "file": "E604.mp3",
+      "text": "A jobb oldalsó lencse szennyezett. Tisztítsa meg mielőbb."
+    },
+    {
+      "file": "E605.mp3",
+      "text": "Bal első lencsehiba. Forduljon az ügyfélszolgálathoz."
+    },
+    {
+      "file": "E606.mp3",
+      "text": "Jobb első lencsehiba. Forduljon az ügyfélszolgálathoz."
+    },
+    {
+      "file": "E607.mp3",
+      "text": "Bal oldalsó lencsehiba. Forduljon az ügyfélszolgálathoz."
+    },
+    {
+      "file": "E608.mp3",
+      "text": "Jobb oldalsó lencsehiba. Forduljon az ügyfélszolgálathoz."
+    },
+    {
+      "file": "E700.mp3",
+      "text": "A vészleállítás feloldásához nyomja meg a MOW, majd az OK gombot."
+    },
+    {
+      "file": "P001.mp3",
+      "text": "A Bluetooth-párosítás sikerült."
+    },
+    {
+      "file": "P002.mp3",
+      "text": "Megkezdődik a párosítás."
+    },
+    {
+      "file": "P003.mp3",
+      "text": "A hálózati kapcsolat létrejött."
+    },
+    {
+      "file": "P004.mp3",
+      "text": "A párosítás sikerült."
+    },
+    {
+      "file": "P005.mp3",
+      "text": "Hozzáadva."
+    },
+    {
+      "file": "P006.mp3",
+      "text": "A párosítás törölve."
+    },
+    {
+      "file": "P007.mp3",
+      "text": "Kényszerített eltávolítás."
+    },
+    {
+      "file": "P008.mp3",
+      "text": "A LoRa-párosítás sikerült."
+    },
+    {
+      "file": "P009.mp3",
+      "text": "A LoRa-párosítás sikertelen. Maradjon a robot közelében, majd próbálja újra."
+    },
+    {
+      "file": "P010.mp3",
+      "text": "A Bluetooth-kapcsolat megszakadt."
+    },
+    {
+      "file": "P011.mp3",
+      "text": "A Bluetooth-kapcsolat létrejött."
+    },
+    {
+      "file": "P012.mp3",
+      "text": "A Wi-Fi-kapcsolat megszakadt."
+    },
+    {
+      "file": "P013.mp3",
+      "text": "A Wi-Fi-kapcsolat létrejött."
+    },
+    {
+      "file": "S001.mp3",
+      "text": "A robot elhagyja a töltőállomást. Próbálja újra később."
+    },
+    {
+      "file": "S002.mp3",
+      "text": "A robot beáll a töltőállomásra."
+    },
+    {
+      "file": "S003.mp3",
+      "text": "A robot megérkezett a kiindulópont közelébe."
+    },
+    {
+      "file": "S004.mp3",
+      "text": "Lencsetisztítás folyamatban. A robot hamarosan megkezdi a nyírást."
+    },
+    {
+      "file": "S005.mp3",
+      "text": "Lencsetisztítás folyamatban. Ezután a robot a kijelölt területre megy nyírni."
+    },
+    {
+      "file": "S006.mp3",
+      "text": "Lencsetisztítás folyamatban. Ezután a robot a kijelölt pontra megy nyírni."
+    },
+    {
+      "file": "S007.mp3",
+      "text": "Lencsetisztítás folyamatban. Ezután a robot a kijelölt határvonalhoz megy nyírni."
+    },
+    {
+      "file": "S008.mp3",
+      "text": "Alacsony az akkumulátor töltöttsége. A robot visszatér tölteni."
+    },
+    {
+      "file": "S009.mp3",
+      "text": "A töltés befejeződött. A robot folytatja a munkát."
+    },
+    {
+      "file": "S010.mp3",
+      "text": "A feladat befejeződött. A robot visszatér tölteni."
+    },
+    {
+      "file": "S011.mp3",
+      "text": "A robot elindul a töltőállomásra."
+    },
+    {
+      "file": "S012.mp3",
+      "text": "Töltés folyamatban."
+    },
+    {
+      "file": "S013.mp3",
+      "text": "Megkezdődik a töltés."
+    },
+    {
+      "file": "S014.mp3",
+      "text": "Az őrző mód bekapcsolva."
+    },
+    {
+      "file": "S015.mp3",
+      "text": "Frissítés folyamatban. Próbálja újra később."
+    },
+    {
+      "file": "S016.mp3",
+      "text": "Megkezdődik a gyári beállítások visszaállítása."
+    },
+    {
+      "file": "S017.mp3",
+      "text": "A feladat szünetel."
+    },
+    {
+      "file": "S018.mp3",
+      "text": "A feladat folytatódik."
+    },
+    {
+      "file": "S019.mp3",
+      "text": "Lencsetisztítás folyamatban. Próbálja újra később."
+    },
+    {
+      "file": "S020.mp3",
+      "text": "A feladat befejeződött."
+    },
+    {
+      "file": "S021.mp3",
+      "text": "A firmware-frissítés sikerült."
+    },
+    {
+      "file": "S022.mp3",
+      "text": "RTK-kalibrálás folyamatban. Próbálja újra később."
+    },
+    {
+      "file": "S023.mp3",
+      "text": "A kalibrálás befejeződött. A robot most már távolról irányítható."
+    },
+    {
+      "file": "S024.mp3",
+      "text": "A robot a kijelölt területre halad."
+    },
+    {
+      "file": "S025.mp3",
+      "text": "Megkezdődik a frissítés."
+    },
+    {
+      "file": "S026.mp3",
+      "text": "Az RTK inicializálása sikertelen."
+    },
+    {
+      "file": "S027.mp3",
+      "text": "A kalibrálás befejeződött. Megkezdődik a térképezés."
+    },
+    {
+      "file": "S028.mp3",
+      "text": "A kalibrálás sikertelen. Ellenőrizze, hogy megfelelő-e a robot működési környezete."
+    },
+    {
+      "file": "S029.mp3",
+      "text": "A robot nem tudta elhagyni a töltőállomást."
+    },
+    {
+      "file": "W001.mp3",
+      "text": "Megkezdődik a pontnyírás."
+    },
+    {
+      "file": "W002.mp3",
+      "text": "A pontnyírás határa elkészült. Erősítse meg, hogy elindulhat-e a nyírás."
+    },
+    {
+      "file": "W003.mp3",
+      "text": "A feladat befejeződött."
+    },
+    {
+      "file": "W004.mp3",
+      "text": "Megkezdődik a feladat."
+    },
+    {
+      "file": "W005.mp3",
+      "text": "Feladat folyamatban."
+    },
+    {
+      "file": "W006.mp3",
+      "text": "Megkezdődik a teljes térkép nyírása."
+    },
+    {
+      "file": "W007.mp3",
+      "text": "A robot a kijelölt területre halad nyírni."
+    },
+    {
+      "file": "W008.mp3",
+      "text": "A robot elindul a töltőállomásra."
+    },
+    {
+      "file": "W009.mp3",
+      "text": "A robot úton van a töltőállomásra."
+    },
+    {
+      "file": "W010.mp3",
+      "text": "Töltés."
+    },
+    {
+      "file": "W011.mp3",
+      "text": "Megkezdődik az ütemezett nyírás."
+    },
+    {
+      "file": "W012.mp3",
+      "text": "Ne zavarjanak időszak van. Indítsa el később."
+    },
+    {
+      "file": "W013.mp3",
+      "text": "Megkezdődik a töltőállomás körüli nyírás."
+    },
+    {
+      "file": "W014.mp3",
+      "text": "Távirányítási mód aktív. Próbálja újra később."
+    },
+    {
+      "file": "W015.mp3",
+      "text": "Megkezdődik a távirányítás."
+    },
+    {
+      "file": "W016.mp3",
+      "text": "A töltés befejeződött."
+    },
+    {
+      "file": "W017.mp3",
+      "text": "Az ütemezett nyírás sikertelen. További információért ellenőrizze a súgót."
+    }
+  ]
+}

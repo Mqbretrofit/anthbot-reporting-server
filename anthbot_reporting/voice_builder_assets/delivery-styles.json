@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "builder_version": "0.1.0-alpha.7.20.11",
+  "styles": [
+    {
+      "id": "natural",
+      "display_name": "Normál / természetes",
+      "short_name": "Normál",
+      "description": "Az alap TTS előadásmód. Nincs külön érzelmi vagy prosódiai módosítás.",
+      "provider_style_preference": [],
+      "fallback_ffmpeg_filter": "",
+      "sellable": true,
+      "rewrite_text": false,
+      "text_direction": "Do not change wording solely because of delivery style.",
+      "openai_tts_instructions": "Speak naturally and clearly in the language of the input. Keep a pleasant, realistic conversational delivery. Do not add, remove, translate, or paraphrase words.",
+      "elevenlabs_audio_tag": "",
+      "elevenlabs_stability": 0.62,
+      "elevenlabs_similarity": 0.97,
+      "fish_audio_tag": ""
+    },
+    {
+      "id": "emotional",
+      "display_name": "Érzelmes / meleg",
+      "short_name": "Érzelmes",
+      "description": "Jól hallhatóan melegebb, emberibb és érzelmesebb előadás. A szöveg ritmusa és megfogalmazása is támogatja az érzelmet.",
+      "provider_style_preference": [
+        "empathetic",
+        "hopeful",
+        "friendly"
+      ],
+      "fallback_ffmpeg_filter": "atempo=0.92,equalizer=f=180:t=q:w=1.0:g=3.0,equalizer=f=2600:t=q:w=1.1:g=1.8,acompressor=threshold=-22dB:ratio=1.8:attack=18:release=220",
+      "sellable": true,
+      "rewrite_text": true,
+      "text_direction": "Make the line feel warm, human and emotionally engaged. It may be slightly longer than the source when a short extra phrase makes the emotion audible. Use natural punctuation and phrasing that encourage expressive TTS, without changing the event meaning.",
+      "openai_tts_instructions": "Speak with clearly audible warmth, emotional engagement and human tenderness. Use expressive intonation, gentle emphasis and natural pauses. Sound genuinely moved and caring, not flat or robotic. Do not add, remove, translate, or paraphrase words.",
+      "elevenlabs_audio_tag": "[warm, emotional, tender voice]",
+      "elevenlabs_stability": 0.4,
+      "elevenlabs_similarity": 0.95,
+      "fish_audio_tag": "[soft] [emphasis]"
+    },
+    {
+      "id": "sensual",
+      "display_name": "Kacér / érzéki / szexi",
+      "short_name": "Érzéki",
+      "description": "Jól hallhatóan lassabb, lágyabb, intim és kacér előadás. A szöveg megfogalmazása is alkalmazkodik hozzá, hogy natív érzelmi variáns nélkül is egyértelmű legyen a karakter.",
+      "provider_style_preference": [
+        "whispering",
+        "friendly",
+        "chat"
+      ],
+      "fallback_ffmpeg_filter": "atempo=0.84,equalizer=f=160:t=q:w=1.0:g=3.5,equalizer=f=2800:t=q:w=1.2:g=-2.0,equalizer=f=5200:t=q:w=1.3:g=-1.5,acompressor=threshold=-24dB:ratio=1.6:attack=30:release=260,volume=0.94",
+      "sellable": true,
+      "rewrite_text": true,
+      "text_direction": "Make the line clearly playful, intimate and sensually flirtatious in an adult but non-explicit way. It may use tasteful interjections, pauses, ellipses, teasing wording, or one short extra phrase when safe. The result should sound noticeably different even with a neutral TTS voice.",
+      "openai_tts_instructions": "Speak in a distinctly warm, intimate, playful and flirtatious adult tone. Use a soft, slightly breathy delivery, a subtle smile, slower pacing, gentle pauses and teasing intonation. Make it clearly sensual and attractive while staying tasteful and non-explicit. Do not add, remove, translate, or paraphrase words.",
+      "elevenlabs_audio_tag": "[soft, breathy, intimate, flirtatious voice]",
+      "elevenlabs_stability": 0.36,
+      "elevenlabs_similarity": 0.95,
+      "fish_audio_tag": "[breathy] [soft]"
+    },
+    {
+      "id": "hard",
+      "display_name": "Kemény / határozott",
+      "short_name": "Kemény",
+      "description": "Jól hallhatóan kemény, határozott, erőteljes előadás; a megfogalmazás is feszesebb és parancsolóbb lehet.",
+      "provider_style_preference": [
+        "unfriendly",
+        "shouting",
+        "angry"
+      ],
+      "fallback_ffmpeg_filter": "atempo=1.06,highpass=f=110,lowpass=f=7600,equalizer=f=160:t=q:w=1.0:g=4.0,equalizer=f=2200:t=q:w=1.0:g=3.5,acompressor=threshold=-26dB:ratio=4.0:attack=3:release=70,volume=1.08",
+      "sellable": true,
+      "rewrite_text": true,
+      "text_direction": "Make the line tough, confident, terse and commanding. Prefer punchy wording and decisive rhythm. It may be slightly expanded if that strengthens the attitude, but never change the robot state or action.",
+      "openai_tts_instructions": "Speak in a tough, firm, authoritative and decisive tone. Use strong projection, crisp consonants, punchy rhythm and confident emphasis. Sound commanding and powerful, not cheerful or soft. Do not add, remove, translate, or paraphrase words.",
+      "elevenlabs_audio_tag": "[low, firm, commanding voice]",
+      "elevenlabs_stability": 0.46,
+      "elevenlabs_similarity": 0.96,
+      "fish_audio_tag": "[emphasis]"
+    },
+    {
+      "id": "cheerful",
+      "display_name": "Vidám / lelkes",
+      "short_name": "Vidám",
+      "description": "Vidám, energikus előadás. Natív cheerful/excited stílus, ha támogatott; különben kissé gyorsabb, világosabb fallback.",
+      "provider_style_preference": [
+        "cheerful",
+        "excited"
+      ],
+      "fallback_ffmpeg_filter": "atempo=1.10,equalizer=f=3000:t=q:w=1.0:g=3.2,equalizer=f=5600:t=q:w=1.2:g=1.8,acompressor=threshold=-22dB:ratio=1.6:attack=8:release=90",
+      "sellable": true,
+      "rewrite_text": true,
+      "text_direction": "Make the line visibly upbeat, enthusiastic and energetic. Natural exclamations and lively phrasing are encouraged when appropriate.",
+      "openai_tts_instructions": "Speak with unmistakable joy, energy and enthusiasm. Use lively pacing, a smiling tone, upbeat intonation and expressive emphasis. Do not add, remove, translate, or paraphrase words.",
+      "elevenlabs_audio_tag": "[cheerfully]",
+      "elevenlabs_stability": 0.4,
+      "elevenlabs_similarity": 0.94,
+      "fish_audio_tag": "[excited]"
+    },
+    {
+      "id": "angry",
+      "display_name": "Dühös",
+      "short_name": "Dühös",
+      "description": "Dühösebb, intenzívebb előadás. Natív angry/shouting/unfriendly stílust használ, ha támogatott; egyébként erősebb kompressziós fallbacket.",
+      "provider_style_preference": [
+        "angry",
+        "shouting",
+        "unfriendly"
+      ],
+      "fallback_ffmpeg_filter": "atempo=1.08,highpass=f=130,equalizer=f=170:t=q:w=1.0:g=4.5,equalizer=f=2000:t=q:w=1.0:g=4.0,acompressor=threshold=-28dB:ratio=5.0:attack=2:release=55,volume=1.10",
+      "sellable": true,
+      "rewrite_text": true,
+      "text_direction": "Make the line clearly irritated, forceful and grumpy without abuse or threats. Use punchy wording and strong punctuation while preserving the exact event meaning.",
+      "openai_tts_instructions": "Speak with clearly audible irritation and controlled anger. Use forceful emphasis, tighter pacing and a grumpy, intense tone without screaming uncontrollably or becoming abusive. Do not add, remove, translate, or paraphrase words.",
+      "elevenlabs_audio_tag": "[angry]",
+      "elevenlabs_stability": 0.38,
+      "elevenlabs_similarity": 0.95,
+      "fish_audio_tag": "[angry]"
+    },
+    {
+      "id": "whisper",
+      "display_name": "Suttogós / halk",
+      "short_name": "Suttogós",
+      "description": "Natív whispering stílus, ha a Cloud hang támogatja. Más hangoknál halkabb, lágyabb karakterű helyi közelítés készül.",
+      "provider_style_preference": [
+        "whispering"
+      ],
+      "fallback_ffmpeg_filter": "volume=0.66,atempo=0.90,highpass=f=220,lowpass=f=5200,equalizer=f=3600:t=q:w=1.1:g=-2.5,acompressor=threshold=-28dB:ratio=1.3:attack=35:release=280",
+      "sellable": true,
+      "rewrite_text": true,
+      "text_direction": "Make the line intimate, hushed and close-mic in wording. Use soft phrasing and natural pauses/ellipses when appropriate so a neutral TTS still sounds more whisper-like in cadence.",
+      "openai_tts_instructions": "Whisper the entire line softly and closely, with intimate breathy delivery and natural pauses, while remaining intelligible. Do not add, remove, translate, or paraphrase words.",
+      "elevenlabs_audio_tag": "[whispers]",
+      "elevenlabs_stability": 0.42,
+      "elevenlabs_similarity": 0.94,
+      "fish_audio_tag": "[whispering]"
+    },
+    {
+      "id": "calm",
+      "display_name": "Nyugodt / lágy",
+      "short_name": "Nyugodt",
+      "description": "Nyugodtabb, lassabb előadás. Natív calm/empathetic/friendly stílus, ahol van; különben enyhe lassítás és lágyítás.",
+      "provider_style_preference": [
+        "calm",
+        "empathetic",
+        "friendly"
+      ],
+      "fallback_ffmpeg_filter": "atempo=0.89,equalizer=f=220:t=q:w=1.1:g=2.0,equalizer=f=3800:t=q:w=1.2:g=-1.4,acompressor=threshold=-22dB:ratio=1.3:attack=35:release=280",
+      "sellable": true,
+      "rewrite_text": true,
+      "text_direction": "Make the line calm, reassuring and unhurried. Slightly soften the wording and rhythm while preserving all information.",
+      "openai_tts_instructions": "Speak slowly, softly and reassuringly with relaxed pacing, gentle intonation and a soothing, composed tone. Do not add, remove, translate, or paraphrase words.",
+      "elevenlabs_audio_tag": "[calm, soothing voice]",
+      "elevenlabs_stability": 0.7,
+      "elevenlabs_similarity": 0.97,
+      "fish_audio_tag": "[soft]"
+    },
+    {
+      "id": "sad",
+      "display_name": "Szomorú / melankolikus",
+      "short_name": "Szomorú",
+      "description": "Szomorúbb, melankolikus előadás. Natív sad stílus, ha támogatott; különben kissé lassabb, sötétebb fallback.",
+      "provider_style_preference": [
+        "sad"
+      ],
+      "fallback_ffmpeg_filter": "atempo=0.88,equalizer=f=180:t=q:w=1.0:g=2.5,equalizer=f=3400:t=q:w=1.1:g=-3.0,acompressor=threshold=-23dB:ratio=1.4:attack=25:release=260",
+      "sellable": true,
+      "rewrite_text": true,
+      "text_direction": "Make the line noticeably melancholic, disappointed or weary, while keeping the event meaning clear and not melodramatic.",
+      "openai_tts_instructions": "Speak with clearly audible sadness, weariness and melancholy. Use slower pacing, subdued energy and natural emotional pauses without becoming theatrical. Do not add, remove, translate, or paraphrase words.",
+      "elevenlabs_audio_tag": "[sad, melancholic voice]",
+      "elevenlabs_stability": 0.46,
+      "elevenlabs_similarity": 0.95,
+      "fish_audio_tag": "[sad]"
+    }
+  ]
+}

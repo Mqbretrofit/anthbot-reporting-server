@@ -163,6 +163,9 @@ def _init_db() -> None:
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     _init_db()
+    from voice_builder_state import jobs, launch_worker
+    if any(j['status'] in ('running', 'queued') for j in jobs()):
+        launch_worker()
     yield
 
 
@@ -260,6 +263,10 @@ async def _limit_body_size(request: Request, call_next):
             limit = MAX_VOICE_PACK_UPLOAD_BYTES
         elif request.url.path == "/api/anthbot/admin/voice-packs/cache-official-upload-chunk":
             limit = OFFICIAL_UPLOAD_HTTP_CHUNK_BYTES
+        elif request.url.path.endswith("/voice-builder/cache-import") or request.url.path.endswith("/import-audio"):
+            limit = 65 * 1024 * 1024
+        elif request.url.path.endswith("/import-prompts"):
+            limit = 2 * 1024 * 1024
         elif request.url.path.endswith("/diagnostics"):
             limit = MAX_DIAGNOSTICS_BYTES
         else:
@@ -1671,3 +1678,4 @@ def delete_installation(installation_id: UUID) -> dict[str, Any]:
     if cursor.rowcount == 0:
         raise HTTPException(status_code=404, detail="installation not found")
     return {"deleted": True, "installation_id": value}
+

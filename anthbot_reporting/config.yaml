@@ -1,5 +1,5 @@
 name: ANTHBOT Reporting Server
-version: "1.0.47"
+version: "1.0.48"
 slug: anthbot_reporting
 description: ANTHBOT Map presence, opt-in telemetry, diagnostics, and admin dashboard backend
 url: https://github.com/Mqbretrofit/anthbot-reporting-server/tree/main/anthbot_reporting
@@ -58,3 +58,4 @@ schema:
   smtp_from_name: str
   smtp_starttls: bool
   smtp_ssl: bool
+

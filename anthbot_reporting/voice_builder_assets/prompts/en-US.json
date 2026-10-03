@@ -1,0 +1,819 @@
+{
+  "schema_version": 2,
+  "language": "English",
+  "language_code": "en-US",
+  "source": "ANTHBOT girl_en-1.2.2 corrected English master transcript",
+  "translation_status": "master_corrected_english",
+  "prompt_count": 201,
+  "fixed_non_speech_files": [
+    "A001.mp3",
+    "A003.mp3",
+    "A030.mp3"
+  ],
+  "prompts": [
+    {
+      "file": "A004.mp3",
+      "text": "I'm here."
+    },
+    {
+      "file": "A005.mp3",
+      "text": "Welcome to use the robot. Please set a four-digit PIN code for the robot first."
+    },
+    {
+      "file": "A006.mp3",
+      "text": "Emergency stop has been activated. To continue the task, press the MOW button first, then press OK to release it."
+    },
+    {
+      "file": "A007.mp3",
+      "text": "Please enter the PIN code."
+    },
+    {
+      "file": "A008.mp3",
+      "text": "Low battery level. Please try again after the robot is fully charged."
+    },
+    {
+      "file": "A009.mp3",
+      "text": "Low battery level. The robot is going to power off. Please recharge it in time."
+    },
+    {
+      "file": "A010.mp3",
+      "text": "The robot is suspended in the air. Please take care to protect the cameras on the device."
+    },
+    {
+      "file": "A011.mp3",
+      "text": "The robot has been lifted. Please put it on the ground to start."
+    },
+    {
+      "file": "A012.mp3",
+      "text": "The robot is tilted. Please take care to protect the cameras on the device."
+    },
+    {
+      "file": "A013.mp3",
+      "text": "The robot did not reach the specified location. The current task is over. Please recharge."
+    },
+    {
+      "file": "A014.mp3",
+      "text": "The positioning signal is weak. Please recharge."
+    },
+    {
+      "file": "A015.mp3",
+      "text": "It's raining. Please recharge."
+    },
+    {
+      "file": "A016.mp3",
+      "text": "The robot has been moved. Please put it back onto the charging station."
+    },
+    {
+      "file": "A017.mp3",
+      "text": "Currently in rain protection mode. Please try again after three hours or turn off rain detection in the app."
+    },
+    {
+      "file": "A018.mp3",
+      "text": "Repositioning is in progress. Please keep the robot within the map and more than 1.5 metres away from the boundary."
+    },
+    {
+      "file": "A019.mp3",
+      "text": "You have entered the security area."
+    },
+    {
+      "file": "A020.mp3",
+      "text": "The lens is dirty."
+    },
+    {
+      "file": "A021.mp3",
+      "text": "The bump board has recovered."
+    },
+    {
+      "file": "A022.mp3",
+      "text": "Please start it on level ground."
+    },
+    {
+      "file": "A023.mp3",
+      "text": "Please move the device to an open area to start spot mowing mode."
+    },
+    {
+      "file": "A024.mp3",
+      "text": "The robot cannot reach the designated area. Please check whether the area is accessible."
+    },
+    {
+      "file": "A025.mp3",
+      "text": "Power off."
+    },
+    {
+      "file": "A026.mp3",
+      "text": "The GPS signal is weak. Please try to start the robot after the signal is stable."
+    },
+    {
+      "file": "A027.mp3",
+      "text": "Please try to start again after the error has been cleared."
+    },
+    {
+      "file": "A028.mp3",
+      "text": "Working in a dim environment is not supported."
+    },
+    {
+      "file": "A029.mp3",
+      "text": "The blade disc is on. Please mind your safety."
+    },
+    {
+      "file": "A031.mp3",
+      "text": "Move it to an open area to initialise it, then try again."
+    },
+    {
+      "file": "C001.mp3",
+      "text": "Map creation succeeded."
+    },
+    {
+      "file": "C002.mp3",
+      "text": "Mapping failed. Please try again."
+    },
+    {
+      "file": "C003.mp3",
+      "text": "Creation succeeded."
+    },
+    {
+      "file": "C004.mp3",
+      "text": "Creation failed."
+    },
+    {
+      "file": "C005.mp3",
+      "text": "Starting to expand the map."
+    },
+    {
+      "file": "C006.mp3",
+      "text": "Map extension succeeded."
+    },
+    {
+      "file": "C007.mp3",
+      "text": "Map extension failed."
+    },
+    {
+      "file": "C008.mp3",
+      "text": "Please remote-control the robot to start creating the map."
+    },
+    {
+      "file": "C009.mp3",
+      "text": "Mapping is in progress. Please try again later."
+    },
+    {
+      "file": "C010.mp3",
+      "text": "Entering ACC automatic mapping mode. This is only suitable for lawns with clear boundaries. Press the OK button to confirm."
+    },
+    {
+      "file": "C011.mp3",
+      "text": "ACC automatic mapping starts."
+    },
+    {
+      "file": "C012.mp3",
+      "text": "Please put the robot on the charging station, then start."
+    },
+    {
+      "file": "C013.mp3",
+      "text": "The mapping area exceeds the limit. Please create maps within the specified range."
+    },
+    {
+      "file": "C014.mp3",
+      "text": "The RTK base has moved. Please find a solution in the app."
+    },
+    {
+      "file": "C015.mp3",
+      "text": "Starting to create no-go zones."
+    },
+    {
+      "file": "C016.mp3",
+      "text": "No-go zone creation failed."
+    },
+    {
+      "file": "C017.mp3",
+      "text": "Please start the robot on the charging station before mapping."
+    },
+    {
+      "file": "C018.mp3",
+      "text": "Please start the robot within the map boundary before expanding the map."
+    },
+    {
+      "file": "E001.mp3",
+      "text": "Starting to charge. The robot will resume working after it is fully charged."
+    },
+    {
+      "file": "E002.mp3",
+      "text": "Recharge failed. Please check the solution in the app."
+    },
+    {
+      "file": "E003.mp3",
+      "text": "Battery error. Please check the solution in the app."
+    },
+    {
+      "file": "E004.mp3",
+      "text": "The lens could not be cleaned. Please check the solution in the app."
+    },
+    {
+      "file": "E005.mp3",
+      "text": "Map error. Please check the solution in the app."
+    },
+    {
+      "file": "E006.mp3",
+      "text": "Sensor error. Please check the solution in the app."
+    },
+    {
+      "file": "E007.mp3",
+      "text": "Battery over-temperature error. Please check the solution in the app."
+    },
+    {
+      "file": "E008.mp3",
+      "text": "Battery low-temperature error. Please check the solution in the app."
+    },
+    {
+      "file": "E009.mp3",
+      "text": "Left rear wheel error. Please check the solution in the app."
+    },
+    {
+      "file": "E010.mp3",
+      "text": "Right rear wheel error. Please check the solution in the app."
+    },
+    {
+      "file": "E011.mp3",
+      "text": "Blade disc error. Please check the solution in the app."
+    },
+    {
+      "file": "E012.mp3",
+      "text": "The robot is stuck. Please help release it."
+    },
+    {
+      "file": "E013.mp3",
+      "text": "The charging station was not detected. Please use the app to help the robot recharge."
+    },
+    {
+      "file": "E014.mp3",
+      "text": "Bumper error. Please check the solution in the app."
+    },
+    {
+      "file": "E015.mp3",
+      "text": "Firmware update failed. Please try again later."
+    },
+    {
+      "file": "E016.mp3",
+      "text": "The robot is suspended in the air. Please check whether the robot is trapped."
+    },
+    {
+      "file": "E017.mp3",
+      "text": "Repositioning failed. Please keep the robot within the map and more than 1.5 metres away from the boundary, then try again later."
+    },
+    {
+      "file": "E018.mp3",
+      "text": "The positioning signal is weak. The robot cannot move now. Please check the solution in the app."
+    },
+    {
+      "file": "E019.mp3",
+      "text": "Positioning error. Please make sure the device is within signal coverage."
+    },
+    {
+      "file": "E020.mp3",
+      "text": "Bumper sensor error. Please check whether the bumper sensor is stuck."
+    },
+    {
+      "file": "E021.mp3",
+      "text": "Front wheel error. Please check the front wheel."
+    },
+    {
+      "file": "E022.mp3",
+      "text": "Rain sensor error. Please contact customer service."
+    },
+    {
+      "file": "E023.mp3",
+      "text": "The device is stuck. Please help release it."
+    },
+    {
+      "file": "E024.mp3",
+      "text": "Communication error. Please contact customer service."
+    },
+    {
+      "file": "E025.mp3",
+      "text": "The device has entered a no-go zone. Please move it away as soon as possible."
+    },
+    {
+      "file": "E026.mp3",
+      "text": "The device is outside the boundary. Please move it within the working area."
+    },
+    {
+      "file": "E101.mp3",
+      "text": "RTK error."
+    },
+    {
+      "file": "E102.mp3",
+      "text": "Communication error. Please contact customer service."
+    },
+    {
+      "file": "E103.mp3",
+      "text": "RTK initialisation failed."
+    },
+    {
+      "file": "E104.mp3",
+      "text": "LoRa is not paired. Please pair it according to the user manual before use."
+    },
+    {
+      "file": "E105.mp3",
+      "text": "Mainboard initialisation error."
+    },
+    {
+      "file": "E201.mp3",
+      "text": "The bumper sensor is stuck."
+    },
+    {
+      "file": "E202.mp3",
+      "text": "IMU data error."
+    },
+    {
+      "file": "E203.mp3",
+      "text": "Rain sensor error."
+    },
+    {
+      "file": "E204.mp3",
+      "text": "The device is suspended in the air."
+    },
+    {
+      "file": "E205.mp3",
+      "text": "The blades have fallen off. Please check whether the blades are installed correctly."
+    },
+    {
+      "file": "E301.mp3",
+      "text": "Recharge failed."
+    },
+    {
+      "file": "E302.mp3",
+      "text": "The machine is stuck."
+    },
+    {
+      "file": "E303.mp3",
+      "text": "The robot was started on a slope. Please put it on level ground and try again."
+    },
+    {
+      "file": "E304.mp3",
+      "text": "Repositioning failed."
+    },
+    {
+      "file": "E305.mp3",
+      "text": "Positioning error. Please make sure the device is within signal coverage."
+    },
+    {
+      "file": "E306.mp3",
+      "text": "The device is outside the boundary. Please move it within the working area, then try again."
+    },
+    {
+      "file": "E307.mp3",
+      "text": "Mapping failed. Please try again."
+    },
+    {
+      "file": "E400.mp3",
+      "text": "Left wheel error."
+    },
+    {
+      "file": "E401.mp3",
+      "text": "Left wheel motor over-voltage."
+    },
+    {
+      "file": "E402.mp3",
+      "text": "Left wheel motor under-voltage."
+    },
+    {
+      "file": "E403.mp3",
+      "text": "Left wheel motor over-current."
+    },
+    {
+      "file": "E404.mp3",
+      "text": "The left wheel motor is blocked."
+    },
+    {
+      "file": "E405.mp3",
+      "text": "Left wheel motor phase cable breakage."
+    },
+    {
+      "file": "E406.mp3",
+      "text": "Left wheel motor phase cable short circuit."
+    },
+    {
+      "file": "E407.mp3",
+      "text": "Left wheel motor overload."
+    },
+    {
+      "file": "E408.mp3",
+      "text": "Left wheel motor Hall sensor error."
+    },
+    {
+      "file": "E409.mp3",
+      "text": "Left wheel motor temperature error."
+    },
+    {
+      "file": "E410.mp3",
+      "text": "Right wheel error."
+    },
+    {
+      "file": "E411.mp3",
+      "text": "Right wheel motor over-voltage."
+    },
+    {
+      "file": "E412.mp3",
+      "text": "Right wheel motor under-voltage."
+    },
+    {
+      "file": "E413.mp3",
+      "text": "Right wheel motor over-current."
+    },
+    {
+      "file": "E414.mp3",
+      "text": "The right wheel motor is blocked."
+    },
+    {
+      "file": "E415.mp3",
+      "text": "Right wheel motor phase cable breakage."
+    },
+    {
+      "file": "E416.mp3",
+      "text": "Right wheel motor phase cable short circuit."
+    },
+    {
+      "file": "E417.mp3",
+      "text": "Right wheel motor overload."
+    },
+    {
+      "file": "E418.mp3",
+      "text": "Right wheel motor Hall sensor error."
+    },
+    {
+      "file": "E419.mp3",
+      "text": "Right wheel motor temperature error."
+    },
+    {
+      "file": "E420.mp3",
+      "text": "Lift motor error."
+    },
+    {
+      "file": "E421.mp3",
+      "text": "The lift motor is stuck."
+    },
+    {
+      "file": "E422.mp3",
+      "text": "Lift motor over-current protection."
+    },
+    {
+      "file": "E423.mp3",
+      "text": "Lift motor stall protection."
+    },
+    {
+      "file": "E424.mp3",
+      "text": "Lift motor open circuit or short circuit."
+    },
+    {
+      "file": "E430.mp3",
+      "text": "Blade disc motor error."
+    },
+    {
+      "file": "E431.mp3",
+      "text": "The blade disc motor is stuck."
+    },
+    {
+      "file": "E432.mp3",
+      "text": "Blade disc motor stall protection."
+    },
+    {
+      "file": "E433.mp3",
+      "text": "Blade disc motor open circuit or short circuit."
+    },
+    {
+      "file": "E434.mp3",
+      "text": "Blade disc motor initialisation failure."
+    },
+    {
+      "file": "E435.mp3",
+      "text": "Blade disc motor over-voltage protection."
+    },
+    {
+      "file": "E436.mp3",
+      "text": "Blade disc motor under-voltage protection."
+    },
+    {
+      "file": "E437.mp3",
+      "text": "Blade disc motor over-current protection."
+    },
+    {
+      "file": "E440.mp3",
+      "text": "Wiper motor error."
+    },
+    {
+      "file": "E441.mp3",
+      "text": "Front wiper motor over-current."
+    },
+    {
+      "file": "E442.mp3",
+      "text": "Front wiper motor short circuit."
+    },
+    {
+      "file": "E443.mp3",
+      "text": "Side wiper motor over-current."
+    },
+    {
+      "file": "E444.mp3",
+      "text": "Side wiper motor short circuit."
+    },
+    {
+      "file": "E501.mp3",
+      "text": "Battery error during charging."
+    },
+    {
+      "file": "E502.mp3",
+      "text": "Battery over-temperature. Please check the solution in the app."
+    },
+    {
+      "file": "E503.mp3",
+      "text": "Battery low temperature. Please check the solution in the app."
+    },
+    {
+      "file": "E504.mp3",
+      "text": "Battery over-voltage protection."
+    },
+    {
+      "file": "E505.mp3",
+      "text": "Battery under-voltage protection."
+    },
+    {
+      "file": "E506.mp3",
+      "text": "Battery over-current protection."
+    },
+    {
+      "file": "E507.mp3",
+      "text": "Battery charge protection."
+    },
+    {
+      "file": "E601.mp3",
+      "text": "The front-left lens is dirty. Please clean it promptly."
+    },
+    {
+      "file": "E602.mp3",
+      "text": "The front-right lens is dirty. Please clean it promptly."
+    },
+    {
+      "file": "E603.mp3",
+      "text": "The left-side lens is dirty. Please clean it promptly."
+    },
+    {
+      "file": "E604.mp3",
+      "text": "The right-side lens is dirty. Please clean it promptly."
+    },
+    {
+      "file": "E605.mp3",
+      "text": "Front-left lens error. Please contact customer service."
+    },
+    {
+      "file": "E606.mp3",
+      "text": "Front-right lens error. Please contact customer service."
+    },
+    {
+      "file": "E607.mp3",
+      "text": "Left-side lens error. Please contact customer service."
+    },
+    {
+      "file": "E608.mp3",
+      "text": "Right-side lens error. Please contact customer service."
+    },
+    {
+      "file": "E700.mp3",
+      "text": "Please press MOW, then OK, to release the emergency-stop protection."
+    },
+    {
+      "file": "P001.mp3",
+      "text": "Bluetooth pairing succeeded."
+    },
+    {
+      "file": "P002.mp3",
+      "text": "Pairing starts."
+    },
+    {
+      "file": "P003.mp3",
+      "text": "Network connection succeeded."
+    },
+    {
+      "file": "P004.mp3",
+      "text": "Pairing succeeded."
+    },
+    {
+      "file": "P005.mp3",
+      "text": "Added."
+    },
+    {
+      "file": "P006.mp3",
+      "text": "Pair removed."
+    },
+    {
+      "file": "P007.mp3",
+      "text": "Forced removal."
+    },
+    {
+      "file": "P008.mp3",
+      "text": "LoRa pairing succeeded."
+    },
+    {
+      "file": "P009.mp3",
+      "text": "LoRa pairing failed. Please stay close to the device and try again."
+    },
+    {
+      "file": "P010.mp3",
+      "text": "Bluetooth disconnected."
+    },
+    {
+      "file": "P011.mp3",
+      "text": "Bluetooth connected."
+    },
+    {
+      "file": "P012.mp3",
+      "text": "Wi-Fi disconnected."
+    },
+    {
+      "file": "P013.mp3",
+      "text": "Wi-Fi connected."
+    },
+    {
+      "file": "S001.mp3",
+      "text": "The robot is undocking. Please try again later."
+    },
+    {
+      "file": "S002.mp3",
+      "text": "The robot is docking."
+    },
+    {
+      "file": "S003.mp3",
+      "text": "The robot has arrived near the starting point."
+    },
+    {
+      "file": "S004.mp3",
+      "text": "Lens cleaning is in progress. The robot will start mowing soon."
+    },
+    {
+      "file": "S005.mp3",
+      "text": "Lens cleaning is in progress. The robot will go to the designated area to mow."
+    },
+    {
+      "file": "S006.mp3",
+      "text": "Lens cleaning is in progress. The robot will go to the designated spot to mow."
+    },
+    {
+      "file": "S007.mp3",
+      "text": "Lens cleaning is in progress. The robot will go to the designated boundary to mow."
+    },
+    {
+      "file": "S008.mp3",
+      "text": "Low battery level. The robot will recharge."
+    },
+    {
+      "file": "S009.mp3",
+      "text": "Recharging is finished. The robot will continue working."
+    },
+    {
+      "file": "S010.mp3",
+      "text": "The task is finished. The robot will recharge."
+    },
+    {
+      "file": "S011.mp3",
+      "text": "Starting to recharge."
+    },
+    {
+      "file": "S012.mp3",
+      "text": "Charging is in progress."
+    },
+    {
+      "file": "S013.mp3",
+      "text": "Charging begins."
+    },
+    {
+      "file": "S014.mp3",
+      "text": "Sentry mode is on."
+    },
+    {
+      "file": "S015.mp3",
+      "text": "An update is in progress. Please try again later."
+    },
+    {
+      "file": "S016.mp3",
+      "text": "Starting to restore factory settings."
+    },
+    {
+      "file": "S017.mp3",
+      "text": "Task paused."
+    },
+    {
+      "file": "S018.mp3",
+      "text": "The task resumes."
+    },
+    {
+      "file": "S019.mp3",
+      "text": "Lens cleaning is in progress. Please try again later."
+    },
+    {
+      "file": "S020.mp3",
+      "text": "Task finished."
+    },
+    {
+      "file": "S021.mp3",
+      "text": "Firmware update succeeded."
+    },
+    {
+      "file": "S022.mp3",
+      "text": "RTK calibration is in progress. Please try again later."
+    },
+    {
+      "file": "S023.mp3",
+      "text": "Calibration finished. You can remote-control the robot now."
+    },
+    {
+      "file": "S024.mp3",
+      "text": "The robot is going to the designated area."
+    },
+    {
+      "file": "S025.mp3",
+      "text": "Starting to update."
+    },
+    {
+      "file": "S026.mp3",
+      "text": "RTK initialisation failed."
+    },
+    {
+      "file": "S027.mp3",
+      "text": "Calibration has finished. Mapping begins."
+    },
+    {
+      "file": "S028.mp3",
+      "text": "Calibration failed. Please check whether the device's working environment is suitable."
+    },
+    {
+      "file": "S029.mp3",
+      "text": "Undocking failed."
+    },
+    {
+      "file": "W001.mp3",
+      "text": "Spot mowing starts."
+    },
+    {
+      "file": "W002.mp3",
+      "text": "The boundary for spot mowing has been completed. Please confirm whether to start mowing."
+    },
+    {
+      "file": "W003.mp3",
+      "text": "Task finished."
+    },
+    {
+      "file": "W004.mp3",
+      "text": "Task begins."
+    },
+    {
+      "file": "W005.mp3",
+      "text": "Task in progress."
+    },
+    {
+      "file": "W006.mp3",
+      "text": "Full-map mowing starts."
+    },
+    {
+      "file": "W007.mp3",
+      "text": "The robot is going to the designated area to mow."
+    },
+    {
+      "file": "W008.mp3",
+      "text": "Starting to recharge."
+    },
+    {
+      "file": "W009.mp3",
+      "text": "On the way to recharge."
+    },
+    {
+      "file": "W010.mp3",
+      "text": "Charging."
+    },
+    {
+      "file": "W011.mp3",
+      "text": "Scheduled mowing begins."
+    },
+    {
+      "file": "W012.mp3",
+      "text": "Do-not-disturb time. Please start later."
+    },
+    {
+      "file": "W013.mp3",
+      "text": "Mowing near the nest starts."
+    },
+    {
+      "file": "W014.mp3",
+      "text": "Remote-control mode. Please try again later."
+    },
+    {
+      "file": "W015.mp3",
+      "text": "Remote control begins."
+    },
+    {
+      "file": "W016.mp3",
+      "text": "Recharging finished."
+    },
+    {
+      "file": "W017.mp3",
+      "text": "Scheduled mowing failed. Please check the support files."
+    }
+  ]
+}

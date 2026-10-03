@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "builder_version": "0.1.0-alpha.7.20.4",
+  "description": "Karakteres szövegstílusban csak az E*.mp3 error üzenetek maradnak változatlanok. Minden más beszédsor stilizálható, miközben az esemény jelentése és a szükséges biztonsági teendő megmarad.",
+  "critical_patterns": [
+    "^E[0-9]+\\.mp3$"
+  ],
+  "critical_files": []
+}
