@@ -250,6 +250,65 @@ class VoiceBuilderTests(unittest.TestCase):
             self.assertEqual(req.call_count,1)
             self.assertEqual(len(result),21)
 
+    def test_provider_errors_identify_operation_and_never_echo_secrets(self):
+        url='https://api.elevenlabs.io/v1/user/subscription?private=SECRET'
+        for reason, expected in [('missing_permissions','User → Read'),
+                                 ('invalid_api_key','Érvénytelen'),
+                                 ('quota_exceeded','kreditkeret'),
+                                 ('SECRET-unknown','jogosultságot')]:
+            with self.subTest(reason=reason):
+                body=json.dumps({'detail':{'status':reason,'message':'SECRET provider response'}}).encode()
+                error=engine.HTTPError(url,401,'SECRET',{'xi-api-key':'SECRET'},io.BytesIO(body))
+                with patch.object(engine,'build_opener') as opener:
+                    opener.return_value.open.side_effect=error
+                    with self.assertRaises(engine.ProviderError) as raised:
+                        engine.request(url,headers={'xi-api-key':'SECRET'})
+                self.assertIn('ElevenLabs kreditkeret lekérdezése',str(raised.exception))
+                self.assertIn(expected,str(raised.exception))
+                self.assertNotIn('SECRET',str(raised.exception))
+                self.assertEqual(raised.exception.status,401)
+        error=engine.HTTPError(url,403,'Forbidden',{},io.BytesIO(b'<html>SECRET</html>'))
+        with patch.object(engine,'build_opener') as opener:
+            opener.return_value.open.side_effect=error
+            with self.assertRaises(engine.ProviderError) as raised:
+                engine.request(url)
+        self.assertNotIn('SECRET',str(raised.exception))
+        self.assertEqual(raised.exception.status,403)
+
+    def test_elevenlabs_access_failure_stops_before_paid_text_processing(self):
+        spec=state.Spec(provider='elevenlabs',voice_id='abc',text_style='funny')
+        job=self.job(spec)
+        error=engine.ProviderError(401,reason='missing_permissions',operation='ElevenLabs kreditkeret lekérdezése')
+        with patch.object(state,'credentials',return_value={'elevenlabs_key':'x','openai_key':'y'}),\
+             patch.object(engine,'request',side_effect=error) as req,\
+             patch.object(engine,'chat_rows') as chat,patch.object(engine,'audio_request') as audio:
+            with self.assertRaisesRegex(engine.ProviderError,'User → Read'):
+                engine.run_job(job)
+        self.assertEqual(req.call_count,1)
+        chat.assert_not_called()
+        audio.assert_not_called()
+
+    def test_saved_scripts_bypass_new_text_access_check(self):
+        job=self.job()
+        doc=state.load_asset('prompts/hu-HU.json')
+        state.atomic(state.job_dir(job['id'])/'prompts.json',state.canonical(doc).encode())
+        with patch.object(engine,'request',side_effect=AssertionError('New provider request')),\
+             patch.object(engine,'chat_rows',side_effect=AssertionError('Repeat text request')):
+            result=engine.load_prompts(self.spec,{},job['id'],before_ai=lambda: self.fail('Cached script precheck'))
+        self.assertEqual(result,doc)
+
+    def test_early_subscription_result_reused_without_bypassing_budget_checks(self):
+        spec=state.Spec(provider='elevenlabs',voice_id='abc',hybrid=False,model='eleven_v4')
+        job=self.job(spec,limit=1000000)
+        doc=state.load_asset('prompts/hu-HU.json')
+        with patch.object(engine,'request',return_value=[{'model_id':'eleven_v4'}]) as req,\
+             patch.object(engine,'probe',side_effect=self.probe):
+            engine.preflight(job,spec,doc,{'elevenlabs_key':'x'},subscription={'character_limit':1000000,'character_count':0})
+            self.assertEqual(req.call_count,1)
+            self.assertTrue(req.call_args.args[0].endswith('/v1/models'))
+            with self.assertRaisesRegex(RuntimeError,'maradék kerete'):
+                engine.preflight(job,spec,doc,{'elevenlabs_key':'x'},subscription={'character_limit':0,'character_count':0})
+
     def test_worker_recovers_running_jobs_and_has_single_queue_owner(self):
         job=self.job()
         with patch.object(worker,'run_job',side_effect=lambda j:state.update(j['id'],status='completed')),patch.object(worker.time,'sleep'):
