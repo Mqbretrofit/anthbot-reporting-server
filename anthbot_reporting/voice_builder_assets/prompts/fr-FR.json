@@ -1,0 +1,819 @@
+{
+  "schema_version": 2,
+  "language": "Français",
+  "language_code": "fr-FR",
+  "source": "Translated from ANTHBOT girl_en-1.2.2 corrected English master transcript",
+  "translation_status": "draft_translation_review_before_release",
+  "prompt_count": 201,
+  "fixed_non_speech_files": [
+    "A001.mp3",
+    "A003.mp3",
+    "A030.mp3"
+  ],
+  "prompts": [
+    {
+      "file": "A004.mp3",
+      "text": "Je suis là."
+    },
+    {
+      "file": "A005.mp3",
+      "text": "Bienvenue. Veuillez d’abord définir un code PIN à quatre chiffres pour le robot."
+    },
+    {
+      "file": "A006.mp3",
+      "text": "L’arrêt d’urgence a été activé. Pour reprendre la tâche, appuyez d’abord sur le bouton MOW, puis sur OK pour le désactiver."
+    },
+    {
+      "file": "A007.mp3",
+      "text": "Veuillez saisir le code PIN."
+    },
+    {
+      "file": "A008.mp3",
+      "text": "Batterie faible. Veuillez réessayer une fois le robot complètement chargé."
+    },
+    {
+      "file": "A009.mp3",
+      "text": "Batterie faible. Le robot va s’éteindre. Veuillez le recharger à temps."
+    },
+    {
+      "file": "A010.mp3",
+      "text": "Le robot est suspendu en l’air. Veillez à protéger les caméras de l’appareil."
+    },
+    {
+      "file": "A011.mp3",
+      "text": "Le robot a été soulevé. Veuillez le poser au sol pour démarrer."
+    },
+    {
+      "file": "A012.mp3",
+      "text": "Le robot est incliné. Veillez à protéger les caméras de l’appareil."
+    },
+    {
+      "file": "A013.mp3",
+      "text": "Le robot n’a pas atteint l’emplacement indiqué. La tâche en cours est terminée. Veuillez le recharger."
+    },
+    {
+      "file": "A014.mp3",
+      "text": "Le signal de positionnement est faible. Veuillez recharger le robot."
+    },
+    {
+      "file": "A015.mp3",
+      "text": "Il pleut. Veuillez recharger le robot."
+    },
+    {
+      "file": "A016.mp3",
+      "text": "Le robot a été déplacé. Veuillez le remettre sur la station de charge."
+    },
+    {
+      "file": "A017.mp3",
+      "text": "Le mode de protection contre la pluie est actif. Veuillez réessayer dans trois heures ou désactiver la détection de pluie dans l’application."
+    },
+    {
+      "file": "A018.mp3",
+      "text": "Le repositionnement est en cours. Veuillez maintenir le robot à l’intérieur de la carte et à plus de 1,5 mètre de la limite."
+    },
+    {
+      "file": "A019.mp3",
+      "text": "Vous êtes entré dans la zone de sécurité."
+    },
+    {
+      "file": "A020.mp3",
+      "text": "La lentille est sale."
+    },
+    {
+      "file": "A021.mp3",
+      "text": "Le pare-chocs fonctionne de nouveau."
+    },
+    {
+      "file": "A022.mp3",
+      "text": "Veuillez démarrer le robot sur un sol plat."
+    },
+    {
+      "file": "A023.mp3",
+      "text": "Veuillez déplacer l’appareil dans une zone dégagée pour démarrer le mode de tonte localisée."
+    },
+    {
+      "file": "A024.mp3",
+      "text": "Le robot ne peut pas atteindre la zone désignée. Veuillez vérifier si la zone est accessible."
+    },
+    {
+      "file": "A025.mp3",
+      "text": "Mise hors tension."
+    },
+    {
+      "file": "A026.mp3",
+      "text": "Le signal GPS est faible. Veuillez essayer de démarrer le robot lorsque le signal sera stable."
+    },
+    {
+      "file": "A027.mp3",
+      "text": "Veuillez réessayer de démarrer après avoir résolu l’erreur."
+    },
+    {
+      "file": "A028.mp3",
+      "text": "Le fonctionnement dans un environnement sombre n’est pas pris en charge."
+    },
+    {
+      "file": "A029.mp3",
+      "text": "Le disque de coupe est en marche. Veuillez faire attention à votre sécurité."
+    },
+    {
+      "file": "A031.mp3",
+      "text": "Déplacez le robot dans une zone dégagée pour l’initialiser, puis réessayez."
+    },
+    {
+      "file": "C001.mp3",
+      "text": "La création de la carte a réussi."
+    },
+    {
+      "file": "C002.mp3",
+      "text": "La cartographie a échoué. Veuillez réessayer."
+    },
+    {
+      "file": "C003.mp3",
+      "text": "La création a réussi."
+    },
+    {
+      "file": "C004.mp3",
+      "text": "La création a échoué."
+    },
+    {
+      "file": "C005.mp3",
+      "text": "Début de l’extension de la carte."
+    },
+    {
+      "file": "C006.mp3",
+      "text": "L’extension de la carte a réussi."
+    },
+    {
+      "file": "C007.mp3",
+      "text": "L’extension de la carte a échoué."
+    },
+    {
+      "file": "C008.mp3",
+      "text": "Veuillez télécommander le robot pour commencer à créer la carte."
+    },
+    {
+      "file": "C009.mp3",
+      "text": "La cartographie est en cours. Veuillez réessayer plus tard."
+    },
+    {
+      "file": "C010.mp3",
+      "text": "Activation du mode de cartographie automatique ACC. Ce mode convient uniquement aux pelouses dont les limites sont clairement définies. Appuyez sur le bouton OK pour confirmer."
+    },
+    {
+      "file": "C011.mp3",
+      "text": "La cartographie automatique ACC commence."
+    },
+    {
+      "file": "C012.mp3",
+      "text": "Veuillez placer le robot sur la station de charge, puis démarrer."
+    },
+    {
+      "file": "C013.mp3",
+      "text": "La zone de cartographie dépasse la limite. Veuillez créer des cartes dans la plage spécifiée."
+    },
+    {
+      "file": "C014.mp3",
+      "text": "La base RTK a été déplacée. Veuillez consulter l’application pour trouver une solution."
+    },
+    {
+      "file": "C015.mp3",
+      "text": "Début de la création des zones interdites."
+    },
+    {
+      "file": "C016.mp3",
+      "text": "La création de la zone interdite a échoué."
+    },
+    {
+      "file": "C017.mp3",
+      "text": "Veuillez démarrer le robot sur la station de charge avant la cartographie."
+    },
+    {
+      "file": "C018.mp3",
+      "text": "Veuillez démarrer le robot à l’intérieur de la limite de la carte avant d’étendre la carte."
+    },
+    {
+      "file": "E001.mp3",
+      "text": "Début de la charge. Le robot reprendra son travail une fois complètement chargé."
+    },
+    {
+      "file": "E002.mp3",
+      "text": "Le retour à la station de charge a échoué. Veuillez consulter la solution dans l’application."
+    },
+    {
+      "file": "E003.mp3",
+      "text": "Erreur de batterie. Veuillez consulter la solution dans l’application."
+    },
+    {
+      "file": "E004.mp3",
+      "text": "La lentille n’a pas pu être nettoyée. Veuillez consulter la solution dans l’application."
+    },
+    {
+      "file": "E005.mp3",
+      "text": "Erreur de carte. Veuillez consulter la solution dans l’application."
+    },
+    {
+      "file": "E006.mp3",
+      "text": "Erreur de capteur. Veuillez consulter la solution dans l’application."
+    },
+    {
+      "file": "E007.mp3",
+      "text": "Erreur de surchauffe de la batterie. Veuillez consulter la solution dans l’application."
+    },
+    {
+      "file": "E008.mp3",
+      "text": "Erreur de température trop basse de la batterie. Veuillez consulter la solution dans l’application."
+    },
+    {
+      "file": "E009.mp3",
+      "text": "Erreur de la roue arrière gauche. Veuillez consulter la solution dans l’application."
+    },
+    {
+      "file": "E010.mp3",
+      "text": "Erreur de la roue arrière droite. Veuillez consulter la solution dans l’application."
+    },
+    {
+      "file": "E011.mp3",
+      "text": "Erreur du disque de coupe. Veuillez consulter la solution dans l’application."
+    },
+    {
+      "file": "E012.mp3",
+      "text": "Le robot est bloqué. Veuillez l’aider à se dégager."
+    },
+    {
+      "file": "E013.mp3",
+      "text": "La station de charge n’a pas été détectée. Veuillez utiliser l’application pour aider le robot à retourner se charger."
+    },
+    {
+      "file": "E014.mp3",
+      "text": "Erreur de pare-chocs. Veuillez consulter la solution dans l’application."
+    },
+    {
+      "file": "E015.mp3",
+      "text": "La mise à jour du firmware a échoué. Veuillez réessayer plus tard."
+    },
+    {
+      "file": "E016.mp3",
+      "text": "Le robot est suspendu en l’air. Veuillez vérifier s’il est coincé."
+    },
+    {
+      "file": "E017.mp3",
+      "text": "Le repositionnement a échoué. Veuillez maintenir le robot à l’intérieur de la carte et à plus de 1,5 mètre de la limite, puis réessayer plus tard."
+    },
+    {
+      "file": "E018.mp3",
+      "text": "Le signal de positionnement est faible. Le robot ne peut pas se déplacer pour le moment. Veuillez consulter la solution dans l’application."
+    },
+    {
+      "file": "E019.mp3",
+      "text": "Erreur de positionnement. Veuillez vous assurer que l’appareil se trouve dans une zone couverte par le signal."
+    },
+    {
+      "file": "E020.mp3",
+      "text": "Erreur du capteur de pare-chocs. Veuillez vérifier si le capteur de pare-chocs est bloqué."
+    },
+    {
+      "file": "E021.mp3",
+      "text": "Erreur de la roue avant. Veuillez vérifier la roue avant."
+    },
+    {
+      "file": "E022.mp3",
+      "text": "Erreur du capteur de pluie. Veuillez contacter le service client."
+    },
+    {
+      "file": "E023.mp3",
+      "text": "L’appareil est bloqué. Veuillez l’aider à se dégager."
+    },
+    {
+      "file": "E024.mp3",
+      "text": "Erreur de communication. Veuillez contacter le service client."
+    },
+    {
+      "file": "E025.mp3",
+      "text": "L’appareil est entré dans une zone interdite. Veuillez l’en retirer dès que possible."
+    },
+    {
+      "file": "E026.mp3",
+      "text": "L’appareil se trouve en dehors de la limite. Veuillez le déplacer dans la zone de travail."
+    },
+    {
+      "file": "E101.mp3",
+      "text": "Erreur RTK."
+    },
+    {
+      "file": "E102.mp3",
+      "text": "Erreur de communication. Veuillez contacter le service client."
+    },
+    {
+      "file": "E103.mp3",
+      "text": "L’initialisation RTK a échoué."
+    },
+    {
+      "file": "E104.mp3",
+      "text": "LoRa n’est pas appairé. Veuillez l’appairer conformément au manuel d’utilisation avant de l’utiliser."
+    },
+    {
+      "file": "E105.mp3",
+      "text": "Erreur d’initialisation de la carte mère."
+    },
+    {
+      "file": "E201.mp3",
+      "text": "Le capteur de pare-chocs est bloqué."
+    },
+    {
+      "file": "E202.mp3",
+      "text": "Erreur de données IMU."
+    },
+    {
+      "file": "E203.mp3",
+      "text": "Erreur du capteur de pluie."
+    },
+    {
+      "file": "E204.mp3",
+      "text": "L’appareil est suspendu en l’air."
+    },
+    {
+      "file": "E205.mp3",
+      "text": "Les lames sont tombées. Veuillez vérifier qu’elles sont correctement installées."
+    },
+    {
+      "file": "E301.mp3",
+      "text": "Le retour à la station de charge a échoué."
+    },
+    {
+      "file": "E302.mp3",
+      "text": "La machine est bloquée."
+    },
+    {
+      "file": "E303.mp3",
+      "text": "Le robot a été démarré sur une pente. Veuillez le placer sur un sol plat et réessayer."
+    },
+    {
+      "file": "E304.mp3",
+      "text": "Le repositionnement a échoué."
+    },
+    {
+      "file": "E305.mp3",
+      "text": "Erreur de positionnement. Veuillez vous assurer que l’appareil se trouve dans une zone couverte par le signal."
+    },
+    {
+      "file": "E306.mp3",
+      "text": "L’appareil se trouve en dehors de la limite. Veuillez le déplacer dans la zone de travail, puis réessayer."
+    },
+    {
+      "file": "E307.mp3",
+      "text": "La cartographie a échoué. Veuillez réessayer."
+    },
+    {
+      "file": "E400.mp3",
+      "text": "Erreur de la roue gauche."
+    },
+    {
+      "file": "E401.mp3",
+      "text": "Surtension du moteur de la roue gauche."
+    },
+    {
+      "file": "E402.mp3",
+      "text": "Sous-tension du moteur de la roue gauche."
+    },
+    {
+      "file": "E403.mp3",
+      "text": "Surintensité du moteur de la roue gauche."
+    },
+    {
+      "file": "E404.mp3",
+      "text": "Le moteur de la roue gauche est bloqué."
+    },
+    {
+      "file": "E405.mp3",
+      "text": "Rupture du câble de phase du moteur de la roue gauche."
+    },
+    {
+      "file": "E406.mp3",
+      "text": "Court-circuit du câble de phase du moteur de la roue gauche."
+    },
+    {
+      "file": "E407.mp3",
+      "text": "Surcharge du moteur de la roue gauche."
+    },
+    {
+      "file": "E408.mp3",
+      "text": "Erreur du capteur Hall du moteur de la roue gauche."
+    },
+    {
+      "file": "E409.mp3",
+      "text": "Erreur de température du moteur de la roue gauche."
+    },
+    {
+      "file": "E410.mp3",
+      "text": "Erreur de la roue droite."
+    },
+    {
+      "file": "E411.mp3",
+      "text": "Surtension du moteur de la roue droite."
+    },
+    {
+      "file": "E412.mp3",
+      "text": "Sous-tension du moteur de la roue droite."
+    },
+    {
+      "file": "E413.mp3",
+      "text": "Surintensité du moteur de la roue droite."
+    },
+    {
+      "file": "E414.mp3",
+      "text": "Le moteur de la roue droite est bloqué."
+    },
+    {
+      "file": "E415.mp3",
+      "text": "Rupture du câble de phase du moteur de la roue droite."
+    },
+    {
+      "file": "E416.mp3",
+      "text": "Court-circuit du câble de phase du moteur de la roue droite."
+    },
+    {
+      "file": "E417.mp3",
+      "text": "Surcharge du moteur de la roue droite."
+    },
+    {
+      "file": "E418.mp3",
+      "text": "Erreur du capteur Hall du moteur de la roue droite."
+    },
+    {
+      "file": "E419.mp3",
+      "text": "Erreur de température du moteur de la roue droite."
+    },
+    {
+      "file": "E420.mp3",
+      "text": "Erreur du moteur de levage."
+    },
+    {
+      "file": "E421.mp3",
+      "text": "Le moteur de levage est bloqué."
+    },
+    {
+      "file": "E422.mp3",
+      "text": "Protection contre les surintensités du moteur de levage."
+    },
+    {
+      "file": "E423.mp3",
+      "text": "Protection contre le blocage du moteur de levage."
+    },
+    {
+      "file": "E424.mp3",
+      "text": "Circuit ouvert ou court-circuit du moteur de levage."
+    },
+    {
+      "file": "E430.mp3",
+      "text": "Erreur du moteur du disque de coupe."
+    },
+    {
+      "file": "E431.mp3",
+      "text": "Le moteur du disque de coupe est bloqué."
+    },
+    {
+      "file": "E432.mp3",
+      "text": "Protection contre le blocage du moteur du disque de coupe."
+    },
+    {
+      "file": "E433.mp3",
+      "text": "Circuit ouvert ou court-circuit du moteur du disque de coupe."
+    },
+    {
+      "file": "E434.mp3",
+      "text": "Échec de l’initialisation du moteur du disque de coupe."
+    },
+    {
+      "file": "E435.mp3",
+      "text": "Protection contre les surtensions du moteur du disque de coupe."
+    },
+    {
+      "file": "E436.mp3",
+      "text": "Protection contre les sous-tensions du moteur du disque de coupe."
+    },
+    {
+      "file": "E437.mp3",
+      "text": "Protection contre les surintensités du moteur du disque de coupe."
+    },
+    {
+      "file": "E440.mp3",
+      "text": "Erreur du moteur d’essuie-glace."
+    },
+    {
+      "file": "E441.mp3",
+      "text": "Surintensité du moteur d’essuie-glace avant."
+    },
+    {
+      "file": "E442.mp3",
+      "text": "Court-circuit du moteur d’essuie-glace avant."
+    },
+    {
+      "file": "E443.mp3",
+      "text": "Surintensité du moteur d’essuie-glace latéral."
+    },
+    {
+      "file": "E444.mp3",
+      "text": "Court-circuit du moteur d’essuie-glace latéral."
+    },
+    {
+      "file": "E501.mp3",
+      "text": "Erreur de batterie pendant la charge."
+    },
+    {
+      "file": "E502.mp3",
+      "text": "Température de la batterie trop élevée. Veuillez consulter la solution dans l’application."
+    },
+    {
+      "file": "E503.mp3",
+      "text": "Température de la batterie trop basse. Veuillez consulter la solution dans l’application."
+    },
+    {
+      "file": "E504.mp3",
+      "text": "Protection contre la surtension de la batterie."
+    },
+    {
+      "file": "E505.mp3",
+      "text": "Protection contre la sous-tension de la batterie."
+    },
+    {
+      "file": "E506.mp3",
+      "text": "Protection contre les surintensités de la batterie."
+    },
+    {
+      "file": "E507.mp3",
+      "text": "Protection de charge de la batterie."
+    },
+    {
+      "file": "E601.mp3",
+      "text": "La lentille avant gauche est sale. Veuillez la nettoyer rapidement."
+    },
+    {
+      "file": "E602.mp3",
+      "text": "La lentille avant droite est sale. Veuillez la nettoyer rapidement."
+    },
+    {
+      "file": "E603.mp3",
+      "text": "La lentille latérale gauche est sale. Veuillez la nettoyer rapidement."
+    },
+    {
+      "file": "E604.mp3",
+      "text": "La lentille latérale droite est sale. Veuillez la nettoyer rapidement."
+    },
+    {
+      "file": "E605.mp3",
+      "text": "Erreur de la lentille avant gauche. Veuillez contacter le service client."
+    },
+    {
+      "file": "E606.mp3",
+      "text": "Erreur de la lentille avant droite. Veuillez contacter le service client."
+    },
+    {
+      "file": "E607.mp3",
+      "text": "Erreur de la lentille latérale gauche. Veuillez contacter le service client."
+    },
+    {
+      "file": "E608.mp3",
+      "text": "Erreur de la lentille latérale droite. Veuillez contacter le service client."
+    },
+    {
+      "file": "E700.mp3",
+      "text": "Veuillez appuyer sur MOW, puis sur OK, pour désactiver la protection d’arrêt d’urgence."
+    },
+    {
+      "file": "P001.mp3",
+      "text": "L’appairage Bluetooth a réussi."
+    },
+    {
+      "file": "P002.mp3",
+      "text": "Début de l’appairage."
+    },
+    {
+      "file": "P003.mp3",
+      "text": "La connexion réseau a réussi."
+    },
+    {
+      "file": "P004.mp3",
+      "text": "L’appairage a réussi."
+    },
+    {
+      "file": "P005.mp3",
+      "text": "Ajouté."
+    },
+    {
+      "file": "P006.mp3",
+      "text": "Appairage supprimé."
+    },
+    {
+      "file": "P007.mp3",
+      "text": "Suppression forcée."
+    },
+    {
+      "file": "P008.mp3",
+      "text": "L’appairage LoRa a réussi."
+    },
+    {
+      "file": "P009.mp3",
+      "text": "L’appairage LoRa a échoué. Veuillez rester près de l’appareil et réessayer."
+    },
+    {
+      "file": "P010.mp3",
+      "text": "Bluetooth déconnecté."
+    },
+    {
+      "file": "P011.mp3",
+      "text": "Bluetooth connecté."
+    },
+    {
+      "file": "P012.mp3",
+      "text": "Wi-Fi déconnecté."
+    },
+    {
+      "file": "P013.mp3",
+      "text": "Wi-Fi connecté."
+    },
+    {
+      "file": "S001.mp3",
+      "text": "Le robot quitte la station de charge. Veuillez réessayer plus tard."
+    },
+    {
+      "file": "S002.mp3",
+      "text": "Le robot s’arrime à la station de charge."
+    },
+    {
+      "file": "S003.mp3",
+      "text": "Le robot est arrivé près du point de départ."
+    },
+    {
+      "file": "S004.mp3",
+      "text": "Le nettoyage des lentilles est en cours. Le robot commencera bientôt à tondre."
+    },
+    {
+      "file": "S005.mp3",
+      "text": "Le nettoyage des lentilles est en cours. Le robot va se rendre dans la zone désignée pour tondre."
+    },
+    {
+      "file": "S006.mp3",
+      "text": "Le nettoyage des lentilles est en cours. Le robot va se rendre au point désigné pour tondre."
+    },
+    {
+      "file": "S007.mp3",
+      "text": "Le nettoyage des lentilles est en cours. Le robot va se rendre à la limite désignée pour tondre."
+    },
+    {
+      "file": "S008.mp3",
+      "text": "Batterie faible. Le robot va retourner se charger."
+    },
+    {
+      "file": "S009.mp3",
+      "text": "La recharge est terminée. Le robot va reprendre son travail."
+    },
+    {
+      "file": "S010.mp3",
+      "text": "La tâche est terminée. Le robot va retourner se charger."
+    },
+    {
+      "file": "S011.mp3",
+      "text": "Début du retour à la station de charge."
+    },
+    {
+      "file": "S012.mp3",
+      "text": "La charge est en cours."
+    },
+    {
+      "file": "S013.mp3",
+      "text": "La charge commence."
+    },
+    {
+      "file": "S014.mp3",
+      "text": "Le mode sentinelle est activé."
+    },
+    {
+      "file": "S015.mp3",
+      "text": "Une mise à jour est en cours. Veuillez réessayer plus tard."
+    },
+    {
+      "file": "S016.mp3",
+      "text": "Début de la restauration des paramètres d’usine."
+    },
+    {
+      "file": "S017.mp3",
+      "text": "Tâche en pause."
+    },
+    {
+      "file": "S018.mp3",
+      "text": "La tâche reprend."
+    },
+    {
+      "file": "S019.mp3",
+      "text": "Le nettoyage des lentilles est en cours. Veuillez réessayer plus tard."
+    },
+    {
+      "file": "S020.mp3",
+      "text": "Tâche terminée."
+    },
+    {
+      "file": "S021.mp3",
+      "text": "La mise à jour du firmware a réussi."
+    },
+    {
+      "file": "S022.mp3",
+      "text": "L’étalonnage RTK est en cours. Veuillez réessayer plus tard."
+    },
+    {
+      "file": "S023.mp3",
+      "text": "L’étalonnage est terminé. Vous pouvez maintenant télécommander le robot."
+    },
+    {
+      "file": "S024.mp3",
+      "text": "Le robot se rend dans la zone désignée."
+    },
+    {
+      "file": "S025.mp3",
+      "text": "Début de la mise à jour."
+    },
+    {
+      "file": "S026.mp3",
+      "text": "L’initialisation RTK a échoué."
+    },
+    {
+      "file": "S027.mp3",
+      "text": "L’étalonnage est terminé. La cartographie commence."
+    },
+    {
+      "file": "S028.mp3",
+      "text": "L’étalonnage a échoué. Veuillez vérifier si l’environnement de travail de l’appareil est adapté."
+    },
+    {
+      "file": "S029.mp3",
+      "text": "La sortie de la station de charge a échoué."
+    },
+    {
+      "file": "W001.mp3",
+      "text": "La tonte localisée commence."
+    },
+    {
+      "file": "W002.mp3",
+      "text": "La limite de la tonte localisée a été créée. Veuillez confirmer si vous souhaitez commencer à tondre."
+    },
+    {
+      "file": "W003.mp3",
+      "text": "Tâche terminée."
+    },
+    {
+      "file": "W004.mp3",
+      "text": "La tâche commence."
+    },
+    {
+      "file": "W005.mp3",
+      "text": "Tâche en cours."
+    },
+    {
+      "file": "W006.mp3",
+      "text": "La tonte de toute la carte commence."
+    },
+    {
+      "file": "W007.mp3",
+      "text": "Le robot se rend dans la zone désignée pour tondre."
+    },
+    {
+      "file": "W008.mp3",
+      "text": "Début du retour à la station de charge."
+    },
+    {
+      "file": "W009.mp3",
+      "text": "En route vers la station de charge."
+    },
+    {
+      "file": "W010.mp3",
+      "text": "Charge en cours."
+    },
+    {
+      "file": "W011.mp3",
+      "text": "La tonte programmée commence."
+    },
+    {
+      "file": "W012.mp3",
+      "text": "Période Ne pas déranger. Veuillez démarrer plus tard."
+    },
+    {
+      "file": "W013.mp3",
+      "text": "La tonte près de la station de charge commence."
+    },
+    {
+      "file": "W014.mp3",
+      "text": "Mode de télécommande. Veuillez réessayer plus tard."
+    },
+    {
+      "file": "W015.mp3",
+      "text": "La télécommande commence."
+    },
+    {
+      "file": "W016.mp3",
+      "text": "La recharge est terminée."
+    },
+    {
+      "file": "W017.mp3",
+      "text": "La tonte programmée a échoué. Veuillez consulter les fichiers d’aide."
+    }
+  ]
+}

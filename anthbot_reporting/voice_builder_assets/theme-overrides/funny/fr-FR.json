@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "theme_id": "funny",
+  "language_code": "fr-FR",
+  "safety_policy": "Only noncritical/status prompts are overridden. Safety, emergency and error prompts remain standard.",
+  "override_count": 16,
+  "overrides": {
+    "A004.mp3": "Je suis là. Pas besoin de crier, je vous entends même de l’autre côté de la pelouse.",
+    "A015.mp3": "Il pleut. Je rentre à la base avant de me transformer en sous-marin.",
+    "A020.mp3": "Ma caméra est sale. Un petit coup de chiffon et je reverrai la pelouse.",
+    "A025.mp3": "Je m’éteins. C’est l’heure d’une petite sieste de robot.",
+    "S001.mp3": "Je quitte la station. Brins d’herbe, préparez-vous !",
+    "S002.mp3": "Amarrage en cours. Douce maison, chère station de charge.",
+    "S009.mp3": "Batterie pleine. Retour au travail, la pelouse ne va pas se tondre toute seule.",
+    "S010.mp3": "Mission accomplie. Je retourne me recharger.",
+    "S017.mp3": "Pause. J’attends ici comme un robot bien sage.",
+    "S018.mp3": "Et c’est reparti. Continuons à tondre.",
+    "S020.mp3": "Terminé. Encore une pelouse conquise.",
+    "W004.mp3": "C’est parti pour la tonte !",
+    "W005.mp3": "Tonte en cours. Petites roues, grandes ambitions.",
+    "W006.mp3": "La tonte complète commence. Aucun brin d’herbe n’est à l’abri.",
+    "W009.mp3": "Je pars me recharger. Même les robots ont besoin d’une pause-café.",
+    "W016.mp3": "Rechargé et prêt à repartir."
+  }
+}

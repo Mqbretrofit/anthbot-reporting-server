@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "builder_version": "0.1.0-alpha.7.20.11",
+  "effects": [
+    {
+      "id": "none",
+      "display_name": "Nincs / természetes hang",
+      "short_name": "Natúr",
+      "description": "Nincs utólagos karaktereffekt.",
+      "ffmpeg_filter": "",
+      "commercial_tier": "standard",
+      "license_required": true,
+      "sellable": true
+    },
+    {
+      "id": "cartoon_duck",
+      "display_name": "Cartoon Duck",
+      "short_name": "Duck",
+      "description": "Nazálisabb, rajzfilmes kacsa-karakter. Generikus effekt, nem konkrét franchise-hangmásolat.",
+      "ffmpeg_filter": "highpass=f=350,lowpass=f=6200,equalizer=f=1100:t=q:w=1.2:g=5,equalizer=f=2200:t=q:w=1.4:g=3,asetrate=17280,aresample=16000,atempo=0.9259",
+      "commercial_tier": "premium",
+      "license_required": true,
+      "sellable": true
+    },
+    {
+      "id": "chipmunk",
+      "display_name": "Chipmunk / mókus",
+      "short_name": "Mókus",
+      "description": "Magas, gyors rajzfilmes mókushang-jellegű karaktereffekt.",
+      "ffmpeg_filter": "asetrate=21600,aresample=16000,atempo=0.7407,highpass=f=250,equalizer=f=3500:t=q:w=1.2:g=2",
+      "commercial_tier": "premium",
+      "license_required": true,
+      "sellable": true
+    },
+    {
+      "id": "funny_creature",
+      "display_name": "Funny Creature",
+      "short_name": "Creature",
+      "description": "Magasabb, vibráló, vicces kis-lény karakter. Generikus effekt, nem konkrét filmes karakter másolata.",
+      "ffmpeg_filter": "asetrate=19520,aresample=16000,atempo=0.8197,tremolo=f=5.2:d=0.12,equalizer=f=1400:t=q:w=1.3:g=3",
+      "commercial_tier": "premium",
+      "license_required": true,
+      "sellable": true
+    },
+    {
+      "id": "helium",
+      "display_name": "Héliumos",
+      "short_name": "Hélium",
+      "description": "Nagyon magas, könnyű rajzfilmes hang.",
+      "ffmpeg_filter": "asetrate=23680,aresample=16000,atempo=0.6757,highpass=f=350",
+      "commercial_tier": "premium",
+      "license_required": true,
+      "sellable": true
+    },
+    {
+      "id": "deep",
+      "display_name": "Mély / Boss",
+      "short_name": "Mély",
+      "description": "Mélyebb hangmagasság, változatlan beszédérthetőséggel.",
+      "ffmpeg_filter": "asetrate=13280,aresample=16000,atempo=1.2048,lowpass=f=7000",
+      "commercial_tier": "premium",
+      "license_required": true,
+      "sellable": true
+    },
+    {
+      "id": "robot",
+      "display_name": "Robot",
+      "short_name": "Robot",
+      "description": "Elektronikus, enyhén vibráló robotkarakter.",
+      "ffmpeg_filter": "highpass=f=180,lowpass=f=7000,tremolo=f=32:d=0.18,aecho=0.8:0.4:18:0.12",
+      "commercial_tier": "premium",
+      "license_required": true,
+      "sellable": true
+    },
+    {
+      "id": "scifi",
+      "display_name": "Sci-Fi",
+      "short_name": "Sci-Fi",
+      "description": "Futurisztikus flanger + enyhe visszhang; a korábbi Sci-Fi témához kompatibilis karaktereffekt.",
+      "ffmpeg_filter": "flanger=delay=8:depth=2:regen=0:width=71:speed=0.8:shape=triangular:phase=25:interp=linear,aecho=0.8:0.7:35:0.18",
+      "commercial_tier": "premium",
+      "license_required": true,
+      "sellable": true
+    },
+    {
+      "id": "radio",
+      "display_name": "Rádió / Walkie-talkie",
+      "short_name": "Rádió",
+      "description": "Keskenysávú rádiós karakter.",
+      "ffmpeg_filter": "highpass=f=450,lowpass=f=3400,acompressor=threshold=-20dB:ratio=3:attack=8:release=60",
+      "commercial_tier": "premium",
+      "license_required": true,
+      "sellable": true
+    }
+  ]
+}

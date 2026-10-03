@@ -1,0 +1,819 @@
+{
+  "schema_version": 2,
+  "language": "Italiano",
+  "language_code": "it-IT",
+  "source": "Translated from ANTHBOT girl_en-1.2.2 corrected English master transcript",
+  "translation_status": "draft_translation_review_before_release",
+  "prompt_count": 201,
+  "fixed_non_speech_files": [
+    "A001.mp3",
+    "A003.mp3",
+    "A030.mp3"
+  ],
+  "prompts": [
+    {
+      "file": "A004.mp3",
+      "text": "Sono qui."
+    },
+    {
+      "file": "A005.mp3",
+      "text": "Benvenuto. Per prima cosa imposta un codice PIN di quattro cifre per il robot."
+    },
+    {
+      "file": "A006.mp3",
+      "text": "L’arresto di emergenza è stato attivato. Per continuare l’attività, premi prima il pulsante MOW, poi premi OK per sbloccarlo."
+    },
+    {
+      "file": "A007.mp3",
+      "text": "Inserisci il codice PIN."
+    },
+    {
+      "file": "A008.mp3",
+      "text": "Batteria scarica. Riprova dopo che il robot sarà completamente carico."
+    },
+    {
+      "file": "A009.mp3",
+      "text": "Batteria scarica. Il robot sta per spegnersi. Ricaricalo in tempo."
+    },
+    {
+      "file": "A010.mp3",
+      "text": "Il robot è sospeso in aria. Fai attenzione a proteggere le telecamere del dispositivo."
+    },
+    {
+      "file": "A011.mp3",
+      "text": "Il robot è stato sollevato. Posizionalo a terra per avviarlo."
+    },
+    {
+      "file": "A012.mp3",
+      "text": "Il robot è inclinato. Fai attenzione a proteggere le telecamere del dispositivo."
+    },
+    {
+      "file": "A013.mp3",
+      "text": "Il robot non ha raggiunto la posizione specificata. L’attività corrente è terminata. Ricarica il robot."
+    },
+    {
+      "file": "A014.mp3",
+      "text": "Il segnale di posizionamento è debole. Ricarica il robot."
+    },
+    {
+      "file": "A015.mp3",
+      "text": "Sta piovendo. Ricarica il robot."
+    },
+    {
+      "file": "A016.mp3",
+      "text": "Il robot è stato spostato. Rimettilo sulla stazione di ricarica."
+    },
+    {
+      "file": "A017.mp3",
+      "text": "La modalità di protezione dalla pioggia è attiva. Riprova tra tre ore oppure disattiva il rilevamento della pioggia nell’app."
+    },
+    {
+      "file": "A018.mp3",
+      "text": "Il riposizionamento è in corso. Mantieni il robot all’interno della mappa e a più di 1,5 metri dal confine."
+    },
+    {
+      "file": "A019.mp3",
+      "text": "Sei entrato nell’area di sicurezza."
+    },
+    {
+      "file": "A020.mp3",
+      "text": "La lente è sporca."
+    },
+    {
+      "file": "A021.mp3",
+      "text": "Il paraurti è tornato a funzionare."
+    },
+    {
+      "file": "A022.mp3",
+      "text": "Avvia il robot su una superficie piana."
+    },
+    {
+      "file": "A023.mp3",
+      "text": "Sposta il dispositivo in un’area aperta per avviare la modalità di taglio localizzato."
+    },
+    {
+      "file": "A024.mp3",
+      "text": "Il robot non riesce a raggiungere l’area designata. Verifica che l’area sia accessibile."
+    },
+    {
+      "file": "A025.mp3",
+      "text": "Spegnimento."
+    },
+    {
+      "file": "A026.mp3",
+      "text": "Il segnale GPS è debole. Prova ad avviare il robot quando il segnale sarà stabile."
+    },
+    {
+      "file": "A027.mp3",
+      "text": "Prova ad avviare di nuovo dopo aver risolto l’errore."
+    },
+    {
+      "file": "A028.mp3",
+      "text": "Il funzionamento in un ambiente poco illuminato non è supportato."
+    },
+    {
+      "file": "A029.mp3",
+      "text": "Il disco lame è in funzione. Fai attenzione alla sicurezza."
+    },
+    {
+      "file": "A031.mp3",
+      "text": "Sposta il robot in un’area aperta per inizializzarlo, poi riprova."
+    },
+    {
+      "file": "C001.mp3",
+      "text": "La creazione della mappa è riuscita."
+    },
+    {
+      "file": "C002.mp3",
+      "text": "La mappatura non è riuscita. Riprova."
+    },
+    {
+      "file": "C003.mp3",
+      "text": "Creazione riuscita."
+    },
+    {
+      "file": "C004.mp3",
+      "text": "Creazione non riuscita."
+    },
+    {
+      "file": "C005.mp3",
+      "text": "Avvio dell’estensione della mappa."
+    },
+    {
+      "file": "C006.mp3",
+      "text": "L’estensione della mappa è riuscita."
+    },
+    {
+      "file": "C007.mp3",
+      "text": "L’estensione della mappa non è riuscita."
+    },
+    {
+      "file": "C008.mp3",
+      "text": "Telecomanda il robot per iniziare a creare la mappa."
+    },
+    {
+      "file": "C009.mp3",
+      "text": "La mappatura è in corso. Riprova più tardi."
+    },
+    {
+      "file": "C010.mp3",
+      "text": "Attivazione della modalità di mappatura automatica ACC. È adatta solo a prati con confini ben definiti. Premi il pulsante OK per confermare."
+    },
+    {
+      "file": "C011.mp3",
+      "text": "La mappatura automatica ACC inizia."
+    },
+    {
+      "file": "C012.mp3",
+      "text": "Posiziona il robot sulla stazione di ricarica, quindi avvia."
+    },
+    {
+      "file": "C013.mp3",
+      "text": "L’area di mappatura supera il limite. Crea mappe entro l’intervallo specificato."
+    },
+    {
+      "file": "C014.mp3",
+      "text": "La base RTK è stata spostata. Consulta l’app per trovare una soluzione."
+    },
+    {
+      "file": "C015.mp3",
+      "text": "Avvio della creazione delle zone vietate."
+    },
+    {
+      "file": "C016.mp3",
+      "text": "La creazione della zona vietata non è riuscita."
+    },
+    {
+      "file": "C017.mp3",
+      "text": "Avvia il robot sulla stazione di ricarica prima della mappatura."
+    },
+    {
+      "file": "C018.mp3",
+      "text": "Avvia il robot all’interno del confine della mappa prima di estendere la mappa."
+    },
+    {
+      "file": "E001.mp3",
+      "text": "Avvio della ricarica. Il robot riprenderà a lavorare quando sarà completamente carico."
+    },
+    {
+      "file": "E002.mp3",
+      "text": "Il ritorno alla stazione di ricarica non è riuscito. Consulta la soluzione nell’app."
+    },
+    {
+      "file": "E003.mp3",
+      "text": "Errore della batteria. Consulta la soluzione nell’app."
+    },
+    {
+      "file": "E004.mp3",
+      "text": "Non è stato possibile pulire la lente. Consulta la soluzione nell’app."
+    },
+    {
+      "file": "E005.mp3",
+      "text": "Errore della mappa. Consulta la soluzione nell’app."
+    },
+    {
+      "file": "E006.mp3",
+      "text": "Errore del sensore. Consulta la soluzione nell’app."
+    },
+    {
+      "file": "E007.mp3",
+      "text": "Errore di temperatura troppo alta della batteria. Consulta la soluzione nell’app."
+    },
+    {
+      "file": "E008.mp3",
+      "text": "Errore di temperatura troppo bassa della batteria. Consulta la soluzione nell’app."
+    },
+    {
+      "file": "E009.mp3",
+      "text": "Errore della ruota posteriore sinistra. Consulta la soluzione nell’app."
+    },
+    {
+      "file": "E010.mp3",
+      "text": "Errore della ruota posteriore destra. Consulta la soluzione nell’app."
+    },
+    {
+      "file": "E011.mp3",
+      "text": "Errore del disco lame. Consulta la soluzione nell’app."
+    },
+    {
+      "file": "E012.mp3",
+      "text": "Il robot è bloccato. Aiutalo a liberarsi."
+    },
+    {
+      "file": "E013.mp3",
+      "text": "La stazione di ricarica non è stata rilevata. Usa l’app per aiutare il robot a tornare a ricaricarsi."
+    },
+    {
+      "file": "E014.mp3",
+      "text": "Errore del paraurti. Consulta la soluzione nell’app."
+    },
+    {
+      "file": "E015.mp3",
+      "text": "L’aggiornamento del firmware non è riuscito. Riprova più tardi."
+    },
+    {
+      "file": "E016.mp3",
+      "text": "Il robot è sospeso in aria. Verifica se il robot è incastrato."
+    },
+    {
+      "file": "E017.mp3",
+      "text": "Il riposizionamento non è riuscito. Mantieni il robot all’interno della mappa e a più di 1,5 metri dal confine, poi riprova più tardi."
+    },
+    {
+      "file": "E018.mp3",
+      "text": "Il segnale di posizionamento è debole. Il robot non può muoversi in questo momento. Consulta la soluzione nell’app."
+    },
+    {
+      "file": "E019.mp3",
+      "text": "Errore di posizionamento. Assicurati che il dispositivo si trovi in un’area coperta dal segnale."
+    },
+    {
+      "file": "E020.mp3",
+      "text": "Errore del sensore del paraurti. Verifica se il sensore del paraurti è bloccato."
+    },
+    {
+      "file": "E021.mp3",
+      "text": "Errore della ruota anteriore. Controlla la ruota anteriore."
+    },
+    {
+      "file": "E022.mp3",
+      "text": "Errore del sensore pioggia. Contatta il servizio clienti."
+    },
+    {
+      "file": "E023.mp3",
+      "text": "Il dispositivo è bloccato. Aiutalo a liberarsi."
+    },
+    {
+      "file": "E024.mp3",
+      "text": "Errore di comunicazione. Contatta il servizio clienti."
+    },
+    {
+      "file": "E025.mp3",
+      "text": "Il dispositivo è entrato in una zona vietata. Spostalo fuori il prima possibile."
+    },
+    {
+      "file": "E026.mp3",
+      "text": "Il dispositivo è fuori dal confine. Spostalo all’interno dell’area di lavoro."
+    },
+    {
+      "file": "E101.mp3",
+      "text": "Errore RTK."
+    },
+    {
+      "file": "E102.mp3",
+      "text": "Errore di comunicazione. Contatta il servizio clienti."
+    },
+    {
+      "file": "E103.mp3",
+      "text": "L’inizializzazione RTK non è riuscita."
+    },
+    {
+      "file": "E104.mp3",
+      "text": "LoRa non è associato. Associalo seguendo il manuale utente prima dell’uso."
+    },
+    {
+      "file": "E105.mp3",
+      "text": "Errore di inizializzazione della scheda madre."
+    },
+    {
+      "file": "E201.mp3",
+      "text": "Il sensore del paraurti è bloccato."
+    },
+    {
+      "file": "E202.mp3",
+      "text": "Errore dati IMU."
+    },
+    {
+      "file": "E203.mp3",
+      "text": "Errore del sensore pioggia."
+    },
+    {
+      "file": "E204.mp3",
+      "text": "Il dispositivo è sospeso in aria."
+    },
+    {
+      "file": "E205.mp3",
+      "text": "Le lame si sono staccate. Verifica che siano installate correttamente."
+    },
+    {
+      "file": "E301.mp3",
+      "text": "Il ritorno alla stazione di ricarica non è riuscito."
+    },
+    {
+      "file": "E302.mp3",
+      "text": "La macchina è bloccata."
+    },
+    {
+      "file": "E303.mp3",
+      "text": "Il robot è stato avviato su una pendenza. Posizionalo su una superficie piana e riprova."
+    },
+    {
+      "file": "E304.mp3",
+      "text": "Il riposizionamento non è riuscito."
+    },
+    {
+      "file": "E305.mp3",
+      "text": "Errore di posizionamento. Assicurati che il dispositivo si trovi in un’area coperta dal segnale."
+    },
+    {
+      "file": "E306.mp3",
+      "text": "Il dispositivo è fuori dal confine. Spostalo nell’area di lavoro e riprova."
+    },
+    {
+      "file": "E307.mp3",
+      "text": "La mappatura non è riuscita. Riprova."
+    },
+    {
+      "file": "E400.mp3",
+      "text": "Errore della ruota sinistra."
+    },
+    {
+      "file": "E401.mp3",
+      "text": "Sovratensione del motore della ruota sinistra."
+    },
+    {
+      "file": "E402.mp3",
+      "text": "Sottotensione del motore della ruota sinistra."
+    },
+    {
+      "file": "E403.mp3",
+      "text": "Sovracorrente del motore della ruota sinistra."
+    },
+    {
+      "file": "E404.mp3",
+      "text": "Il motore della ruota sinistra è bloccato."
+    },
+    {
+      "file": "E405.mp3",
+      "text": "Interruzione del cavo di fase del motore della ruota sinistra."
+    },
+    {
+      "file": "E406.mp3",
+      "text": "Cortocircuito del cavo di fase del motore della ruota sinistra."
+    },
+    {
+      "file": "E407.mp3",
+      "text": "Sovraccarico del motore della ruota sinistra."
+    },
+    {
+      "file": "E408.mp3",
+      "text": "Errore del sensore Hall del motore della ruota sinistra."
+    },
+    {
+      "file": "E409.mp3",
+      "text": "Errore di temperatura del motore della ruota sinistra."
+    },
+    {
+      "file": "E410.mp3",
+      "text": "Errore della ruota destra."
+    },
+    {
+      "file": "E411.mp3",
+      "text": "Sovratensione del motore della ruota destra."
+    },
+    {
+      "file": "E412.mp3",
+      "text": "Sottotensione del motore della ruota destra."
+    },
+    {
+      "file": "E413.mp3",
+      "text": "Sovracorrente del motore della ruota destra."
+    },
+    {
+      "file": "E414.mp3",
+      "text": "Il motore della ruota destra è bloccato."
+    },
+    {
+      "file": "E415.mp3",
+      "text": "Interruzione del cavo di fase del motore della ruota destra."
+    },
+    {
+      "file": "E416.mp3",
+      "text": "Cortocircuito del cavo di fase del motore della ruota destra."
+    },
+    {
+      "file": "E417.mp3",
+      "text": "Sovraccarico del motore della ruota destra."
+    },
+    {
+      "file": "E418.mp3",
+      "text": "Errore del sensore Hall del motore della ruota destra."
+    },
+    {
+      "file": "E419.mp3",
+      "text": "Errore di temperatura del motore della ruota destra."
+    },
+    {
+      "file": "E420.mp3",
+      "text": "Errore del motore di sollevamento."
+    },
+    {
+      "file": "E421.mp3",
+      "text": "Il motore di sollevamento è bloccato."
+    },
+    {
+      "file": "E422.mp3",
+      "text": "Protezione da sovracorrente del motore di sollevamento."
+    },
+    {
+      "file": "E423.mp3",
+      "text": "Protezione da stallo del motore di sollevamento."
+    },
+    {
+      "file": "E424.mp3",
+      "text": "Circuito aperto o cortocircuito del motore di sollevamento."
+    },
+    {
+      "file": "E430.mp3",
+      "text": "Errore del motore del disco lame."
+    },
+    {
+      "file": "E431.mp3",
+      "text": "Il motore del disco lame è bloccato."
+    },
+    {
+      "file": "E432.mp3",
+      "text": "Protezione da stallo del motore del disco lame."
+    },
+    {
+      "file": "E433.mp3",
+      "text": "Circuito aperto o cortocircuito del motore del disco lame."
+    },
+    {
+      "file": "E434.mp3",
+      "text": "Errore di inizializzazione del motore del disco lame."
+    },
+    {
+      "file": "E435.mp3",
+      "text": "Protezione da sovratensione del motore del disco lame."
+    },
+    {
+      "file": "E436.mp3",
+      "text": "Protezione da sottotensione del motore del disco lame."
+    },
+    {
+      "file": "E437.mp3",
+      "text": "Protezione da sovracorrente del motore del disco lame."
+    },
+    {
+      "file": "E440.mp3",
+      "text": "Errore del motore del tergicristallo."
+    },
+    {
+      "file": "E441.mp3",
+      "text": "Sovracorrente del motore del tergicristallo anteriore."
+    },
+    {
+      "file": "E442.mp3",
+      "text": "Cortocircuito del motore del tergicristallo anteriore."
+    },
+    {
+      "file": "E443.mp3",
+      "text": "Sovracorrente del motore del tergicristallo laterale."
+    },
+    {
+      "file": "E444.mp3",
+      "text": "Cortocircuito del motore del tergicristallo laterale."
+    },
+    {
+      "file": "E501.mp3",
+      "text": "Errore della batteria durante la ricarica."
+    },
+    {
+      "file": "E502.mp3",
+      "text": "Temperatura della batteria troppo alta. Consulta la soluzione nell’app."
+    },
+    {
+      "file": "E503.mp3",
+      "text": "Temperatura della batteria troppo bassa. Consulta la soluzione nell’app."
+    },
+    {
+      "file": "E504.mp3",
+      "text": "Protezione da sovratensione della batteria."
+    },
+    {
+      "file": "E505.mp3",
+      "text": "Protezione da sottotensione della batteria."
+    },
+    {
+      "file": "E506.mp3",
+      "text": "Protezione da sovracorrente della batteria."
+    },
+    {
+      "file": "E507.mp3",
+      "text": "Protezione di ricarica della batteria."
+    },
+    {
+      "file": "E601.mp3",
+      "text": "La lente anteriore sinistra è sporca. Puliscila subito."
+    },
+    {
+      "file": "E602.mp3",
+      "text": "La lente anteriore destra è sporca. Puliscila subito."
+    },
+    {
+      "file": "E603.mp3",
+      "text": "La lente laterale sinistra è sporca. Puliscila subito."
+    },
+    {
+      "file": "E604.mp3",
+      "text": "La lente laterale destra è sporca. Puliscila subito."
+    },
+    {
+      "file": "E605.mp3",
+      "text": "Errore della lente anteriore sinistra. Contatta il servizio clienti."
+    },
+    {
+      "file": "E606.mp3",
+      "text": "Errore della lente anteriore destra. Contatta il servizio clienti."
+    },
+    {
+      "file": "E607.mp3",
+      "text": "Errore della lente laterale sinistra. Contatta il servizio clienti."
+    },
+    {
+      "file": "E608.mp3",
+      "text": "Errore della lente laterale destra. Contatta il servizio clienti."
+    },
+    {
+      "file": "E700.mp3",
+      "text": "Premi MOW, poi OK, per disattivare la protezione di arresto di emergenza."
+    },
+    {
+      "file": "P001.mp3",
+      "text": "Associazione Bluetooth riuscita."
+    },
+    {
+      "file": "P002.mp3",
+      "text": "Avvio dell’associazione."
+    },
+    {
+      "file": "P003.mp3",
+      "text": "Connessione di rete riuscita."
+    },
+    {
+      "file": "P004.mp3",
+      "text": "Associazione riuscita."
+    },
+    {
+      "file": "P005.mp3",
+      "text": "Aggiunto."
+    },
+    {
+      "file": "P006.mp3",
+      "text": "Associazione rimossa."
+    },
+    {
+      "file": "P007.mp3",
+      "text": "Rimozione forzata."
+    },
+    {
+      "file": "P008.mp3",
+      "text": "Associazione LoRa riuscita."
+    },
+    {
+      "file": "P009.mp3",
+      "text": "Associazione LoRa non riuscita. Rimani vicino al dispositivo e riprova."
+    },
+    {
+      "file": "P010.mp3",
+      "text": "Bluetooth disconnesso."
+    },
+    {
+      "file": "P011.mp3",
+      "text": "Bluetooth connesso."
+    },
+    {
+      "file": "P012.mp3",
+      "text": "Wi-Fi disconnesso."
+    },
+    {
+      "file": "P013.mp3",
+      "text": "Wi-Fi connesso."
+    },
+    {
+      "file": "S001.mp3",
+      "text": "Il robot sta lasciando la stazione di ricarica. Riprova più tardi."
+    },
+    {
+      "file": "S002.mp3",
+      "text": "Il robot sta entrando nella stazione di ricarica."
+    },
+    {
+      "file": "S003.mp3",
+      "text": "Il robot è arrivato vicino al punto di partenza."
+    },
+    {
+      "file": "S004.mp3",
+      "text": "La pulizia delle lenti è in corso. Il robot inizierà presto a tagliare."
+    },
+    {
+      "file": "S005.mp3",
+      "text": "La pulizia delle lenti è in corso. Il robot raggiungerà l’area designata per tagliare."
+    },
+    {
+      "file": "S006.mp3",
+      "text": "La pulizia delle lenti è in corso. Il robot raggiungerà il punto designato per tagliare."
+    },
+    {
+      "file": "S007.mp3",
+      "text": "La pulizia delle lenti è in corso. Il robot raggiungerà il confine designato per tagliare."
+    },
+    {
+      "file": "S008.mp3",
+      "text": "Batteria scarica. Il robot tornerà a ricaricarsi."
+    },
+    {
+      "file": "S009.mp3",
+      "text": "La ricarica è terminata. Il robot continuerà a lavorare."
+    },
+    {
+      "file": "S010.mp3",
+      "text": "L’attività è terminata. Il robot tornerà a ricaricarsi."
+    },
+    {
+      "file": "S011.mp3",
+      "text": "Avvio del ritorno alla stazione di ricarica."
+    },
+    {
+      "file": "S012.mp3",
+      "text": "Ricarica in corso."
+    },
+    {
+      "file": "S013.mp3",
+      "text": "La ricarica inizia."
+    },
+    {
+      "file": "S014.mp3",
+      "text": "La modalità sentinella è attiva."
+    },
+    {
+      "file": "S015.mp3",
+      "text": "È in corso un aggiornamento. Riprova più tardi."
+    },
+    {
+      "file": "S016.mp3",
+      "text": "Avvio del ripristino delle impostazioni di fabbrica."
+    },
+    {
+      "file": "S017.mp3",
+      "text": "Attività in pausa."
+    },
+    {
+      "file": "S018.mp3",
+      "text": "L’attività riprende."
+    },
+    {
+      "file": "S019.mp3",
+      "text": "La pulizia delle lenti è in corso. Riprova più tardi."
+    },
+    {
+      "file": "S020.mp3",
+      "text": "Attività terminata."
+    },
+    {
+      "file": "S021.mp3",
+      "text": "L’aggiornamento del firmware è riuscito."
+    },
+    {
+      "file": "S022.mp3",
+      "text": "La calibrazione RTK è in corso. Riprova più tardi."
+    },
+    {
+      "file": "S023.mp3",
+      "text": "La calibrazione è terminata. Ora puoi telecomandare il robot."
+    },
+    {
+      "file": "S024.mp3",
+      "text": "Il robot sta andando nell’area designata."
+    },
+    {
+      "file": "S025.mp3",
+      "text": "Avvio dell’aggiornamento."
+    },
+    {
+      "file": "S026.mp3",
+      "text": "L’inizializzazione RTK non è riuscita."
+    },
+    {
+      "file": "S027.mp3",
+      "text": "La calibrazione è terminata. La mappatura inizia."
+    },
+    {
+      "file": "S028.mp3",
+      "text": "La calibrazione non è riuscita. Verifica che l’ambiente di lavoro del dispositivo sia adatto."
+    },
+    {
+      "file": "S029.mp3",
+      "text": "L’uscita dalla stazione di ricarica non è riuscita."
+    },
+    {
+      "file": "W001.mp3",
+      "text": "Il taglio localizzato inizia."
+    },
+    {
+      "file": "W002.mp3",
+      "text": "Il confine per il taglio localizzato è stato creato. Conferma se vuoi iniziare a tagliare."
+    },
+    {
+      "file": "W003.mp3",
+      "text": "Attività terminata."
+    },
+    {
+      "file": "W004.mp3",
+      "text": "L’attività inizia."
+    },
+    {
+      "file": "W005.mp3",
+      "text": "Attività in corso."
+    },
+    {
+      "file": "W006.mp3",
+      "text": "Il taglio dell’intera mappa inizia."
+    },
+    {
+      "file": "W007.mp3",
+      "text": "Il robot sta andando nell’area designata per tagliare."
+    },
+    {
+      "file": "W008.mp3",
+      "text": "Avvio del ritorno alla stazione di ricarica."
+    },
+    {
+      "file": "W009.mp3",
+      "text": "In viaggio verso la stazione di ricarica."
+    },
+    {
+      "file": "W010.mp3",
+      "text": "Ricarica."
+    },
+    {
+      "file": "W011.mp3",
+      "text": "Il taglio programmato inizia."
+    },
+    {
+      "file": "W012.mp3",
+      "text": "Periodo Non disturbare. Avvia più tardi."
+    },
+    {
+      "file": "W013.mp3",
+      "text": "Il taglio vicino alla stazione di ricarica inizia."
+    },
+    {
+      "file": "W014.mp3",
+      "text": "Modalità telecomando. Riprova più tardi."
+    },
+    {
+      "file": "W015.mp3",
+      "text": "Il telecomando inizia."
+    },
+    {
+      "file": "W016.mp3",
+      "text": "La ricarica è terminata."
+    },
+    {
+      "file": "W017.mp3",
+      "text": "Il taglio programmato non è riuscito. Consulta i file di supporto."
+    }
+  ]
+}

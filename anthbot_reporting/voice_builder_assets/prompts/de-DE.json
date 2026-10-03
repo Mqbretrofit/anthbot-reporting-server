@@ -1,0 +1,819 @@
+{
+  "schema_version": 2,
+  "language": "Deutsch",
+  "language_code": "de-DE",
+  "source": "Translated from ANTHBOT girl_en-1.2.2 corrected English master transcript",
+  "translation_status": "draft_translation_review_before_release",
+  "prompt_count": 201,
+  "fixed_non_speech_files": [
+    "A001.mp3",
+    "A003.mp3",
+    "A030.mp3"
+  ],
+  "prompts": [
+    {
+      "file": "A004.mp3",
+      "text": "Ich bin hier."
+    },
+    {
+      "file": "A005.mp3",
+      "text": "Willkommen beim Roboter. Bitte richten Sie zuerst einen vierstelligen PIN-Code für den Roboter ein."
+    },
+    {
+      "file": "A006.mp3",
+      "text": "Der Not-Aus wurde aktiviert. Um die Aufgabe fortzusetzen, drücken Sie zuerst die MOW-Taste und anschließend OK, um die Sperre aufzuheben."
+    },
+    {
+      "file": "A007.mp3",
+      "text": "Bitte geben Sie den PIN-Code ein."
+    },
+    {
+      "file": "A008.mp3",
+      "text": "Niedriger Akkustand. Bitte versuchen Sie es erneut, nachdem der Roboter vollständig aufgeladen ist."
+    },
+    {
+      "file": "A009.mp3",
+      "text": "Niedriger Akkustand. Der Roboter wird ausgeschaltet. Bitte laden Sie ihn rechtzeitig auf."
+    },
+    {
+      "file": "A010.mp3",
+      "text": "Der Roboter ist in der Luft. Achten Sie darauf, die Kameras am Gerät zu schützen."
+    },
+    {
+      "file": "A011.mp3",
+      "text": "Der Roboter wurde angehoben. Bitte stellen Sie ihn zum Starten auf den Boden."
+    },
+    {
+      "file": "A012.mp3",
+      "text": "Der Roboter ist geneigt. Achten Sie darauf, die Kameras am Gerät zu schützen."
+    },
+    {
+      "file": "A013.mp3",
+      "text": "Der Roboter hat den angegebenen Ort nicht erreicht. Die aktuelle Aufgabe ist beendet. Bitte laden Sie ihn auf."
+    },
+    {
+      "file": "A014.mp3",
+      "text": "Das Positionierungssignal ist schwach. Bitte laden Sie den Roboter auf."
+    },
+    {
+      "file": "A015.mp3",
+      "text": "Es regnet. Bitte laden Sie den Roboter auf."
+    },
+    {
+      "file": "A016.mp3",
+      "text": "Der Roboter wurde bewegt. Bitte stellen Sie ihn zurück auf die Ladestation."
+    },
+    {
+      "file": "A017.mp3",
+      "text": "Der Regenschutzmodus ist aktiv. Bitte versuchen Sie es nach drei Stunden erneut oder deaktivieren Sie die Regenerkennung in der App."
+    },
+    {
+      "file": "A018.mp3",
+      "text": "Die Neupositionierung läuft. Bitte lassen Sie den Roboter innerhalb der Karte und mehr als 1,5 Meter von der Begrenzung entfernt."
+    },
+    {
+      "file": "A019.mp3",
+      "text": "Sie haben den Sicherheitsbereich betreten."
+    },
+    {
+      "file": "A020.mp3",
+      "text": "Die Linse ist verschmutzt."
+    },
+    {
+      "file": "A021.mp3",
+      "text": "Der Stoßfänger ist wieder funktionsfähig."
+    },
+    {
+      "file": "A022.mp3",
+      "text": "Bitte starten Sie den Roboter auf ebenem Boden."
+    },
+    {
+      "file": "A023.mp3",
+      "text": "Bitte bringen Sie das Gerät in einen offenen Bereich, um den Punktmähmodus zu starten."
+    },
+    {
+      "file": "A024.mp3",
+      "text": "Der Roboter kann den vorgesehenen Bereich nicht erreichen. Bitte prüfen Sie, ob der Bereich zugänglich ist."
+    },
+    {
+      "file": "A025.mp3",
+      "text": "Ausschalten."
+    },
+    {
+      "file": "A026.mp3",
+      "text": "Das GPS-Signal ist schwach. Bitte versuchen Sie den Roboter zu starten, nachdem das Signal stabil ist."
+    },
+    {
+      "file": "A027.mp3",
+      "text": "Bitte versuchen Sie nach Behebung des Fehlers erneut zu starten."
+    },
+    {
+      "file": "A028.mp3",
+      "text": "Das Arbeiten in dunkler Umgebung wird nicht unterstützt."
+    },
+    {
+      "file": "A029.mp3",
+      "text": "Der Messerteller ist eingeschaltet. Bitte achten Sie auf Ihre Sicherheit."
+    },
+    {
+      "file": "A031.mp3",
+      "text": "Bringen Sie den Roboter zur Initialisierung in einen offenen Bereich und versuchen Sie es erneut."
+    },
+    {
+      "file": "C001.mp3",
+      "text": "Die Kartenerstellung war erfolgreich."
+    },
+    {
+      "file": "C002.mp3",
+      "text": "Die Kartierung ist fehlgeschlagen. Bitte versuchen Sie es erneut."
+    },
+    {
+      "file": "C003.mp3",
+      "text": "Die Erstellung war erfolgreich."
+    },
+    {
+      "file": "C004.mp3",
+      "text": "Die Erstellung ist fehlgeschlagen."
+    },
+    {
+      "file": "C005.mp3",
+      "text": "Die Kartenerweiterung wird gestartet."
+    },
+    {
+      "file": "C006.mp3",
+      "text": "Die Kartenerweiterung war erfolgreich."
+    },
+    {
+      "file": "C007.mp3",
+      "text": "Die Kartenerweiterung ist fehlgeschlagen."
+    },
+    {
+      "file": "C008.mp3",
+      "text": "Bitte steuern Sie den Roboter per Fernbedienung, um mit der Kartenerstellung zu beginnen."
+    },
+    {
+      "file": "C009.mp3",
+      "text": "Die Kartierung läuft. Bitte versuchen Sie es später erneut."
+    },
+    {
+      "file": "C010.mp3",
+      "text": "Der automatische ACC-Kartierungsmodus wird aktiviert. Dieser ist nur für Rasenflächen mit klaren Begrenzungen geeignet. Drücken Sie zur Bestätigung die OK-Taste."
+    },
+    {
+      "file": "C011.mp3",
+      "text": "Die automatische ACC-Kartierung beginnt."
+    },
+    {
+      "file": "C012.mp3",
+      "text": "Bitte stellen Sie den Roboter auf die Ladestation und starten Sie dann."
+    },
+    {
+      "file": "C013.mp3",
+      "text": "Der Kartierungsbereich überschreitet das Limit. Bitte erstellen Sie Karten innerhalb des angegebenen Bereichs."
+    },
+    {
+      "file": "C014.mp3",
+      "text": "Die RTK-Basis wurde bewegt. Bitte suchen Sie in der App nach einer Lösung."
+    },
+    {
+      "file": "C015.mp3",
+      "text": "Die Erstellung von Sperrzonen wird gestartet."
+    },
+    {
+      "file": "C016.mp3",
+      "text": "Die Erstellung der Sperrzone ist fehlgeschlagen."
+    },
+    {
+      "file": "C017.mp3",
+      "text": "Bitte starten Sie den Roboter vor der Kartierung auf der Ladestation."
+    },
+    {
+      "file": "C018.mp3",
+      "text": "Bitte starten Sie den Roboter innerhalb der Kartengrenze, bevor Sie die Karte erweitern."
+    },
+    {
+      "file": "E001.mp3",
+      "text": "Der Ladevorgang beginnt. Der Roboter setzt die Arbeit fort, nachdem er vollständig aufgeladen ist."
+    },
+    {
+      "file": "E002.mp3",
+      "text": "Die Rückkehr zur Ladestation ist fehlgeschlagen. Bitte prüfen Sie die Lösung in der App."
+    },
+    {
+      "file": "E003.mp3",
+      "text": "Akkufehler. Bitte prüfen Sie die Lösung in der App."
+    },
+    {
+      "file": "E004.mp3",
+      "text": "Die Linse konnte nicht gereinigt werden. Bitte prüfen Sie die Lösung in der App."
+    },
+    {
+      "file": "E005.mp3",
+      "text": "Kartenfehler. Bitte prüfen Sie die Lösung in der App."
+    },
+    {
+      "file": "E006.mp3",
+      "text": "Sensorfehler. Bitte prüfen Sie die Lösung in der App."
+    },
+    {
+      "file": "E007.mp3",
+      "text": "Fehler wegen zu hoher Akkutemperatur. Bitte prüfen Sie die Lösung in der App."
+    },
+    {
+      "file": "E008.mp3",
+      "text": "Fehler wegen zu niedriger Akkutemperatur. Bitte prüfen Sie die Lösung in der App."
+    },
+    {
+      "file": "E009.mp3",
+      "text": "Fehler am linken Hinterrad. Bitte prüfen Sie die Lösung in der App."
+    },
+    {
+      "file": "E010.mp3",
+      "text": "Fehler am rechten Hinterrad. Bitte prüfen Sie die Lösung in der App."
+    },
+    {
+      "file": "E011.mp3",
+      "text": "Fehler am Messerteller. Bitte prüfen Sie die Lösung in der App."
+    },
+    {
+      "file": "E012.mp3",
+      "text": "Der Roboter steckt fest. Bitte helfen Sie, ihn zu befreien."
+    },
+    {
+      "file": "E013.mp3",
+      "text": "Die Ladestation wurde nicht erkannt. Bitte verwenden Sie die App, um dem Roboter bei der Rückkehr zur Ladestation zu helfen."
+    },
+    {
+      "file": "E014.mp3",
+      "text": "Stoßfängerfehler. Bitte prüfen Sie die Lösung in der App."
+    },
+    {
+      "file": "E015.mp3",
+      "text": "Das Firmware-Update ist fehlgeschlagen. Bitte versuchen Sie es später erneut."
+    },
+    {
+      "file": "E016.mp3",
+      "text": "Der Roboter ist in der Luft. Bitte prüfen Sie, ob der Roboter feststeckt."
+    },
+    {
+      "file": "E017.mp3",
+      "text": "Die Neupositionierung ist fehlgeschlagen. Bitte lassen Sie den Roboter innerhalb der Karte und mehr als 1,5 Meter von der Begrenzung entfernt und versuchen Sie es später erneut."
+    },
+    {
+      "file": "E018.mp3",
+      "text": "Das Positionierungssignal ist schwach. Der Roboter kann sich jetzt nicht bewegen. Bitte prüfen Sie die Lösung in der App."
+    },
+    {
+      "file": "E019.mp3",
+      "text": "Positionierungsfehler. Bitte stellen Sie sicher, dass sich das Gerät im Signalempfangsbereich befindet."
+    },
+    {
+      "file": "E020.mp3",
+      "text": "Fehler am Stoßfängersensor. Bitte prüfen Sie, ob der Stoßfängersensor feststeckt."
+    },
+    {
+      "file": "E021.mp3",
+      "text": "Fehler am Vorderrad. Bitte prüfen Sie das Vorderrad."
+    },
+    {
+      "file": "E022.mp3",
+      "text": "Fehler am Regensensor. Bitte wenden Sie sich an den Kundendienst."
+    },
+    {
+      "file": "E023.mp3",
+      "text": "Das Gerät steckt fest. Bitte helfen Sie, es zu befreien."
+    },
+    {
+      "file": "E024.mp3",
+      "text": "Kommunikationsfehler. Bitte wenden Sie sich an den Kundendienst."
+    },
+    {
+      "file": "E025.mp3",
+      "text": "Das Gerät ist in eine Sperrzone gefahren. Bitte entfernen Sie es so schnell wie möglich."
+    },
+    {
+      "file": "E026.mp3",
+      "text": "Das Gerät befindet sich außerhalb der Begrenzung. Bitte bringen Sie es in den Arbeitsbereich."
+    },
+    {
+      "file": "E101.mp3",
+      "text": "RTK-Fehler."
+    },
+    {
+      "file": "E102.mp3",
+      "text": "Kommunikationsfehler. Bitte wenden Sie sich an den Kundendienst."
+    },
+    {
+      "file": "E103.mp3",
+      "text": "Die RTK-Initialisierung ist fehlgeschlagen."
+    },
+    {
+      "file": "E104.mp3",
+      "text": "LoRa ist nicht gekoppelt. Bitte koppeln Sie LoRa vor der Verwendung gemäß der Bedienungsanleitung."
+    },
+    {
+      "file": "E105.mp3",
+      "text": "Fehler bei der Initialisierung der Hauptplatine."
+    },
+    {
+      "file": "E201.mp3",
+      "text": "Der Stoßfängersensor steckt fest."
+    },
+    {
+      "file": "E202.mp3",
+      "text": "IMU-Datenfehler."
+    },
+    {
+      "file": "E203.mp3",
+      "text": "Regensensorfehler."
+    },
+    {
+      "file": "E204.mp3",
+      "text": "Das Gerät ist in der Luft."
+    },
+    {
+      "file": "E205.mp3",
+      "text": "Die Messer sind abgefallen. Bitte prüfen Sie, ob die Messer korrekt montiert sind."
+    },
+    {
+      "file": "E301.mp3",
+      "text": "Die Rückkehr zur Ladestation ist fehlgeschlagen."
+    },
+    {
+      "file": "E302.mp3",
+      "text": "Die Maschine steckt fest."
+    },
+    {
+      "file": "E303.mp3",
+      "text": "Der Roboter wurde an einem Hang gestartet. Bitte stellen Sie ihn auf ebenen Boden und versuchen Sie es erneut."
+    },
+    {
+      "file": "E304.mp3",
+      "text": "Die Neupositionierung ist fehlgeschlagen."
+    },
+    {
+      "file": "E305.mp3",
+      "text": "Positionierungsfehler. Bitte stellen Sie sicher, dass sich das Gerät im Signalempfangsbereich befindet."
+    },
+    {
+      "file": "E306.mp3",
+      "text": "Das Gerät befindet sich außerhalb der Begrenzung. Bitte bringen Sie es in den Arbeitsbereich und versuchen Sie es erneut."
+    },
+    {
+      "file": "E307.mp3",
+      "text": "Die Kartierung ist fehlgeschlagen. Bitte versuchen Sie es erneut."
+    },
+    {
+      "file": "E400.mp3",
+      "text": "Fehler am linken Rad."
+    },
+    {
+      "file": "E401.mp3",
+      "text": "Überspannung am linken Radmotor."
+    },
+    {
+      "file": "E402.mp3",
+      "text": "Unterspannung am linken Radmotor."
+    },
+    {
+      "file": "E403.mp3",
+      "text": "Überstrom am linken Radmotor."
+    },
+    {
+      "file": "E404.mp3",
+      "text": "Der linke Radmotor ist blockiert."
+    },
+    {
+      "file": "E405.mp3",
+      "text": "Phasenleitung des linken Radmotors unterbrochen."
+    },
+    {
+      "file": "E406.mp3",
+      "text": "Kurzschluss in der Phasenleitung des linken Radmotors."
+    },
+    {
+      "file": "E407.mp3",
+      "text": "Überlastung des linken Radmotors."
+    },
+    {
+      "file": "E408.mp3",
+      "text": "Hall-Sensorfehler am linken Radmotor."
+    },
+    {
+      "file": "E409.mp3",
+      "text": "Temperaturfehler am linken Radmotor."
+    },
+    {
+      "file": "E410.mp3",
+      "text": "Fehler am rechten Rad."
+    },
+    {
+      "file": "E411.mp3",
+      "text": "Überspannung am rechten Radmotor."
+    },
+    {
+      "file": "E412.mp3",
+      "text": "Unterspannung am rechten Radmotor."
+    },
+    {
+      "file": "E413.mp3",
+      "text": "Überstrom am rechten Radmotor."
+    },
+    {
+      "file": "E414.mp3",
+      "text": "Der rechte Radmotor ist blockiert."
+    },
+    {
+      "file": "E415.mp3",
+      "text": "Phasenleitung des rechten Radmotors unterbrochen."
+    },
+    {
+      "file": "E416.mp3",
+      "text": "Kurzschluss in der Phasenleitung des rechten Radmotors."
+    },
+    {
+      "file": "E417.mp3",
+      "text": "Überlastung des rechten Radmotors."
+    },
+    {
+      "file": "E418.mp3",
+      "text": "Hall-Sensorfehler am rechten Radmotor."
+    },
+    {
+      "file": "E419.mp3",
+      "text": "Temperaturfehler am rechten Radmotor."
+    },
+    {
+      "file": "E420.mp3",
+      "text": "Fehler am Hubmotor."
+    },
+    {
+      "file": "E421.mp3",
+      "text": "Der Hubmotor steckt fest."
+    },
+    {
+      "file": "E422.mp3",
+      "text": "Überstromschutz des Hubmotors."
+    },
+    {
+      "file": "E423.mp3",
+      "text": "Blockierschutz des Hubmotors."
+    },
+    {
+      "file": "E424.mp3",
+      "text": "Unterbrechung oder Kurzschluss im Hubmotor."
+    },
+    {
+      "file": "E430.mp3",
+      "text": "Fehler am Messertellermotor."
+    },
+    {
+      "file": "E431.mp3",
+      "text": "Der Messertellermotor steckt fest."
+    },
+    {
+      "file": "E432.mp3",
+      "text": "Blockierschutz des Messertellermotors."
+    },
+    {
+      "file": "E433.mp3",
+      "text": "Unterbrechung oder Kurzschluss im Messertellermotor."
+    },
+    {
+      "file": "E434.mp3",
+      "text": "Initialisierungsfehler des Messertellermotors."
+    },
+    {
+      "file": "E435.mp3",
+      "text": "Überspannungsschutz des Messertellermotors."
+    },
+    {
+      "file": "E436.mp3",
+      "text": "Unterspannungsschutz des Messertellermotors."
+    },
+    {
+      "file": "E437.mp3",
+      "text": "Überstromschutz des Messertellermotors."
+    },
+    {
+      "file": "E440.mp3",
+      "text": "Fehler am Wischermotor."
+    },
+    {
+      "file": "E441.mp3",
+      "text": "Überstrom am vorderen Wischermotor."
+    },
+    {
+      "file": "E442.mp3",
+      "text": "Kurzschluss am vorderen Wischermotor."
+    },
+    {
+      "file": "E443.mp3",
+      "text": "Überstrom am seitlichen Wischermotor."
+    },
+    {
+      "file": "E444.mp3",
+      "text": "Kurzschluss am seitlichen Wischermotor."
+    },
+    {
+      "file": "E501.mp3",
+      "text": "Akkufehler während des Ladevorgangs."
+    },
+    {
+      "file": "E502.mp3",
+      "text": "Zu hohe Akkutemperatur. Bitte prüfen Sie die Lösung in der App."
+    },
+    {
+      "file": "E503.mp3",
+      "text": "Zu niedrige Akkutemperatur. Bitte prüfen Sie die Lösung in der App."
+    },
+    {
+      "file": "E504.mp3",
+      "text": "Überspannungsschutz des Akkus."
+    },
+    {
+      "file": "E505.mp3",
+      "text": "Unterspannungsschutz des Akkus."
+    },
+    {
+      "file": "E506.mp3",
+      "text": "Überstromschutz des Akkus."
+    },
+    {
+      "file": "E507.mp3",
+      "text": "Ladeschutz des Akkus."
+    },
+    {
+      "file": "E601.mp3",
+      "text": "Die vordere linke Linse ist verschmutzt. Bitte reinigen Sie sie umgehend."
+    },
+    {
+      "file": "E602.mp3",
+      "text": "Die vordere rechte Linse ist verschmutzt. Bitte reinigen Sie sie umgehend."
+    },
+    {
+      "file": "E603.mp3",
+      "text": "Die linke Seitenlinse ist verschmutzt. Bitte reinigen Sie sie umgehend."
+    },
+    {
+      "file": "E604.mp3",
+      "text": "Die rechte Seitenlinse ist verschmutzt. Bitte reinigen Sie sie umgehend."
+    },
+    {
+      "file": "E605.mp3",
+      "text": "Fehler an der vorderen linken Linse. Bitte wenden Sie sich an den Kundendienst."
+    },
+    {
+      "file": "E606.mp3",
+      "text": "Fehler an der vorderen rechten Linse. Bitte wenden Sie sich an den Kundendienst."
+    },
+    {
+      "file": "E607.mp3",
+      "text": "Fehler an der linken Seitenlinse. Bitte wenden Sie sich an den Kundendienst."
+    },
+    {
+      "file": "E608.mp3",
+      "text": "Fehler an der rechten Seitenlinse. Bitte wenden Sie sich an den Kundendienst."
+    },
+    {
+      "file": "E700.mp3",
+      "text": "Bitte drücken Sie MOW und anschließend OK, um den Not-Aus-Schutz aufzuheben."
+    },
+    {
+      "file": "P001.mp3",
+      "text": "Die Bluetooth-Kopplung war erfolgreich."
+    },
+    {
+      "file": "P002.mp3",
+      "text": "Die Kopplung wird gestartet."
+    },
+    {
+      "file": "P003.mp3",
+      "text": "Die Netzwerkverbindung wurde erfolgreich hergestellt."
+    },
+    {
+      "file": "P004.mp3",
+      "text": "Die Kopplung war erfolgreich."
+    },
+    {
+      "file": "P005.mp3",
+      "text": "Hinzugefügt."
+    },
+    {
+      "file": "P006.mp3",
+      "text": "Kopplung entfernt."
+    },
+    {
+      "file": "P007.mp3",
+      "text": "Erzwungen entfernt."
+    },
+    {
+      "file": "P008.mp3",
+      "text": "Die LoRa-Kopplung war erfolgreich."
+    },
+    {
+      "file": "P009.mp3",
+      "text": "Die LoRa-Kopplung ist fehlgeschlagen. Bitte bleiben Sie in der Nähe des Geräts und versuchen Sie es erneut."
+    },
+    {
+      "file": "P010.mp3",
+      "text": "Bluetooth getrennt."
+    },
+    {
+      "file": "P011.mp3",
+      "text": "Bluetooth verbunden."
+    },
+    {
+      "file": "P012.mp3",
+      "text": "Wi-Fi getrennt."
+    },
+    {
+      "file": "P013.mp3",
+      "text": "Wi-Fi verbunden."
+    },
+    {
+      "file": "S001.mp3",
+      "text": "Der Roboter verlässt die Ladestation. Bitte versuchen Sie es später erneut."
+    },
+    {
+      "file": "S002.mp3",
+      "text": "Der Roboter dockt an."
+    },
+    {
+      "file": "S003.mp3",
+      "text": "Der Roboter ist in der Nähe des Startpunkts angekommen."
+    },
+    {
+      "file": "S004.mp3",
+      "text": "Die Linsenreinigung läuft. Der Roboter beginnt in Kürze mit dem Mähen."
+    },
+    {
+      "file": "S005.mp3",
+      "text": "Die Linsenreinigung läuft. Der Roboter fährt zum vorgesehenen Bereich, um zu mähen."
+    },
+    {
+      "file": "S006.mp3",
+      "text": "Die Linsenreinigung läuft. Der Roboter fährt zum vorgesehenen Punkt, um zu mähen."
+    },
+    {
+      "file": "S007.mp3",
+      "text": "Die Linsenreinigung läuft. Der Roboter fährt zur vorgesehenen Begrenzung, um zu mähen."
+    },
+    {
+      "file": "S008.mp3",
+      "text": "Niedriger Akkustand. Der Roboter fährt zum Laden."
+    },
+    {
+      "file": "S009.mp3",
+      "text": "Der Ladevorgang ist beendet. Der Roboter setzt die Arbeit fort."
+    },
+    {
+      "file": "S010.mp3",
+      "text": "Die Aufgabe ist beendet. Der Roboter fährt zum Laden."
+    },
+    {
+      "file": "S011.mp3",
+      "text": "Die Rückkehr zur Ladestation wird gestartet."
+    },
+    {
+      "file": "S012.mp3",
+      "text": "Der Ladevorgang läuft."
+    },
+    {
+      "file": "S013.mp3",
+      "text": "Der Ladevorgang beginnt."
+    },
+    {
+      "file": "S014.mp3",
+      "text": "Der Wachmodus ist aktiviert."
+    },
+    {
+      "file": "S015.mp3",
+      "text": "Ein Update läuft. Bitte versuchen Sie es später erneut."
+    },
+    {
+      "file": "S016.mp3",
+      "text": "Die Wiederherstellung der Werkseinstellungen wird gestartet."
+    },
+    {
+      "file": "S017.mp3",
+      "text": "Aufgabe pausiert."
+    },
+    {
+      "file": "S018.mp3",
+      "text": "Die Aufgabe wird fortgesetzt."
+    },
+    {
+      "file": "S019.mp3",
+      "text": "Die Linsenreinigung läuft. Bitte versuchen Sie es später erneut."
+    },
+    {
+      "file": "S020.mp3",
+      "text": "Aufgabe beendet."
+    },
+    {
+      "file": "S021.mp3",
+      "text": "Das Firmware-Update war erfolgreich."
+    },
+    {
+      "file": "S022.mp3",
+      "text": "Die RTK-Kalibrierung läuft. Bitte versuchen Sie es später erneut."
+    },
+    {
+      "file": "S023.mp3",
+      "text": "Die Kalibrierung ist abgeschlossen. Sie können den Roboter jetzt fernsteuern."
+    },
+    {
+      "file": "S024.mp3",
+      "text": "Der Roboter fährt zum vorgesehenen Bereich."
+    },
+    {
+      "file": "S025.mp3",
+      "text": "Das Update wird gestartet."
+    },
+    {
+      "file": "S026.mp3",
+      "text": "Die RTK-Initialisierung ist fehlgeschlagen."
+    },
+    {
+      "file": "S027.mp3",
+      "text": "Die Kalibrierung ist abgeschlossen. Die Kartierung beginnt."
+    },
+    {
+      "file": "S028.mp3",
+      "text": "Die Kalibrierung ist fehlgeschlagen. Bitte prüfen Sie, ob die Arbeitsumgebung des Geräts geeignet ist."
+    },
+    {
+      "file": "S029.mp3",
+      "text": "Das Verlassen der Ladestation ist fehlgeschlagen."
+    },
+    {
+      "file": "W001.mp3",
+      "text": "Das Punktmähen beginnt."
+    },
+    {
+      "file": "W002.mp3",
+      "text": "Die Begrenzung für das Punktmähen wurde erstellt. Bitte bestätigen Sie, ob mit dem Mähen begonnen werden soll."
+    },
+    {
+      "file": "W003.mp3",
+      "text": "Aufgabe beendet."
+    },
+    {
+      "file": "W004.mp3",
+      "text": "Die Aufgabe beginnt."
+    },
+    {
+      "file": "W005.mp3",
+      "text": "Aufgabe läuft."
+    },
+    {
+      "file": "W006.mp3",
+      "text": "Das Mähen der gesamten Karte beginnt."
+    },
+    {
+      "file": "W007.mp3",
+      "text": "Der Roboter fährt zum vorgesehenen Bereich, um zu mähen."
+    },
+    {
+      "file": "W008.mp3",
+      "text": "Die Rückkehr zur Ladestation wird gestartet."
+    },
+    {
+      "file": "W009.mp3",
+      "text": "Auf dem Weg zur Ladestation."
+    },
+    {
+      "file": "W010.mp3",
+      "text": "Ladevorgang."
+    },
+    {
+      "file": "W011.mp3",
+      "text": "Das geplante Mähen beginnt."
+    },
+    {
+      "file": "W012.mp3",
+      "text": "Ruhezeit. Bitte starten Sie später."
+    },
+    {
+      "file": "W013.mp3",
+      "text": "Das Mähen in der Nähe der Ladestation beginnt."
+    },
+    {
+      "file": "W014.mp3",
+      "text": "Fernsteuerungsmodus. Bitte versuchen Sie es später erneut."
+    },
+    {
+      "file": "W015.mp3",
+      "text": "Die Fernsteuerung beginnt."
+    },
+    {
+      "file": "W016.mp3",
+      "text": "Der Ladevorgang ist beendet."
+    },
+    {
+      "file": "W017.mp3",
+      "text": "Das geplante Mähen ist fehlgeschlagen. Bitte prüfen Sie die Hilfedateien."
+    }
+  ]
+}

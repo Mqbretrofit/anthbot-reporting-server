@@ -3,3 +3,5 @@ uvicorn[standard]>=0.35,<1
 python-multipart>=0.0.20,<1
 stripe>=12,<20
 boto3>=1.40,<2
+
+cryptography>=43,<50

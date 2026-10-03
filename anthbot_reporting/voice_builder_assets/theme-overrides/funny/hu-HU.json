@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "theme_id": "funny",
+  "language_code": "hu-HU",
+  "safety_policy": "Only noncritical/status prompts are overridden. Safety, emergency and error prompts remain standard.",
+  "override_count": 16,
+  "overrides": {
+    "A004.mp3": "Itt vagyok. Nem kell kiabálni, a kert végéből is hallom.",
+    "A015.mp3": "Esik. Visszamegyek tölteni, mielőtt tengeralattjáró lesz belőlem.",
+    "A020.mp3": "Koszos a kamerám. Egy gyors törlés, és újra látom, merre nő a fű.",
+    "A025.mp3": "Kikapcsolok. Ideje egy kis robot-szunyókálásnak.",
+    "S001.mp3": "Elhagyom a töltőt. Fűszálak, készüljetek!",
+    "S002.mp3": "Dokkolás. Édes otthon, töltőállomás.",
+    "S009.mp3": "Tele az akku. Vissza dolgozni, a fű nem nyírja le magát.",
+    "S010.mp3": "Küldetés teljesítve. Visszamegyek tölteni.",
+    "S017.mp3": "Szünet. Itt várok, mint egy jól nevelt robot.",
+    "S018.mp3": "És folytatjuk. Nyírjunk tovább.",
+    "S020.mp3": "Kész. Megint legyőztem egy gyepet.",
+    "W004.mp3": "Induljon a nyírás!",
+    "W005.mp3": "Nyírás folyamatban. Kis kerekek, nagy ambíciók.",
+    "W006.mp3": "Teljes terület nyírása indul. Egy fűszál sincs biztonságban.",
+    "W009.mp3": "Megyek tölteni. Még a robotoknak is kell egy kávészünet.",
+    "W016.mp3": "Feltöltve és indulásra kész."
+  }
+}

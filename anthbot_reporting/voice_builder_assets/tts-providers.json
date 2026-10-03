@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "builder_version": "0.1.0-alpha.7.20.11",
+  "providers": [
+    {
+      "id": "elevenlabs",
+      "display_name": "ElevenLabs · Smart Hybrid v4 + Flash v2.5 (ajánlott / profi)",
+      "description": "Smart Hybrid költségmód: Standard + Natural és minden E*.mp3 hibasor Flash v2.5; expresszív nem-error sorok Eleven v4. Globális SHA-256 TTS-cache akadályozza meg az azonos kérés újbóli kifizetését."
+    },
+    {
+      "id": "openai",
+      "display_name": "OpenAI · gpt-4o-mini-tts",
+      "description": "Közvetlen OpenAI Speech API. Az Előadásmód utasítása közvetlenül a TTS modellhez megy, ezért az érzelmes / érzéki / kemény / dühös / suttogós előadás sokkal karakteresebb lehet."
+    },
+    {
+      "id": "ha_cloud",
+      "display_name": "Home Assistant Cloud",
+      "description": "A meglévő Nabu Casa TTS útvonal. A támogatott Cloud hangok natív stílusvariánsait használja, ahol elérhetők."
+    },
+    {
+      "id": "fish_audio",
+      "display_name": "Fish Audio · S2.1 Pro Free / Pro (kísérleti)",
+      "description": "Fish Audio S2.1 Pro: nagyon természetes, expresszív TTS inline érzelem/direction tagekkel. A developer free modell s2.1-pro-free; kereskedelmi kiadáshoz a Fish aktuális licencfeltételeit ellenőrizd, illetve választható a fizetős s2.1-pro."
+    }
+  ],
+  "openai_voices": [
+    "alloy",
+    "ash",
+    "ballad",
+    "coral",
+    "echo",
+    "fable",
+    "nova",
+    "onyx",
+    "sage",
+    "shimmer",
+    "verse",
+    "marin",
+    "cedar"
+  ],
+  "openai_model": "gpt-4o-mini-tts",
+  "elevenlabs_model": "eleven_v4",
+  "elevenlabs_output_format": "mp3_22050_32",
+  "elevenlabs_error_model": "eleven_flash_v2_5",
+  "elevenlabs_hybrid_default": true,
+  "elevenlabs_credit_limit_default": 10000,
+  "fish_audio_models": [
+    {
+      "id": "s2.1-pro-free",
+      "display_name": "S2.1 Pro Free · developer / fair use"
+    },
+    {
+      "id": "s2.1-pro",
+      "display_name": "S2.1 Pro · fizetős / production"
+    }
+  ],
+  "fish_audio_default_model": "s2.1-pro-free",
+  "elevenlabs_smart_hybrid_default": true,
+  "elevenlabs_global_cache": "%LOCALAPPDATA%/ANTHBOT Voice Pack Builder/tts-cache/elevenlabs"
+}

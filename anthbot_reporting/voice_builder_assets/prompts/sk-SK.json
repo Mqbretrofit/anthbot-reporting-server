@@ -1,0 +1,819 @@
+{
+  "schema_version": 1,
+  "language": "Slovenčina",
+  "language_code": "sk-SK",
+  "prompt_count": 201,
+  "source": "Translated from reviewed ANTHBOT English master prompt set",
+  "translation_status": "Nový preklad z anglického masteru – pred vydaním nutná jazyková kontrola",
+  "fixed_non_speech_files": [
+    "A001.mp3",
+    "A003.mp3",
+    "A030.mp3"
+  ],
+  "prompts": [
+    {
+      "file": "A004.mp3",
+      "text": "Som tu."
+    },
+    {
+      "file": "A005.mp3",
+      "text": "Vitajte pri používaní robota. Najprv nastavte pre robota štvormiestny PIN kód."
+    },
+    {
+      "file": "A006.mp3",
+      "text": "Bolo aktivované núdzové zastavenie. Ak chcete pokračovať v úlohe, najprv stlačte tlačidlo MOW a potom tlačidlo OK."
+    },
+    {
+      "file": "A007.mp3",
+      "text": "Zadajte PIN kód."
+    },
+    {
+      "file": "A008.mp3",
+      "text": "Nízka úroveň batérie. Skúste to znova po úplnom nabití robota."
+    },
+    {
+      "file": "A009.mp3",
+      "text": "Nízka úroveň batérie. Robot sa vypne. Včas ho dobite."
+    },
+    {
+      "file": "A010.mp3",
+      "text": "Robot je zdvihnutý vo vzduchu. Dávajte pozor, aby nedošlo k poškodeniu kamier zariadenia."
+    },
+    {
+      "file": "A011.mp3",
+      "text": "Robot bol zdvihnutý. Položte ho na zem a potom ho spustite."
+    },
+    {
+      "file": "A012.mp3",
+      "text": "Robot je naklonený. Dávajte pozor, aby nedošlo k poškodeniu kamier zariadenia."
+    },
+    {
+      "file": "A013.mp3",
+      "text": "Robot nedosiahol určené miesto. Aktuálna úloha sa skončila. Dobite ho."
+    },
+    {
+      "file": "A014.mp3",
+      "text": "Polohovací signál je slabý. Dobite robota."
+    },
+    {
+      "file": "A015.mp3",
+      "text": "Prší. Dobite robota."
+    },
+    {
+      "file": "A016.mp3",
+      "text": "Robot bol premiestnený. Vráťte ho do nabíjacej stanice."
+    },
+    {
+      "file": "A017.mp3",
+      "text": "Je aktívny režim ochrany pred dažďom. Skúste to znova o tri hodiny alebo vypnite detekciu dažďa v aplikácii."
+    },
+    {
+      "file": "A018.mp3",
+      "text": "Prebieha nové určenie polohy. Udržujte robota vnútri mapy a viac ako 1,5 metra od hranice."
+    },
+    {
+      "file": "A019.mp3",
+      "text": "Vstúpili ste do bezpečnostnej oblasti."
+    },
+    {
+      "file": "A020.mp3",
+      "text": "Objektív je znečistený."
+    },
+    {
+      "file": "A021.mp3",
+      "text": "Nárazník sa vrátil do normálneho stavu."
+    },
+    {
+      "file": "A022.mp3",
+      "text": "Spustite robota na rovnom povrchu."
+    },
+    {
+      "file": "A023.mp3",
+      "text": "Presuňte zariadenie na otvorené miesto a spustite režim bodového kosenia."
+    },
+    {
+      "file": "A024.mp3",
+      "text": "Robot nemôže dosiahnuť určenú oblasť. Skontrolujte, či je oblasť prístupná."
+    },
+    {
+      "file": "A025.mp3",
+      "text": "Vypínanie."
+    },
+    {
+      "file": "A026.mp3",
+      "text": "Signál GPS je slabý. Spustite robota znova, keď bude signál stabilný."
+    },
+    {
+      "file": "A027.mp3",
+      "text": "Po odstránení chyby skúste robota spustiť znova."
+    },
+    {
+      "file": "A028.mp3",
+      "text": "Práca v slabo osvetlenom prostredí nie je podporovaná."
+    },
+    {
+      "file": "A029.mp3",
+      "text": "Žací kotúč je zapnutý. Dbajte na svoju bezpečnosť."
+    },
+    {
+      "file": "A031.mp3",
+      "text": "Presuňte robota na otvorené miesto na inicializáciu a potom to skúste znova."
+    },
+    {
+      "file": "C001.mp3",
+      "text": "Vytvorenie mapy bolo úspešné."
+    },
+    {
+      "file": "C002.mp3",
+      "text": "Mapovanie zlyhalo. Skúste to znova."
+    },
+    {
+      "file": "C003.mp3",
+      "text": "Vytvorenie bolo úspešné."
+    },
+    {
+      "file": "C004.mp3",
+      "text": "Vytvorenie zlyhalo."
+    },
+    {
+      "file": "C005.mp3",
+      "text": "Začína sa rozširovanie mapy."
+    },
+    {
+      "file": "C006.mp3",
+      "text": "Rozšírenie mapy bolo úspešné."
+    },
+    {
+      "file": "C007.mp3",
+      "text": "Rozšírenie mapy zlyhalo."
+    },
+    {
+      "file": "C008.mp3",
+      "text": "Na začatie vytvárania mapy ovládajte robota diaľkovo."
+    },
+    {
+      "file": "C009.mp3",
+      "text": "Prebieha mapovanie. Skúste to znova neskôr."
+    },
+    {
+      "file": "C010.mp3",
+      "text": "Vstup do automatického režimu mapovania ACC. Tento režim je vhodný iba pre trávniky s jasne vymedzenými hranicami. Potvrďte stlačením tlačidla OK."
+    },
+    {
+      "file": "C011.mp3",
+      "text": "Spúšťa sa automatické mapovanie ACC."
+    },
+    {
+      "file": "C012.mp3",
+      "text": "Položte robota do nabíjacej stanice a potom ho spustite."
+    },
+    {
+      "file": "C013.mp3",
+      "text": "Mapovaná oblasť prekračuje limit. Vytvárajte mapy iba v určenom rozsahu."
+    },
+    {
+      "file": "C014.mp3",
+      "text": "Základňa RTK bola premiestnená. Riešenie nájdete v aplikácii."
+    },
+    {
+      "file": "C015.mp3",
+      "text": "Začína sa vytváranie zakázaných zón."
+    },
+    {
+      "file": "C016.mp3",
+      "text": "Vytvorenie zakázanej zóny zlyhalo."
+    },
+    {
+      "file": "C017.mp3",
+      "text": "Pred mapovaním spustite robota z nabíjacej stanice."
+    },
+    {
+      "file": "C018.mp3",
+      "text": "Pred rozšírením mapy spustite robota vnútri hranice mapy."
+    },
+    {
+      "file": "E001.mp3",
+      "text": "Začína sa nabíjanie. Po úplnom nabití bude robot pokračovať v práci."
+    },
+    {
+      "file": "E002.mp3",
+      "text": "Dobíjanie zlyhalo. Riešenie nájdete v aplikácii."
+    },
+    {
+      "file": "E003.mp3",
+      "text": "Chyba batérie. Riešenie nájdete v aplikácii."
+    },
+    {
+      "file": "E004.mp3",
+      "text": "Objektív sa nepodarilo vyčistiť. Riešenie nájdete v aplikácii."
+    },
+    {
+      "file": "E005.mp3",
+      "text": "Chyba mapy. Riešenie nájdete v aplikácii."
+    },
+    {
+      "file": "E006.mp3",
+      "text": "Chyba senzora. Riešenie nájdete v aplikácii."
+    },
+    {
+      "file": "E007.mp3",
+      "text": "Chyba v dôsledku príliš vysokej teploty batérie. Riešenie nájdete v aplikácii."
+    },
+    {
+      "file": "E008.mp3",
+      "text": "Chyba v dôsledku príliš nízkej teploty batérie. Riešenie nájdete v aplikácii."
+    },
+    {
+      "file": "E009.mp3",
+      "text": "Chyba ľavého zadného kolesa. Riešenie nájdete v aplikácii."
+    },
+    {
+      "file": "E010.mp3",
+      "text": "Chyba pravého zadného kolesa. Riešenie nájdete v aplikácii."
+    },
+    {
+      "file": "E011.mp3",
+      "text": "Chyba žacieho kotúča. Riešenie nájdete v aplikácii."
+    },
+    {
+      "file": "E012.mp3",
+      "text": "Robot uviazol. Pomôžte ho uvoľniť."
+    },
+    {
+      "file": "E013.mp3",
+      "text": "Nabíjacia stanica nebola rozpoznaná. Pomocou aplikácie pomôžte robotu začať dobíjanie."
+    },
+    {
+      "file": "E014.mp3",
+      "text": "Chyba nárazníka. Riešenie nájdete v aplikácii."
+    },
+    {
+      "file": "E015.mp3",
+      "text": "Aktualizácia firmvéru zlyhala. Skúste to znova neskôr."
+    },
+    {
+      "file": "E016.mp3",
+      "text": "Robot je zdvihnutý vo vzduchu. Skontrolujte, či robot nie je zachytený."
+    },
+    {
+      "file": "E017.mp3",
+      "text": "Nové určenie polohy zlyhalo. Udržujte robota vnútri mapy a viac ako 1,5 metra od hranice a potom to skúste znova."
+    },
+    {
+      "file": "E018.mp3",
+      "text": "Polohovací signál je slabý. Robot sa teraz nemôže pohybovať. Riešenie nájdete v aplikácii."
+    },
+    {
+      "file": "E019.mp3",
+      "text": "Chyba polohovania. Uistite sa, že sa zariadenie nachádza v oblasti pokrytia signálom."
+    },
+    {
+      "file": "E020.mp3",
+      "text": "Chyba senzora nárazníka. Skontrolujte, či senzor nárazníka nie je zaseknutý."
+    },
+    {
+      "file": "E021.mp3",
+      "text": "Chyba predného kolesa. Skontrolujte predné koleso."
+    },
+    {
+      "file": "E022.mp3",
+      "text": "Chyba dažďového senzora. Kontaktujte zákaznícku podporu."
+    },
+    {
+      "file": "E023.mp3",
+      "text": "Zariadenie uviazlo. Pomôžte ho uvoľniť."
+    },
+    {
+      "file": "E024.mp3",
+      "text": "Chyba komunikácie. Kontaktujte zákaznícku podporu."
+    },
+    {
+      "file": "E025.mp3",
+      "text": "Zariadenie vstúpilo do zakázanej zóny. Čo najskôr ho presuňte preč."
+    },
+    {
+      "file": "E026.mp3",
+      "text": "Zariadenie je mimo hranice. Presuňte ho do pracovnej oblasti."
+    },
+    {
+      "file": "E101.mp3",
+      "text": "Chyba RTK."
+    },
+    {
+      "file": "E102.mp3",
+      "text": "Chyba komunikácie. Kontaktujte zákaznícku podporu."
+    },
+    {
+      "file": "E103.mp3",
+      "text": "Inicializácia RTK zlyhala."
+    },
+    {
+      "file": "E104.mp3",
+      "text": "LoRa nie je spárovaná. Pred použitím ju spárujte podľa používateľskej príručky."
+    },
+    {
+      "file": "E105.mp3",
+      "text": "Chyba inicializácie hlavnej dosky."
+    },
+    {
+      "file": "E201.mp3",
+      "text": "Senzor nárazníka je zaseknutý."
+    },
+    {
+      "file": "E202.mp3",
+      "text": "Chyba údajov IMU."
+    },
+    {
+      "file": "E203.mp3",
+      "text": "Chyba dažďového senzora."
+    },
+    {
+      "file": "E204.mp3",
+      "text": "Zariadenie je zdvihnuté vo vzduchu."
+    },
+    {
+      "file": "E205.mp3",
+      "text": "Nože odpadli. Skontrolujte, či sú nože správne nainštalované."
+    },
+    {
+      "file": "E301.mp3",
+      "text": "Dobíjanie zlyhalo."
+    },
+    {
+      "file": "E302.mp3",
+      "text": "Stroj uviazol."
+    },
+    {
+      "file": "E303.mp3",
+      "text": "Robot bol spustený na svahu. Položte ho na rovný povrch a skúste to znova."
+    },
+    {
+      "file": "E304.mp3",
+      "text": "Nové určenie polohy zlyhalo."
+    },
+    {
+      "file": "E305.mp3",
+      "text": "Chyba polohovania. Uistite sa, že sa zariadenie nachádza v oblasti pokrytia signálom."
+    },
+    {
+      "file": "E306.mp3",
+      "text": "Zariadenie je mimo hranice. Presuňte ho do pracovnej oblasti a skúste to znova."
+    },
+    {
+      "file": "E307.mp3",
+      "text": "Mapovanie zlyhalo. Skúste to znova."
+    },
+    {
+      "file": "E400.mp3",
+      "text": "Chyba ľavého kolesa."
+    },
+    {
+      "file": "E401.mp3",
+      "text": "Prepätie motora ľavého kolesa."
+    },
+    {
+      "file": "E402.mp3",
+      "text": "Podpätie motora ľavého kolesa."
+    },
+    {
+      "file": "E403.mp3",
+      "text": "Nadprúd motora ľavého kolesa."
+    },
+    {
+      "file": "E404.mp3",
+      "text": "Motor ľavého kolesa je zablokovaný."
+    },
+    {
+      "file": "E405.mp3",
+      "text": "Prerušenie fázového kábla motora ľavého kolesa."
+    },
+    {
+      "file": "E406.mp3",
+      "text": "Skrat fázového kábla motora ľavého kolesa."
+    },
+    {
+      "file": "E407.mp3",
+      "text": "Preťaženie motora ľavého kolesa."
+    },
+    {
+      "file": "E408.mp3",
+      "text": "Chyba Hallovho senzora motora ľavého kolesa."
+    },
+    {
+      "file": "E409.mp3",
+      "text": "Chyba teploty motora ľavého kolesa."
+    },
+    {
+      "file": "E410.mp3",
+      "text": "Chyba pravého kolesa."
+    },
+    {
+      "file": "E411.mp3",
+      "text": "Prepätie motora pravého kolesa."
+    },
+    {
+      "file": "E412.mp3",
+      "text": "Podpätie motora pravého kolesa."
+    },
+    {
+      "file": "E413.mp3",
+      "text": "Nadprúd motora pravého kolesa."
+    },
+    {
+      "file": "E414.mp3",
+      "text": "Motor pravého kolesa je zablokovaný."
+    },
+    {
+      "file": "E415.mp3",
+      "text": "Prerušenie fázového kábla motora pravého kolesa."
+    },
+    {
+      "file": "E416.mp3",
+      "text": "Skrat fázového kábla motora pravého kolesa."
+    },
+    {
+      "file": "E417.mp3",
+      "text": "Preťaženie motora pravého kolesa."
+    },
+    {
+      "file": "E418.mp3",
+      "text": "Chyba Hallovho senzora motora pravého kolesa."
+    },
+    {
+      "file": "E419.mp3",
+      "text": "Chyba teploty motora pravého kolesa."
+    },
+    {
+      "file": "E420.mp3",
+      "text": "Chyba zdvíhacieho motora."
+    },
+    {
+      "file": "E421.mp3",
+      "text": "Zdvíhací motor je zaseknutý."
+    },
+    {
+      "file": "E422.mp3",
+      "text": "Ochrana zdvíhacieho motora proti nadprúdu."
+    },
+    {
+      "file": "E423.mp3",
+      "text": "Ochrana zdvíhacieho motora proti zablokovaniu."
+    },
+    {
+      "file": "E424.mp3",
+      "text": "Prerušený obvod alebo skrat zdvíhacieho motora."
+    },
+    {
+      "file": "E430.mp3",
+      "text": "Chyba motora žacieho kotúča."
+    },
+    {
+      "file": "E431.mp3",
+      "text": "Motor žacieho kotúča je zaseknutý."
+    },
+    {
+      "file": "E432.mp3",
+      "text": "Ochrana motora žacieho kotúča proti zablokovaniu."
+    },
+    {
+      "file": "E433.mp3",
+      "text": "Prerušený obvod alebo skrat motora žacieho kotúča."
+    },
+    {
+      "file": "E434.mp3",
+      "text": "Inicializácia motora žacieho kotúča zlyhala."
+    },
+    {
+      "file": "E435.mp3",
+      "text": "Ochrana motora žacieho kotúča proti prepätiu."
+    },
+    {
+      "file": "E436.mp3",
+      "text": "Ochrana motora žacieho kotúča proti podpätiu."
+    },
+    {
+      "file": "E437.mp3",
+      "text": "Ochrana motora žacieho kotúča proti nadprúdu."
+    },
+    {
+      "file": "E440.mp3",
+      "text": "Chyba motora stierača."
+    },
+    {
+      "file": "E441.mp3",
+      "text": "Nadprúd motora predného stierača."
+    },
+    {
+      "file": "E442.mp3",
+      "text": "Skrat motora predného stierača."
+    },
+    {
+      "file": "E443.mp3",
+      "text": "Nadprúd motora bočného stierača."
+    },
+    {
+      "file": "E444.mp3",
+      "text": "Skrat motora bočného stierača."
+    },
+    {
+      "file": "E501.mp3",
+      "text": "Chyba batérie počas nabíjania."
+    },
+    {
+      "file": "E502.mp3",
+      "text": "Príliš vysoká teplota batérie. Riešenie nájdete v aplikácii."
+    },
+    {
+      "file": "E503.mp3",
+      "text": "Príliš nízka teplota batérie. Riešenie nájdete v aplikácii."
+    },
+    {
+      "file": "E504.mp3",
+      "text": "Ochrana batérie proti prepätiu."
+    },
+    {
+      "file": "E505.mp3",
+      "text": "Ochrana batérie proti podpätiu."
+    },
+    {
+      "file": "E506.mp3",
+      "text": "Ochrana batérie proti nadprúdu."
+    },
+    {
+      "file": "E507.mp3",
+      "text": "Ochrana batérie pri nabíjaní."
+    },
+    {
+      "file": "E601.mp3",
+      "text": "Ľavý predný objektív je znečistený. Čo najskôr ho vyčistite."
+    },
+    {
+      "file": "E602.mp3",
+      "text": "Pravý predný objektív je znečistený. Čo najskôr ho vyčistite."
+    },
+    {
+      "file": "E603.mp3",
+      "text": "Ľavý bočný objektív je znečistený. Čo najskôr ho vyčistite."
+    },
+    {
+      "file": "E604.mp3",
+      "text": "Pravý bočný objektív je znečistený. Čo najskôr ho vyčistite."
+    },
+    {
+      "file": "E605.mp3",
+      "text": "Chyba ľavého predného objektívu. Kontaktujte zákaznícku podporu."
+    },
+    {
+      "file": "E606.mp3",
+      "text": "Chyba pravého predného objektívu. Kontaktujte zákaznícku podporu."
+    },
+    {
+      "file": "E607.mp3",
+      "text": "Chyba ľavého bočného objektívu. Kontaktujte zákaznícku podporu."
+    },
+    {
+      "file": "E608.mp3",
+      "text": "Chyba pravého bočného objektívu. Kontaktujte zákaznícku podporu."
+    },
+    {
+      "file": "E700.mp3",
+      "text": "Na uvoľnenie ochrany núdzového zastavenia stlačte MOW a potom OK."
+    },
+    {
+      "file": "P001.mp3",
+      "text": "Párovanie Bluetooth bolo úspešné."
+    },
+    {
+      "file": "P002.mp3",
+      "text": "Párovanie sa začína."
+    },
+    {
+      "file": "P003.mp3",
+      "text": "Pripojenie k sieti bolo úspešné."
+    },
+    {
+      "file": "P004.mp3",
+      "text": "Párovanie bolo úspešné."
+    },
+    {
+      "file": "P005.mp3",
+      "text": "Pridané."
+    },
+    {
+      "file": "P006.mp3",
+      "text": "Párovanie bolo odstránené."
+    },
+    {
+      "file": "P007.mp3",
+      "text": "Vynútené odstránenie."
+    },
+    {
+      "file": "P008.mp3",
+      "text": "Párovanie LoRa bolo úspešné."
+    },
+    {
+      "file": "P009.mp3",
+      "text": "Párovanie LoRa zlyhalo. Zostaňte v blízkosti zariadenia a skúste to znova."
+    },
+    {
+      "file": "P010.mp3",
+      "text": "Bluetooth bolo odpojené."
+    },
+    {
+      "file": "P011.mp3",
+      "text": "Bluetooth bolo pripojené."
+    },
+    {
+      "file": "P012.mp3",
+      "text": "Wi-Fi bola odpojená."
+    },
+    {
+      "file": "P013.mp3",
+      "text": "Wi-Fi bola pripojená."
+    },
+    {
+      "file": "S001.mp3",
+      "text": "Robot opúšťa nabíjaciu stanicu. Skúste to znova neskôr."
+    },
+    {
+      "file": "S002.mp3",
+      "text": "Robot vchádza do nabíjacej stanice."
+    },
+    {
+      "file": "S003.mp3",
+      "text": "Robot dorazil blízko východiskového bodu."
+    },
+    {
+      "file": "S004.mp3",
+      "text": "Prebieha čistenie objektívu. Robot čoskoro začne kosiť."
+    },
+    {
+      "file": "S005.mp3",
+      "text": "Prebieha čistenie objektívu. Robot pôjde do určenej oblasti a začne kosiť."
+    },
+    {
+      "file": "S006.mp3",
+      "text": "Prebieha čistenie objektívu. Robot pôjde na určené miesto a začne kosiť."
+    },
+    {
+      "file": "S007.mp3",
+      "text": "Prebieha čistenie objektívu. Robot pôjde k určenej hranici a začne kosiť."
+    },
+    {
+      "file": "S008.mp3",
+      "text": "Nízka úroveň batérie. Robot sa pôjde dobiť."
+    },
+    {
+      "file": "S009.mp3",
+      "text": "Dobíjanie bolo dokončené. Robot bude pokračovať v práci."
+    },
+    {
+      "file": "S010.mp3",
+      "text": "Úloha bola dokončená. Robot sa pôjde dobiť."
+    },
+    {
+      "file": "S011.mp3",
+      "text": "Začína sa dobíjanie."
+    },
+    {
+      "file": "S012.mp3",
+      "text": "Prebieha nabíjanie."
+    },
+    {
+      "file": "S013.mp3",
+      "text": "Nabíjanie sa začína."
+    },
+    {
+      "file": "S014.mp3",
+      "text": "Režim stráženia je zapnutý."
+    },
+    {
+      "file": "S015.mp3",
+      "text": "Prebieha aktualizácia. Skúste to znova neskôr."
+    },
+    {
+      "file": "S016.mp3",
+      "text": "Začína sa obnovenie továrenských nastavení."
+    },
+    {
+      "file": "S017.mp3",
+      "text": "Úloha bola pozastavená."
+    },
+    {
+      "file": "S018.mp3",
+      "text": "Úloha pokračuje."
+    },
+    {
+      "file": "S019.mp3",
+      "text": "Prebieha čistenie objektívu. Skúste to znova neskôr."
+    },
+    {
+      "file": "S020.mp3",
+      "text": "Úloha dokončená."
+    },
+    {
+      "file": "S021.mp3",
+      "text": "Aktualizácia firmvéru bola úspešná."
+    },
+    {
+      "file": "S022.mp3",
+      "text": "Prebieha kalibrácia RTK. Skúste to znova neskôr."
+    },
+    {
+      "file": "S023.mp3",
+      "text": "Kalibrácia bola dokončená. Teraz môžete robota ovládať diaľkovo."
+    },
+    {
+      "file": "S024.mp3",
+      "text": "Robot ide do určenej oblasti."
+    },
+    {
+      "file": "S025.mp3",
+      "text": "Začína sa aktualizácia."
+    },
+    {
+      "file": "S026.mp3",
+      "text": "Inicializácia RTK zlyhala."
+    },
+    {
+      "file": "S027.mp3",
+      "text": "Kalibrácia bola dokončená. Začína sa mapovanie."
+    },
+    {
+      "file": "S028.mp3",
+      "text": "Kalibrácia zlyhala. Skontrolujte, či je pracovné prostredie zariadenia vhodné."
+    },
+    {
+      "file": "S029.mp3",
+      "text": "Výjazd z nabíjacej stanice zlyhal."
+    },
+    {
+      "file": "W001.mp3",
+      "text": "Začína sa bodové kosenie."
+    },
+    {
+      "file": "W002.mp3",
+      "text": "Hranica pre bodové kosenie bola dokončená. Potvrďte, či chcete začať kosiť."
+    },
+    {
+      "file": "W003.mp3",
+      "text": "Úloha dokončená."
+    },
+    {
+      "file": "W004.mp3",
+      "text": "Úloha sa začína."
+    },
+    {
+      "file": "W005.mp3",
+      "text": "Úloha prebieha."
+    },
+    {
+      "file": "W006.mp3",
+      "text": "Začína sa kosenie celej mapy."
+    },
+    {
+      "file": "W007.mp3",
+      "text": "Robot ide do určenej oblasti kosiť."
+    },
+    {
+      "file": "W008.mp3",
+      "text": "Začína sa dobíjanie."
+    },
+    {
+      "file": "W009.mp3",
+      "text": "Robot ide k nabíjacej stanici."
+    },
+    {
+      "file": "W010.mp3",
+      "text": "Nabíjanie."
+    },
+    {
+      "file": "W011.mp3",
+      "text": "Začína sa plánované kosenie."
+    },
+    {
+      "file": "W012.mp3",
+      "text": "Čas nerušiť. Spustite kosenie neskôr."
+    },
+    {
+      "file": "W013.mp3",
+      "text": "Začína sa kosenie v okolí nabíjacej stanice."
+    },
+    {
+      "file": "W014.mp3",
+      "text": "Režim diaľkového ovládania. Skúste to znova neskôr."
+    },
+    {
+      "file": "W015.mp3",
+      "text": "Začína sa diaľkové ovládanie."
+    },
+    {
+      "file": "W016.mp3",
+      "text": "Dobíjanie bolo dokončené."
+    },
+    {
+      "file": "W017.mp3",
+      "text": "Plánované kosenie zlyhalo. Skontrolujte podporné súbory."
+    }
+  ]
+}

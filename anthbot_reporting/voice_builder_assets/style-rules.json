@@ -1,0 +1,30 @@
+{
+  "schema_version": 2,
+  "builder_version": "0.1.0-alpha.7.20.11",
+  "global_rule": "For every eligible non-critical line, preserve the exact operational meaning but write the sentence from scratch. Do NOT start with the original/source sentence and then append a joke, sarcastic comment, flirtatious remark, emotion, or second sentence. Do NOT use the unchanged source clause as the first clause. Express the same mower event naturally through fresh wording that already embodies the selected personality. Avoid high lexical overlap with the source except for required technical terms, numbers, units, product names, button names, and words that have no natural substitute. The result must sound as if the character independently said the message without ever seeing the source wording. Critical E*.mp3 error lines remain exact and unchanged.",
+  "styles": {
+    "standard": {
+      "rule": "Keep the approved localized wording unchanged unless the selected delivery mode itself requires a text rewrite."
+    },
+    "funny": {
+      "rule": "Rewrite each eligible line from scratch as a genuinely funny, compact robot/lawn/garden line. The joke must be built into the new sentence itself; never quote or restate the original sentence and then add a punchline."
+    },
+    "wild_funny": {
+      "rule": "Rewrite each eligible line from scratch with stronger absurd, memorable robot humour. The operational meaning must stay obvious, but the sentence structure and wording should be clearly different from the source. Never use source + punchline construction."
+    },
+    "sarcastic": {
+      "rule": "Rewrite the whole eligible sentence from scratch in dry, sharp, clearly noticeable sarcasm. Convey the original mower event through a new sarcastic formulation. Never begin with the source wording and tack a sarcastic afterthought onto it; the sarcasm must be intrinsic to the complete new sentence."
+    },
+    "flirty": {
+      "rule": "Rewrite the whole eligible sentence from scratch in a tasteful, playful, adult-sensual/flirtatious voice. Use fresh phrasing, teasing rhythm or a short intimate turn where natural. Never keep the source sentence intact and merely append a flirtatious phrase."
+    },
+    "cute": {
+      "rule": "Rewrite the whole eligible sentence from scratch in a warm, cute, playful voice. Use fresh natural wording rather than preserving the source clause and attaching a cute comment."
+    }
+  },
+  "repair_policy": {
+    "max_rounds": 5,
+    "draft_alternatives": 3,
+    "keep_generated_candidate_if_qa_correction_breaks_freshness": true
+  }
+}

@@ -1,0 +1,819 @@
+{
+  "schema_version": 1,
+  "language": "Polski",
+  "language_code": "pl-PL",
+  "prompt_count": 201,
+  "source": "Translated from reviewed ANTHBOT English master prompt set",
+  "translation_status": "Nowe tłumaczenie z angielskiego mastera – przed wydaniem wymagana kontrola językowa",
+  "fixed_non_speech_files": [
+    "A001.mp3",
+    "A003.mp3",
+    "A030.mp3"
+  ],
+  "prompts": [
+    {
+      "file": "A004.mp3",
+      "text": "Jestem tutaj."
+    },
+    {
+      "file": "A005.mp3",
+      "text": "Witamy w obsłudze robota. Najpierw ustaw czterocyfrowy kod PIN dla robota."
+    },
+    {
+      "file": "A006.mp3",
+      "text": "Zostało aktywowane zatrzymanie awaryjne. Aby kontynuować zadanie, najpierw naciśnij przycisk MOW, a następnie przycisk OK."
+    },
+    {
+      "file": "A007.mp3",
+      "text": "Wprowadź kod PIN."
+    },
+    {
+      "file": "A008.mp3",
+      "text": "Niski poziom baterii. Spróbuj ponownie po pełnym naładowaniu robota."
+    },
+    {
+      "file": "A009.mp3",
+      "text": "Niski poziom baterii. Robot zostanie wyłączony. Naładuj go na czas."
+    },
+    {
+      "file": "A010.mp3",
+      "text": "Robot jest uniesiony w powietrzu. Uważaj, aby nie uszkodzić kamer urządzenia."
+    },
+    {
+      "file": "A011.mp3",
+      "text": "Robot został podniesiony. Połóż go na ziemi, aby go uruchomić."
+    },
+    {
+      "file": "A012.mp3",
+      "text": "Robot jest przechylony. Uważaj, aby nie uszkodzić kamer urządzenia."
+    },
+    {
+      "file": "A013.mp3",
+      "text": "Robot nie dotarł do wskazanego miejsca. Bieżące zadanie zostało zakończone. Naładuj robota."
+    },
+    {
+      "file": "A014.mp3",
+      "text": "Sygnał pozycjonowania jest słaby. Naładuj robota."
+    },
+    {
+      "file": "A015.mp3",
+      "text": "Pada deszcz. Naładuj robota."
+    },
+    {
+      "file": "A016.mp3",
+      "text": "Robot został przesunięty. Umieść go z powrotem w stacji ładującej."
+    },
+    {
+      "file": "A017.mp3",
+      "text": "Aktywny jest tryb ochrony przed deszczem. Spróbuj ponownie za trzy godziny lub wyłącz wykrywanie deszczu w aplikacji."
+    },
+    {
+      "file": "A018.mp3",
+      "text": "Trwa ponowne ustalanie pozycji. Utrzymuj robota wewnątrz mapy i w odległości większej niż 1,5 metra od granicy."
+    },
+    {
+      "file": "A019.mp3",
+      "text": "Wjechano do obszaru bezpieczeństwa."
+    },
+    {
+      "file": "A020.mp3",
+      "text": "Obiektyw jest zabrudzony."
+    },
+    {
+      "file": "A021.mp3",
+      "text": "Zderzak wrócił do normalnego stanu."
+    },
+    {
+      "file": "A022.mp3",
+      "text": "Uruchom robota na równym podłożu."
+    },
+    {
+      "file": "A023.mp3",
+      "text": "Przenieś urządzenie na otwartą przestrzeń, aby uruchomić tryb koszenia punktowego."
+    },
+    {
+      "file": "A024.mp3",
+      "text": "Robot nie może dotrzeć do wyznaczonego obszaru. Sprawdź, czy obszar jest dostępny."
+    },
+    {
+      "file": "A025.mp3",
+      "text": "Wyłączanie."
+    },
+    {
+      "file": "A026.mp3",
+      "text": "Sygnał GPS jest słaby. Spróbuj uruchomić robota ponownie, gdy sygnał będzie stabilny."
+    },
+    {
+      "file": "A027.mp3",
+      "text": "Po usunięciu błędu spróbuj uruchomić robota ponownie."
+    },
+    {
+      "file": "A028.mp3",
+      "text": "Praca w słabo oświetlonym otoczeniu nie jest obsługiwana."
+    },
+    {
+      "file": "A029.mp3",
+      "text": "Tarcza tnąca jest włączona. Zachowaj ostrożność."
+    },
+    {
+      "file": "A031.mp3",
+      "text": "Przenieś robota na otwartą przestrzeń w celu inicjalizacji, a następnie spróbuj ponownie."
+    },
+    {
+      "file": "C001.mp3",
+      "text": "Mapa została utworzona pomyślnie."
+    },
+    {
+      "file": "C002.mp3",
+      "text": "Mapowanie nie powiodło się. Spróbuj ponownie."
+    },
+    {
+      "file": "C003.mp3",
+      "text": "Tworzenie zakończone pomyślnie."
+    },
+    {
+      "file": "C004.mp3",
+      "text": "Tworzenie nie powiodło się."
+    },
+    {
+      "file": "C005.mp3",
+      "text": "Rozpoczyna się rozszerzanie mapy."
+    },
+    {
+      "file": "C006.mp3",
+      "text": "Rozszerzenie mapy zakończone pomyślnie."
+    },
+    {
+      "file": "C007.mp3",
+      "text": "Rozszerzenie mapy nie powiodło się."
+    },
+    {
+      "file": "C008.mp3",
+      "text": "Steruj robotem zdalnie, aby rozpocząć tworzenie mapy."
+    },
+    {
+      "file": "C009.mp3",
+      "text": "Trwa mapowanie. Spróbuj ponownie później."
+    },
+    {
+      "file": "C010.mp3",
+      "text": "Uruchamianie automatycznego trybu mapowania ACC. Tryb ten jest odpowiedni wyłącznie dla trawników z wyraźnymi granicami. Naciśnij przycisk OK, aby potwierdzić."
+    },
+    {
+      "file": "C011.mp3",
+      "text": "Rozpoczyna się automatyczne mapowanie ACC."
+    },
+    {
+      "file": "C012.mp3",
+      "text": "Umieść robota w stacji ładującej, a następnie go uruchom."
+    },
+    {
+      "file": "C013.mp3",
+      "text": "Obszar mapowania przekracza limit. Twórz mapy w określonym zakresie."
+    },
+    {
+      "file": "C014.mp3",
+      "text": "Baza RTK została przesunięta. Sprawdź rozwiązanie w aplikacji."
+    },
+    {
+      "file": "C015.mp3",
+      "text": "Rozpoczyna się tworzenie stref zakazanych."
+    },
+    {
+      "file": "C016.mp3",
+      "text": "Tworzenie strefy zakazanej nie powiodło się."
+    },
+    {
+      "file": "C017.mp3",
+      "text": "Przed rozpoczęciem mapowania uruchom robota ze stacji ładującej."
+    },
+    {
+      "file": "C018.mp3",
+      "text": "Przed rozszerzeniem mapy uruchom robota wewnątrz granicy mapy."
+    },
+    {
+      "file": "E001.mp3",
+      "text": "Rozpoczyna się ładowanie. Po pełnym naładowaniu robot wznowi pracę."
+    },
+    {
+      "file": "E002.mp3",
+      "text": "Powrót do ładowania nie powiódł się. Sprawdź rozwiązanie w aplikacji."
+    },
+    {
+      "file": "E003.mp3",
+      "text": "Błąd baterii. Sprawdź rozwiązanie w aplikacji."
+    },
+    {
+      "file": "E004.mp3",
+      "text": "Nie udało się wyczyścić obiektywu. Sprawdź rozwiązanie w aplikacji."
+    },
+    {
+      "file": "E005.mp3",
+      "text": "Błąd mapy. Sprawdź rozwiązanie w aplikacji."
+    },
+    {
+      "file": "E006.mp3",
+      "text": "Błąd czujnika. Sprawdź rozwiązanie w aplikacji."
+    },
+    {
+      "file": "E007.mp3",
+      "text": "Błąd zbyt wysokiej temperatury baterii. Sprawdź rozwiązanie w aplikacji."
+    },
+    {
+      "file": "E008.mp3",
+      "text": "Błąd zbyt niskiej temperatury baterii. Sprawdź rozwiązanie w aplikacji."
+    },
+    {
+      "file": "E009.mp3",
+      "text": "Błąd lewego tylnego koła. Sprawdź rozwiązanie w aplikacji."
+    },
+    {
+      "file": "E010.mp3",
+      "text": "Błąd prawego tylnego koła. Sprawdź rozwiązanie w aplikacji."
+    },
+    {
+      "file": "E011.mp3",
+      "text": "Błąd tarczy tnącej. Sprawdź rozwiązanie w aplikacji."
+    },
+    {
+      "file": "E012.mp3",
+      "text": "Robot utknął. Pomóż go uwolnić."
+    },
+    {
+      "file": "E013.mp3",
+      "text": "Nie wykryto stacji ładującej. Użyj aplikacji, aby pomóc robotowi wrócić do ładowania."
+    },
+    {
+      "file": "E014.mp3",
+      "text": "Błąd zderzaka. Sprawdź rozwiązanie w aplikacji."
+    },
+    {
+      "file": "E015.mp3",
+      "text": "Aktualizacja oprogramowania sprzętowego nie powiodła się. Spróbuj ponownie później."
+    },
+    {
+      "file": "E016.mp3",
+      "text": "Robot jest uniesiony w powietrzu. Sprawdź, czy robot nie jest zakleszczony."
+    },
+    {
+      "file": "E017.mp3",
+      "text": "Ponowne ustalanie pozycji nie powiodło się. Utrzymuj robota wewnątrz mapy i w odległości większej niż 1,5 metra od granicy, a następnie spróbuj ponownie."
+    },
+    {
+      "file": "E018.mp3",
+      "text": "Sygnał pozycjonowania jest słaby. Robot nie może teraz się poruszać. Sprawdź rozwiązanie w aplikacji."
+    },
+    {
+      "file": "E019.mp3",
+      "text": "Błąd pozycjonowania. Upewnij się, że urządzenie znajduje się w zasięgu sygnału."
+    },
+    {
+      "file": "E020.mp3",
+      "text": "Błąd czujnika zderzaka. Sprawdź, czy czujnik zderzaka nie jest zablokowany."
+    },
+    {
+      "file": "E021.mp3",
+      "text": "Błąd przedniego koła. Sprawdź przednie koło."
+    },
+    {
+      "file": "E022.mp3",
+      "text": "Błąd czujnika deszczu. Skontaktuj się z obsługą klienta."
+    },
+    {
+      "file": "E023.mp3",
+      "text": "Urządzenie utknęło. Pomóż je uwolnić."
+    },
+    {
+      "file": "E024.mp3",
+      "text": "Błąd komunikacji. Skontaktuj się z obsługą klienta."
+    },
+    {
+      "file": "E025.mp3",
+      "text": "Urządzenie wjechało do strefy zakazanej. Jak najszybciej je stamtąd przesuń."
+    },
+    {
+      "file": "E026.mp3",
+      "text": "Urządzenie znajduje się poza granicą. Przenieś je do obszaru roboczego."
+    },
+    {
+      "file": "E101.mp3",
+      "text": "Błąd RTK."
+    },
+    {
+      "file": "E102.mp3",
+      "text": "Błąd komunikacji. Skontaktuj się z obsługą klienta."
+    },
+    {
+      "file": "E103.mp3",
+      "text": "Inicjalizacja RTK nie powiodła się."
+    },
+    {
+      "file": "E104.mp3",
+      "text": "LoRa nie jest sparowana. Przed użyciem sparuj ją zgodnie z instrukcją obsługi."
+    },
+    {
+      "file": "E105.mp3",
+      "text": "Błąd inicjalizacji płyty głównej."
+    },
+    {
+      "file": "E201.mp3",
+      "text": "Czujnik zderzaka jest zablokowany."
+    },
+    {
+      "file": "E202.mp3",
+      "text": "Błąd danych IMU."
+    },
+    {
+      "file": "E203.mp3",
+      "text": "Błąd czujnika deszczu."
+    },
+    {
+      "file": "E204.mp3",
+      "text": "Urządzenie jest uniesione w powietrzu."
+    },
+    {
+      "file": "E205.mp3",
+      "text": "Ostrza odpadły. Sprawdź, czy ostrza są prawidłowo zamontowane."
+    },
+    {
+      "file": "E301.mp3",
+      "text": "Powrót do ładowania nie powiódł się."
+    },
+    {
+      "file": "E302.mp3",
+      "text": "Maszyna utknęła."
+    },
+    {
+      "file": "E303.mp3",
+      "text": "Robot został uruchomiony na pochyłości. Umieść go na równym podłożu i spróbuj ponownie."
+    },
+    {
+      "file": "E304.mp3",
+      "text": "Ponowne ustalanie pozycji nie powiodło się."
+    },
+    {
+      "file": "E305.mp3",
+      "text": "Błąd pozycjonowania. Upewnij się, że urządzenie znajduje się w zasięgu sygnału."
+    },
+    {
+      "file": "E306.mp3",
+      "text": "Urządzenie znajduje się poza granicą. Przenieś je do obszaru roboczego, a następnie spróbuj ponownie."
+    },
+    {
+      "file": "E307.mp3",
+      "text": "Mapowanie nie powiodło się. Spróbuj ponownie."
+    },
+    {
+      "file": "E400.mp3",
+      "text": "Błąd lewego koła."
+    },
+    {
+      "file": "E401.mp3",
+      "text": "Przepięcie silnika lewego koła."
+    },
+    {
+      "file": "E402.mp3",
+      "text": "Zbyt niskie napięcie silnika lewego koła."
+    },
+    {
+      "file": "E403.mp3",
+      "text": "Przeciążenie prądowe silnika lewego koła."
+    },
+    {
+      "file": "E404.mp3",
+      "text": "Silnik lewego koła jest zablokowany."
+    },
+    {
+      "file": "E405.mp3",
+      "text": "Przerwanie przewodu fazowego silnika lewego koła."
+    },
+    {
+      "file": "E406.mp3",
+      "text": "Zwarcie przewodu fazowego silnika lewego koła."
+    },
+    {
+      "file": "E407.mp3",
+      "text": "Przeciążenie silnika lewego koła."
+    },
+    {
+      "file": "E408.mp3",
+      "text": "Błąd czujnika Halla silnika lewego koła."
+    },
+    {
+      "file": "E409.mp3",
+      "text": "Błąd temperatury silnika lewego koła."
+    },
+    {
+      "file": "E410.mp3",
+      "text": "Błąd prawego koła."
+    },
+    {
+      "file": "E411.mp3",
+      "text": "Przepięcie silnika prawego koła."
+    },
+    {
+      "file": "E412.mp3",
+      "text": "Zbyt niskie napięcie silnika prawego koła."
+    },
+    {
+      "file": "E413.mp3",
+      "text": "Przeciążenie prądowe silnika prawego koła."
+    },
+    {
+      "file": "E414.mp3",
+      "text": "Silnik prawego koła jest zablokowany."
+    },
+    {
+      "file": "E415.mp3",
+      "text": "Przerwanie przewodu fazowego silnika prawego koła."
+    },
+    {
+      "file": "E416.mp3",
+      "text": "Zwarcie przewodu fazowego silnika prawego koła."
+    },
+    {
+      "file": "E417.mp3",
+      "text": "Przeciążenie silnika prawego koła."
+    },
+    {
+      "file": "E418.mp3",
+      "text": "Błąd czujnika Halla silnika prawego koła."
+    },
+    {
+      "file": "E419.mp3",
+      "text": "Błąd temperatury silnika prawego koła."
+    },
+    {
+      "file": "E420.mp3",
+      "text": "Błąd silnika podnoszenia."
+    },
+    {
+      "file": "E421.mp3",
+      "text": "Silnik podnoszenia jest zablokowany."
+    },
+    {
+      "file": "E422.mp3",
+      "text": "Zabezpieczenie silnika podnoszenia przed przeciążeniem prądowym."
+    },
+    {
+      "file": "E423.mp3",
+      "text": "Zabezpieczenie silnika podnoszenia przed zablokowaniem."
+    },
+    {
+      "file": "E424.mp3",
+      "text": "Przerwa w obwodzie lub zwarcie silnika podnoszenia."
+    },
+    {
+      "file": "E430.mp3",
+      "text": "Błąd silnika tarczy tnącej."
+    },
+    {
+      "file": "E431.mp3",
+      "text": "Silnik tarczy tnącej jest zablokowany."
+    },
+    {
+      "file": "E432.mp3",
+      "text": "Zabezpieczenie silnika tarczy tnącej przed zablokowaniem."
+    },
+    {
+      "file": "E433.mp3",
+      "text": "Przerwa w obwodzie lub zwarcie silnika tarczy tnącej."
+    },
+    {
+      "file": "E434.mp3",
+      "text": "Inicjalizacja silnika tarczy tnącej nie powiodła się."
+    },
+    {
+      "file": "E435.mp3",
+      "text": "Zabezpieczenie silnika tarczy tnącej przed przepięciem."
+    },
+    {
+      "file": "E436.mp3",
+      "text": "Zabezpieczenie silnika tarczy tnącej przed zbyt niskim napięciem."
+    },
+    {
+      "file": "E437.mp3",
+      "text": "Zabezpieczenie silnika tarczy tnącej przed przeciążeniem prądowym."
+    },
+    {
+      "file": "E440.mp3",
+      "text": "Błąd silnika wycieraczki."
+    },
+    {
+      "file": "E441.mp3",
+      "text": "Przeciążenie prądowe silnika przedniej wycieraczki."
+    },
+    {
+      "file": "E442.mp3",
+      "text": "Zwarcie silnika przedniej wycieraczki."
+    },
+    {
+      "file": "E443.mp3",
+      "text": "Przeciążenie prądowe silnika bocznej wycieraczki."
+    },
+    {
+      "file": "E444.mp3",
+      "text": "Zwarcie silnika bocznej wycieraczki."
+    },
+    {
+      "file": "E501.mp3",
+      "text": "Błąd baterii podczas ładowania."
+    },
+    {
+      "file": "E502.mp3",
+      "text": "Zbyt wysoka temperatura baterii. Sprawdź rozwiązanie w aplikacji."
+    },
+    {
+      "file": "E503.mp3",
+      "text": "Zbyt niska temperatura baterii. Sprawdź rozwiązanie w aplikacji."
+    },
+    {
+      "file": "E504.mp3",
+      "text": "Zabezpieczenie baterii przed przepięciem."
+    },
+    {
+      "file": "E505.mp3",
+      "text": "Zabezpieczenie baterii przed zbyt niskim napięciem."
+    },
+    {
+      "file": "E506.mp3",
+      "text": "Zabezpieczenie baterii przed przeciążeniem prądowym."
+    },
+    {
+      "file": "E507.mp3",
+      "text": "Zabezpieczenie baterii podczas ładowania."
+    },
+    {
+      "file": "E601.mp3",
+      "text": "Lewy przedni obiektyw jest zabrudzony. Wyczyść go jak najszybciej."
+    },
+    {
+      "file": "E602.mp3",
+      "text": "Prawy przedni obiektyw jest zabrudzony. Wyczyść go jak najszybciej."
+    },
+    {
+      "file": "E603.mp3",
+      "text": "Lewy boczny obiektyw jest zabrudzony. Wyczyść go jak najszybciej."
+    },
+    {
+      "file": "E604.mp3",
+      "text": "Prawy boczny obiektyw jest zabrudzony. Wyczyść go jak najszybciej."
+    },
+    {
+      "file": "E605.mp3",
+      "text": "Błąd lewego przedniego obiektywu. Skontaktuj się z obsługą klienta."
+    },
+    {
+      "file": "E606.mp3",
+      "text": "Błąd prawego przedniego obiektywu. Skontaktuj się z obsługą klienta."
+    },
+    {
+      "file": "E607.mp3",
+      "text": "Błąd lewego bocznego obiektywu. Skontaktuj się z obsługą klienta."
+    },
+    {
+      "file": "E608.mp3",
+      "text": "Błąd prawego bocznego obiektywu. Skontaktuj się z obsługą klienta."
+    },
+    {
+      "file": "E700.mp3",
+      "text": "Aby zwolnić zabezpieczenie zatrzymania awaryjnego, naciśnij MOW, a następnie OK."
+    },
+    {
+      "file": "P001.mp3",
+      "text": "Parowanie Bluetooth zakończone pomyślnie."
+    },
+    {
+      "file": "P002.mp3",
+      "text": "Rozpoczyna się parowanie."
+    },
+    {
+      "file": "P003.mp3",
+      "text": "Połączenie z siecią zakończone pomyślnie."
+    },
+    {
+      "file": "P004.mp3",
+      "text": "Parowanie zakończone pomyślnie."
+    },
+    {
+      "file": "P005.mp3",
+      "text": "Dodano."
+    },
+    {
+      "file": "P006.mp3",
+      "text": "Parowanie zostało usunięte."
+    },
+    {
+      "file": "P007.mp3",
+      "text": "Wymuszone usunięcie."
+    },
+    {
+      "file": "P008.mp3",
+      "text": "Parowanie LoRa zakończone pomyślnie."
+    },
+    {
+      "file": "P009.mp3",
+      "text": "Parowanie LoRa nie powiodło się. Pozostań blisko urządzenia i spróbuj ponownie."
+    },
+    {
+      "file": "P010.mp3",
+      "text": "Bluetooth rozłączony."
+    },
+    {
+      "file": "P011.mp3",
+      "text": "Bluetooth połączony."
+    },
+    {
+      "file": "P012.mp3",
+      "text": "Wi-Fi rozłączone."
+    },
+    {
+      "file": "P013.mp3",
+      "text": "Wi-Fi połączone."
+    },
+    {
+      "file": "S001.mp3",
+      "text": "Robot opuszcza stację ładującą. Spróbuj ponownie później."
+    },
+    {
+      "file": "S002.mp3",
+      "text": "Robot wjeżdża do stacji ładującej."
+    },
+    {
+      "file": "S003.mp3",
+      "text": "Robot dotarł w pobliże punktu startowego."
+    },
+    {
+      "file": "S004.mp3",
+      "text": "Trwa czyszczenie obiektywu. Robot wkrótce rozpocznie koszenie."
+    },
+    {
+      "file": "S005.mp3",
+      "text": "Trwa czyszczenie obiektywu. Robot pojedzie do wyznaczonego obszaru i rozpocznie koszenie."
+    },
+    {
+      "file": "S006.mp3",
+      "text": "Trwa czyszczenie obiektywu. Robot pojedzie do wyznaczonego miejsca i rozpocznie koszenie."
+    },
+    {
+      "file": "S007.mp3",
+      "text": "Trwa czyszczenie obiektywu. Robot pojedzie do wyznaczonej granicy i rozpocznie koszenie."
+    },
+    {
+      "file": "S008.mp3",
+      "text": "Niski poziom baterii. Robot pojedzie do stacji ładującej."
+    },
+    {
+      "file": "S009.mp3",
+      "text": "Ładowanie zakończone. Robot będzie kontynuował pracę."
+    },
+    {
+      "file": "S010.mp3",
+      "text": "Zadanie zakończone. Robot pojedzie do stacji ładującej."
+    },
+    {
+      "file": "S011.mp3",
+      "text": "Rozpoczyna się powrót do ładowania."
+    },
+    {
+      "file": "S012.mp3",
+      "text": "Trwa ładowanie."
+    },
+    {
+      "file": "S013.mp3",
+      "text": "Rozpoczyna się ładowanie."
+    },
+    {
+      "file": "S014.mp3",
+      "text": "Tryb dozoru jest włączony."
+    },
+    {
+      "file": "S015.mp3",
+      "text": "Trwa aktualizacja. Spróbuj ponownie później."
+    },
+    {
+      "file": "S016.mp3",
+      "text": "Rozpoczyna się przywracanie ustawień fabrycznych."
+    },
+    {
+      "file": "S017.mp3",
+      "text": "Zadanie wstrzymane."
+    },
+    {
+      "file": "S018.mp3",
+      "text": "Zadanie jest wznawiane."
+    },
+    {
+      "file": "S019.mp3",
+      "text": "Trwa czyszczenie obiektywu. Spróbuj ponownie później."
+    },
+    {
+      "file": "S020.mp3",
+      "text": "Zadanie zakończone."
+    },
+    {
+      "file": "S021.mp3",
+      "text": "Aktualizacja oprogramowania sprzętowego zakończona pomyślnie."
+    },
+    {
+      "file": "S022.mp3",
+      "text": "Trwa kalibracja RTK. Spróbuj ponownie później."
+    },
+    {
+      "file": "S023.mp3",
+      "text": "Kalibracja zakończona. Możesz teraz sterować robotem zdalnie."
+    },
+    {
+      "file": "S024.mp3",
+      "text": "Robot jedzie do wyznaczonego obszaru."
+    },
+    {
+      "file": "S025.mp3",
+      "text": "Rozpoczyna się aktualizacja."
+    },
+    {
+      "file": "S026.mp3",
+      "text": "Inicjalizacja RTK nie powiodła się."
+    },
+    {
+      "file": "S027.mp3",
+      "text": "Kalibracja zakończona. Rozpoczyna się mapowanie."
+    },
+    {
+      "file": "S028.mp3",
+      "text": "Kalibracja nie powiodła się. Sprawdź, czy środowisko pracy urządzenia jest odpowiednie."
+    },
+    {
+      "file": "S029.mp3",
+      "text": "Wyjazd ze stacji ładującej nie powiódł się."
+    },
+    {
+      "file": "W001.mp3",
+      "text": "Rozpoczyna się koszenie punktowe."
+    },
+    {
+      "file": "W002.mp3",
+      "text": "Granica koszenia punktowego została utworzona. Potwierdź, czy rozpocząć koszenie."
+    },
+    {
+      "file": "W003.mp3",
+      "text": "Zadanie zakończone."
+    },
+    {
+      "file": "W004.mp3",
+      "text": "Zadanie rozpoczyna się."
+    },
+    {
+      "file": "W005.mp3",
+      "text": "Zadanie w toku."
+    },
+    {
+      "file": "W006.mp3",
+      "text": "Rozpoczyna się koszenie całej mapy."
+    },
+    {
+      "file": "W007.mp3",
+      "text": "Robot jedzie do wyznaczonego obszaru, aby kosić."
+    },
+    {
+      "file": "W008.mp3",
+      "text": "Rozpoczyna się powrót do ładowania."
+    },
+    {
+      "file": "W009.mp3",
+      "text": "Robot jedzie do stacji ładującej."
+    },
+    {
+      "file": "W010.mp3",
+      "text": "Ładowanie."
+    },
+    {
+      "file": "W011.mp3",
+      "text": "Rozpoczyna się zaplanowane koszenie."
+    },
+    {
+      "file": "W012.mp3",
+      "text": "Czas trybu Nie przeszkadzać. Rozpocznij koszenie później."
+    },
+    {
+      "file": "W013.mp3",
+      "text": "Rozpoczyna się koszenie w pobliżu stacji ładującej."
+    },
+    {
+      "file": "W014.mp3",
+      "text": "Tryb zdalnego sterowania. Spróbuj ponownie później."
+    },
+    {
+      "file": "W015.mp3",
+      "text": "Rozpoczyna się zdalne sterowanie."
+    },
+    {
+      "file": "W016.mp3",
+      "text": "Ładowanie zakończone."
+    },
+    {
+      "file": "W017.mp3",
+      "text": "Zaplanowane koszenie nie powiodło się. Sprawdź pliki pomocy."
+    }
+  ]
+}
