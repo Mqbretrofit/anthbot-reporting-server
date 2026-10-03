@@ -236,6 +236,12 @@ def jobs():
         return [public_job(r) for r in c.execute('SELECT * FROM jobs ORDER BY created DESC LIMIT 100')]
 
 
+def pending_work():
+    with db() as c:
+        return c.execute("""SELECT 1 FROM jobs WHERE status IN ('queued','running') OR
+            (status='completed' AND mode='build' AND published='' AND error='') LIMIT 1""").fetchone() is not None
+
+
 def create_jobs(specs, mode, credit_limit):
     batch = secrets.token_hex(16)
     ids = []

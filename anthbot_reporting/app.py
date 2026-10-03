@@ -163,8 +163,8 @@ def _init_db() -> None:
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     _init_db()
-    from voice_builder_state import jobs, launch_worker
-    if any(j['status'] in ('running', 'queued') for j in jobs()):
+    from voice_builder_state import pending_work, launch_worker
+    if pending_work():
         launch_worker()
     yield
 

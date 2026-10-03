@@ -25,11 +25,17 @@ add-on recovers interrupted jobs and reuses finished audio.
    reuses the preview TTS cache. Generated output is validated as MP3,
    16 kHz, mono, 32 kbit/s. The three original non-speech assets A001/A003/A030
    remain byte-identical; their original bitrate is preserved.
-4. Download the complete TAR.GZ, technical manifest and public catalog, or
-   upload it using the existing community pack/version allocation path.
-   Newly created packs start hidden. Review the two samples and set price and
+4. Successful full builds automatically upload to Hangbolt through the existing
+   community pack/version allocation path, even after the browser closes.
+   Previews are not uploaded. Download the complete TAR.GZ, technical manifest
+   and public catalog at any time after completion. Newly created packs start
+   hidden. Review the two samples and set price and
    visibility in **Hangbolt**. Republish of the same identity preserves its
    price, visibility and existing access rules.
+   If upload fails, the completed pack stays downloadable and the UI offers
+   **Feltöltés újrapróbálása**; no new speech generation is needed. Restarting the
+   add-on recovers completed, unuploaded builds whose upload has not failed.
+   Automatic and manual retries use the same idempotent publisher.
 5. Pause stops at a checkpoint after the current provider request finishes.
    Resume uses completed output and cache. A failed job can be resumed after
    correcting its credentials or batch credit limit. To switch TTS models,
@@ -59,6 +65,20 @@ settings. The 104 other lines can be rewritten; unchanged or source-plus-joke
 outputs are rejected and repaired. Text chunks survive interrupted translation.
 The rule editor changes future text generation and invalidates affected style
 cache. A started job's saved script remains stable.
+Translation and style caches are shared across voices and character effects
+for the same locale, translation model, text style, delivery and rules. Resume
+keeps valid finished MP3s and generates only missing audio; upload retries run
+only publishing. The log explicitly identifies reused scripts and text chunks,
+instead of displaying cached chunks as new text processing.
+Paid text/TTS calls also persist a request intent before sending and save their
+responses before further processing. Timeouts, server errors and interrupted
+calls with unknown outcomes are never sent again on automatic retry or resume:
+the job stops for provider-side checking or result import. Explicit rejection
+responses allow correction and retry; only HTTP 429 is retried automatically.
+This prevents the builder from blindly paying for the same uncertain request
+twice; it cannot control the provider's accounting or retrieve a lost response
+without provider support. Preserve the entire state directory, including
+`paid-requests` and `paid-text-results`, when backing up or upgrading.
 
 ## Bring existing work across
 

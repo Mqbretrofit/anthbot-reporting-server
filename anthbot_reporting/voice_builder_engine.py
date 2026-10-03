@@ -116,6 +116,42 @@ def request(url, payload=None, headers=None, *, json_result=False):
     return result
 
 
+def paid_once(identity, fetch, response_path, *, binary=False, native=False, before_send=None):
+    """Persist intent before billing, and result before processing it.
+
+    An interrupted/ambiguous request is never issued again automatically or on
+    resume. Only explicit rejection responses may clear the intent for retry.
+    """
+    key = state.digest(identity)
+    marker = state.root() / 'paid-requests' / (key + '.json')
+    with state.locked('paid-' + key + '.lock'):
+        if response_path.exists():
+            if binary:
+                meta = response_path.with_suffix('.json')
+                saved_native = json.loads(meta.read_text()).get('native',native) if meta.exists() else native
+                return response_path.read_bytes(), saved_native
+            return json.loads(response_path.read_text())
+        if marker.exists():
+            raise RuntimeError('Egy korábbi fizetős API-kérés eredménye nem ismert. A dupla terhelés elkerülésére nem küldjük újra; ellenőrizd a szolgáltatónál vagy importáld a kész eredményt.')
+        if before_send:
+            before_send()
+        state.atomic(marker, state.canonical({'request_hash':key,'state':'sent_or_pending'}).encode())
+        try:
+            result = fetch()
+        except ProviderError as err:
+            if err.status in (400,401,403,404,405,413,415,422,429):
+                marker.unlink(missing_ok=True)
+                raise
+            raise RuntimeError('A fizetős API-kérés kimenetele bizonytalan. A dupla terhelés elkerülésére nem ismételjük meg; a kész fájlok megmaradtak.') from None
+        if binary:
+            data, saved_native = result
+            state.atomic(response_path, data)
+            state.atomic(response_path.with_suffix('.json'), state.canonical({'native':saved_native}).encode())
+        else:
+            state.atomic(response_path, state.canonical(result).encode())
+        return result
+
+
 def probe(path):
     try:
         if not path.exists() or path.stat().st_size < 500:
@@ -213,18 +249,21 @@ def chat_rows(rows, instruction, spec, keys, jid):
     for offset in range(0, len(rows), 20):
         check(jid)
         group = rows[offset:offset + 20]
-        state.log(jid, 'Szövegfeldolgozás: %s–%s / %s' % (offset + 1, min(offset + 20, len(rows)), len(rows)))
         chunk_path = state.root() / 'text-chunks' / (state.digest({'rows':group,'instruction':instruction,'model':spec.translation_model}) + '.json')
         if chunk_path.exists():
             result.extend(json.loads(chunk_path.read_text()))
+            state.log(jid, 'Kész szövegrész újrahasználva: %s–%s / %s; nincs új szövegkérés.' %
+                      (offset + 1, min(offset + 20, len(rows)), len(rows)))
             continue
-        answer = request('https://api.openai.com/v1/chat/completions',
+        state.log(jid, 'Szövegfeldolgozás: %s–%s / %s' % (offset + 1, min(offset + 20, len(rows)), len(rows)))
+        answer = paid_once({'purpose':'text','chunk':chunk_path.stem}, lambda: request('https://api.openai.com/v1/chat/completions',
                          {'model': spec.translation_model, 'response_format': {'type': 'json_object'},
                           'messages': [{'role': 'system', 'content': instruction +
                             '\nReturn only JSON {"prompts":[{"file":"original filename","text":"result"}]}. '
                             'Keep filenames, exact row count and all numbers, units, button names and required actions.'},
                             {'role': 'user', 'content': state.canonical({'prompts': group})}]},
-                         {'Authorization': 'Bearer ' + keys['openai_key']}, json_result=True)
+                         {'Authorization': 'Bearer ' + keys['openai_key']}, json_result=True),
+                         state.root()/'paid-text-results'/(chunk_path.stem+'.json'))
         try:
             data = json.loads(answer['choices'][0]['message']['content'])['prompts']
         except (KeyError, IndexError, ValueError, TypeError):
@@ -241,6 +280,7 @@ def chat_rows(rows, instruction, spec, keys, jid):
 def load_prompts(spec, keys, jid, *, before_ai=None):
     jobpath = state.job_dir(jid) / 'prompts.json'
     if jobpath.exists():
+        state.log(jid, 'A feladat kész szövegkönyvét használjuk; nincs új fordítás vagy stilizálás.')
         return validate_prompts(json.loads(jobpath.read_text()))
     migrated = state.root() / 'migrated-prompts' / (spec.locale+'_'+spec.text_style+'_'+spec.delivery+'.json')
     if migrated.exists():
@@ -584,19 +624,26 @@ def run_job(job):
             native = json.loads(native_path.read_text()).get('native', False) if native_path.exists() else spec.provider != 'ha_cloud'
             state.log(jid, name + ': TTS-cache használata.')
         else:
+            required = {'elevenlabs':'elevenlabs_key','openai':'openai_key',
+                        'fish_audio':'fish_audio_key','ha_cloud':'ha_token'}[spec.provider]
+            if not keys.get(required):
+                raise RuntimeError('Hiányzik a kiválasztott TTS-szolgáltató API-kulcsa vagy tokenje')
             for attempt in range(3):
                 check(jid)
-                if spec.provider == 'elevenlabs':
-                    rates = json.loads((directory/'rates.json').read_text())
-                    cost = len(sig['text']) * rates.get(sig['model_id'], 1)
-                    state.reserve(job['batch_id'], cost)
+                def reserve_audio():
+                    if spec.provider == 'elevenlabs':
+                        rates = json.loads((directory/'rates.json').read_text())
+                        cost = len(sig['text']) * rates.get(sig['model_id'], 1)
+                        state.reserve(job['batch_id'], cost)
                 try:
-                    data, native = audio_request(sig, keys)
+                    data, native = paid_once({'purpose':'tts','signature':sig},
+                        lambda: audio_request(sig, keys), raw, binary=True,
+                        native=spec.provider != 'ha_cloud', before_send=reserve_audio)
                     break
                 except ProviderError as e:
-                    # Only explicit non-success HTTP responses are retryable;
-                    # timeout after an accepted request could otherwise bill twice.
-                    if e.status not in (429,500,502,503,504) or attempt == 2:
+                    # Only an explicit rate-limit rejection is retried. Server
+                    # errors/timeouts may have been billed and remain journaled.
+                    if e.status != 429 or attempt == 2:
                         raise
                     state.log(jid, name + ': átmeneti szolgáltatói hiba, újrapróbálás.')
                     time.sleep(attempt + 1)
