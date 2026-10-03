@@ -116,6 +116,7 @@ def jobs():
 @router.post(PREFIX + '/jobs', status_code=201)
 def start(payload: Start):
     specs = list({state.digest(s.model_dump()):s for s in payload.selections}.values())
+    specs = [s.model_copy(update={'voice_display_name': engine.alias(s)}) if not s.voice_display_name.strip() else s for s in specs]
     ids = state.create_jobs(specs, 'build' if payload.mode == 'import' else payload.mode, payload.credit_limit)
     if payload.mode == 'import':
         for jid in ids:

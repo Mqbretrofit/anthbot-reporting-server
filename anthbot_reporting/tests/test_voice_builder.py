@@ -97,6 +97,16 @@ class VoiceBuilderTests(unittest.TestCase):
         self.client.post('/dashboard/login',data={'token':'test-admin'})
         self.assertIn('Voice Builder',self.client.get('/dashboard').text)
 
+    def test_batch_jobs_receive_distinct_stable_local_voice_names(self):
+        body={'selections':[self.spec.model_dump(),self.spec.model_copy(update={'voice_id':'onyx'}).model_dump()]}
+        first=self.api('/jobs','POST',json=body).json()['items']
+        second=self.api('/jobs','POST',json=body).json()['items']
+        names=[x['spec']['voice_display_name'] for x in first]
+        self.assertEqual(len(set(names)),2)
+        self.assertEqual(names,[x['spec']['voice_display_name'] for x in second])
+        self.assertNotIn('coral',names)
+        self.assertNotIn('onyx',names)
+
     def test_secrets_are_encrypted_not_returned_and_survive_settings_changes(self):
         secret='sk-test-private-value'
         r=self.api('/settings','PUT',json={'selections':[self.spec.model_dump()],
