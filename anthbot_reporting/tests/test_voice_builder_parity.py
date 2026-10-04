@@ -111,6 +111,83 @@ class VoiceParityTests(unittest.TestCase):
         self.assertEqual(r.status_code,409)
         self.assertEqual(core._uploaded_voice_pack_registry()['packs'],[])
 
+    def test_unpublished_legacy_completion_offers_review_backs_up_and_uploads_only_one_changed_audio(self):
+        spec=self.spec.model_copy(update={'text_style':'funny'})
+        job=self.job(spec)
+        with patch.object(engine,'request',side_effect=self.answer):
+            self.run_fast(job)
+        directory=state.job_dir(job['id'])
+        base=state.load_asset('prompts/hu-HU.json')
+        old={**base,'prompts':[{**p,'text':p['text'] if text.critical(p['file']) else 'Korábbi kerti móka '+p['file']} for p in base['prompts']]}
+        state.atomic(directory/'prompts.json',state.canonical(old).encode())
+        (directory/'text-approval.json').unlink()
+        manifest=json.loads((directory/'manifest.json').read_text())
+        manifest.update(schema_version=1,prompt_sha256=state.digest(old));manifest.pop('text_verification',None)
+        state.atomic(directory/'manifest.json',state.canonical(manifest).encode())
+        original_pack=(directory/'pack.tar.gz').read_bytes()
+        unchanged=(directory/'audio/A005.mp3').read_bytes()
+        with patch.object(engine,'request',side_effect=AssertionError('Listing charged')),\
+             patch.object(worker,'run_job',side_effect=AssertionError('Upload retried generation')),patch.object(worker.time,'sleep'):
+            worker.main()
+            listed=self.api('/jobs').json()['items'][0]
+            self.assertEqual(listed['upload_recovery']['action'],'review')
+            self.assertIn('szövegellenőrzés',listed['error'])
+            self.assertEqual(self.api('/reviews').json()['items'][0]['job_id'],job['id'])
+            self.assertEqual(self.api('/jobs/'+job['id']+'/publish','POST').status_code,409)
+        self.assertEqual(core._uploaded_voice_pack_registry()['packs'],[])
+        self.assertEqual(self.api('/jobs/'+job['id']+'/review','POST').status_code,200)
+        def qa(url,payload=None,headers=None,**kw):
+            self.assertIn('QA editor',payload['input'])
+            result=self.answer(url,payload,headers,**kw)
+            parsed=json.loads(result['output'][0]['content'][0]['text'])
+            for p in parsed['prompts']:
+                if p['file']=='A004.mp3':
+                    p['corrected_text']='Kijavított kerti móka A004'
+            result['output'][0]['content'][0]['text']=json.dumps(parsed)
+            return result
+        with patch.object(engine,'request',side_effect=qa) as requests,patch.object(engine,'probe',side_effect=self.probe),\
+             patch.object(engine,'normalize',side_effect=self.normalize),\
+             patch.object(state,'credentials',return_value={'openai_key':'fake'}),\
+             patch.object(engine,'audio_request',return_value=(self.audio+b'\0'*100,True)) as audio,patch.object(worker.time,'sleep'):
+            worker.main()
+            self.assertEqual(requests.call_count,1)
+            self.assertEqual(audio.call_count,1)
+            # Retrying the finished repair and upload cannot replay paid work.
+            self.assertEqual(self.api('/jobs/'+job['id']+'/review','POST').status_code,200)
+            worker.main()
+            self.assertEqual(requests.call_count,1)
+            self.assertEqual(audio.call_count,1)
+        self.assertEqual((directory/'audio/A005.mp3').read_bytes(),unchanged)
+        self.assertTrue(state.get_job(job['id'])['published'])
+        self.assertIsNone(review.upload_recovery(state.get_job(job['id'])))
+        self.assertEqual(len(core._uploaded_voice_pack_registry()['packs']),1)
+        with zipfile.ZipFile(io.BytesIO(self.api('/jobs/'+job['id']+'/review-backup.zip').content)) as z:
+            packs=[z.read(n) for n in z.namelist() if n.endswith('/pack.tar.gz')]
+            self.assertIn(original_pack,packs)
+            self.assertTrue(any(n.endswith('/audio/A004.mp3') for n in z.namelist()))
+
+    def test_standard_legacy_and_verified_manifest_rebuild_have_no_paid_requests(self):
+        job=self.job();self.run_fast(job)
+        directory=state.job_dir(job['id'])
+        for missing_approval in (True,False):
+            if missing_approval:
+                (directory/'text-approval.json').unlink()
+            manifest=json.loads((directory/'manifest.json').read_text())
+            manifest.pop('text_verification',None)
+            state.atomic(directory/'manifest.json',state.canonical(manifest).encode())
+            state.update(job['id'],published='')
+            recovery=self.api('/jobs').json()['items'][0]['upload_recovery']
+            self.assertEqual(recovery['action'],'review')
+            self.assertEqual(self.api('/jobs/'+job['id']+'/publish','POST').status_code,409)
+            self.assertEqual(self.api('/jobs/'+job['id']+'/review','POST').status_code,200)
+            with patch.object(engine,'request',side_effect=AssertionError('Repeated translation / QA')),\
+                 patch.object(engine,'audio_request',side_effect=AssertionError('Repeated TTS')),\
+                 patch.object(engine,'probe',side_effect=self.probe),\
+                 patch.object(state,'credentials',return_value={'openai_key':'fake'}),patch.object(worker.time,'sleep'):
+                worker.main()
+            self.assertTrue(state.get_job(job['id'])['published'])
+            self.assertIsNone(self.api('/jobs').json()['items'][0]['upload_recovery'])
+
     def test_quarantine_requires_exact_current_revision_backs_up_before_hiding_and_keeps_price(self):
         job=self.job(); self.run_fast(job)
         uploaded=self.api('/jobs/'+job['id']+'/publish','POST').json()

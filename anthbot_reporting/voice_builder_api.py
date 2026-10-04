@@ -109,7 +109,10 @@ def elevenlabs_models():
 
 @router.get(PREFIX + '/jobs')
 def jobs():
+    from voice_builder_review import upload_recovery
     items = state.jobs()
+    for job in items:
+        job['upload_recovery'] = upload_recovery(job)
     if any(x['status'] in ('running','queued') for x in items):
         state.launch_worker()
     return {'items':items}

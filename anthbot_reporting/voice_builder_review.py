@@ -28,6 +28,38 @@ def review_state(jid):
     return json.loads(path.read_text()) if path.exists() else None
 
 
+def upload_recovery(job):
+    """Read-only readiness check, including completed but never uploaded jobs.
+
+    Do not spend money, queue generation, or mutate Store records while listing.
+    Use exactly the publisher's proof gate instead of trusting a stale error.
+    """
+    if job['mode'] != 'build' or job['status'] != 'completed' or job['published']:
+        return None
+    from voice_builder_publish import approved_pack_text, ReviewRequired
+    try:
+        manifest = json.loads((state.job_dir(job['id'])/'manifest.json').read_text())
+        approved_pack_text(job['id'], manifest)
+    except ReviewRequired as err:
+        return {'action':'review','reason':err.detail,
+                'note':'A mentett szöveg ellenőrzése után csak a javított mondatok hangja készül újra. Az új QA és javítás szolgáltatói költséggel járhat.'}
+    except (OSError, ValueError, KeyError, TypeError):
+        # An unreadable artifact is not evidence that only QA is missing.
+        return None
+    return None
+
+
+def backup_job(jid):
+    directory = state.job_dir(jid)
+    manifest = json.loads((directory/'manifest.json').read_text()) if (directory/'manifest.json').exists() else {}
+    backup = state.root()/'review-backups'/jid/state.digest(manifest)
+    for name in ('manifest.json','prompts.json','pack.tar.gz','text-approval.json'):
+        path = directory/name
+        if path.exists() and not (backup/name).exists():
+            state.atomic(backup/name, path.read_bytes())
+    return manifest
+
+
 def scan_and_quarantine():
     """Local migration: no provider calls, no paid work, no registry deletion.
 
@@ -105,8 +137,11 @@ def items():
     result = []
     for job in jobs:
         review = review_state(job['id'])
+        recovery = upload_recovery(job)
+        if recovery:
+            review = {**(review or {}),'status':'required','reason':recovery['reason'],'note':recovery['note']}
         if review:
-            result.append({'job_id':job['id'],'spec':job['spec'],**review})
+            result.append({'job_id':job['id'],'spec':job['spec'],**review,'job_status':job['status']})
     return result
 
 
@@ -119,9 +154,10 @@ def start_review(jid):
     review = review_state(jid) or {'status':'required','reason':'Kézzel kért felülvizsgálat','backup_available':True}
     if review.get('status') == 'superseded':
         raise ValueError('Ezt a verziót már újabb feltöltés váltotta fel; a korábbi feladat nem írhatja felül')
-    state.atomic(state.job_dir(jid)/'review-state.json',state.canonical({**review,'status':'queued'}).encode())
-    manifest_path = state.job_dir(jid)/'manifest.json'
-    manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+    # Keep the old complete artifact before any QA correction or rebuild,
+    # including legacy jobs that have never reached the Store.
+    manifest = backup_job(jid)
+    state.atomic(state.job_dir(jid)/'review-state.json',state.canonical({**review,'status':'queued','backup_available':True}).encode())
     state.atomic(state.job_dir(jid)/'review-intent.json',state.canonical({'repair':True,'expected_md5':manifest.get('music_md5','')}).encode())
     # Published result remains attached until a complete replacement exists.
     state.set_status(jid,'queued')

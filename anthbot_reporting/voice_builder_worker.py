@@ -6,7 +6,7 @@ from voice_builder_engine import run_job, Paused, ProviderError
 
 
 def publish_completed(job_id):
-    from voice_builder_publish import publish_job
+    from voice_builder_publish import publish_job, ReviewRequired
     job = state.get_job(job_id)
     if job['status'] != 'completed' or job['mode'] != 'build' or job['published']:
         return
@@ -17,6 +17,10 @@ def publish_completed(job_id):
     state.log(job_id, 'A teljes csomag elkészült; automatikus Hangbolt-feltöltés indul.')
     try:
         publish_job(job_id)
+    except ReviewRequired as err:
+        message = err.detail + ' Válaszd az „Ellenőrzés és feltöltés” műveletet; a mentett fordítás és a változatlan hangok megmaradnak.'
+        state.update(job_id, error=message)
+        state.log(job_id, message)
     except Exception:
         # Publishing is separate from generation: keep downloadable output and
         # avoid automatic retry loops or paid TTS calls after an upload failure.

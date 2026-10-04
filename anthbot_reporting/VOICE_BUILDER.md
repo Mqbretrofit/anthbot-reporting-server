@@ -1,6 +1,6 @@
 # Server Voice Builder
 
-Reporting Server **1.0.51** provides **Dashboard → Voice Builder** for administrators.
+Reporting Server **1.0.52** provides **Dashboard → Voice Builder** for administrators.
 The generator runs in a separate Python process on the server. Closing the
 browser does not stop it. One process owns the durable queue; restarting the
 add-on recovers interrupted jobs and reuses finished audio.
@@ -36,6 +36,15 @@ add-on recovers interrupted jobs and reuses finished audio.
    **Feltöltés újrapróbálása**; no new speech generation is needed. Restarting the
    add-on recovers completed, unuploaded builds whose upload has not failed.
    Automatic and manual retries use the same idempotent publisher.
+   Older completed builds lacking final text approval show **Ellenőrzés és
+   feltöltés**, including those that were never uploaded. Listing jobs only
+   checks local proof and never calls a provider. The recovery backs up the
+   original script and archive, checks the saved candidate, reuses unchanged
+   audio, rebuilds the validated artifact and follows the batch's upload
+   setting. Already verified text needs only a local rebuild. A missing styled
+   QA pass or genuinely corrected speech may incur a new provider charge;
+   translation and full-script rewriting are not repeated. Ordinary upload
+   failures continue to offer the upload-only retry.
 5. Pause stops at a checkpoint after the current provider request finishes.
    Resume uses completed output and cache. A failed job can be resumed after
    correcting its credentials or batch credit limit. To switch TTS models,
@@ -144,7 +153,7 @@ up before being hidden and marked for review. Files, original metadata, prices,
 access and sales records are retained. The backup ZIP is downloadable from the
 job. Hidden paid packs remain accessible through existing purchase entitlements.
 
-**Korábbi feltöltések felülvizsgálata → Ellenőrzés és javítás** processes the
+**Korábbi csomagok ellenőrzése és feltöltése → Ellenőrzés és feltöltés** processes the
 saved candidate, not a new translation. Good rows and audio remain intact.
 Only corrected text loses its old per-job MP3, after that file is backed up;
 unchanged rows never request TTS. A different verified shared script cannot
