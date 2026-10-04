@@ -7,4 +7,4 @@ The server currently lives in this repository only as a transitional deployment 
 
 Voice Builder: see [VOICE_BUILDER.md](VOICE_BUILDER.md).
 
-Voice Builder 1.0.51 includes the desktop 7.20.11 final grammar/meaning/persona QA and targeted repair chain, full provider catalogs, saved per-locale batches, automatic upload, durable paid-response reuse, and review/backup of earlier unverified server uploads. See [VOICE_BUILDER.md](VOICE_BUILDER.md).
+Voice Builder 1.0.52 includes the desktop 7.20.11 final grammar/meaning/persona QA and targeted repair chain, full provider catalogs, saved per-locale batches, automatic upload, durable paid-response reuse, and review/backup of earlier unverified server uploads. See [VOICE_BUILDER.md](VOICE_BUILDER.md).

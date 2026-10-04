@@ -545,7 +545,7 @@ def build_pack(jid, spec, doc):
     tmp.replace(archive)
     public = metadata(spec)
     data = archive.read_bytes()
-    manifest = {'schema_version': 2, 'builder_version': 'server-1.0.51 / desktop-7.20.11', 'public_store': public,
+    manifest = {'schema_version': 2, 'builder_version': 'server-1.0.52 / desktop-7.20.11', 'public_store': public,
                 'technical': spec.model_dump(exclude={'voice_display_name','ha_url'}),
                 'music_md5': hashlib.md5(data).hexdigest(), 'sha256': hashlib.sha256(data).hexdigest(),
                 'size': len(data), 'spoken_count': 201, 'total_mp3': 204,

@@ -8,6 +8,25 @@ import app as core
 import voice_builder_state as state
 
 
+class ReviewRequired(HTTPException):
+    """A controlled local proof failure, safe to show without provider details."""
+    def __init__(self, detail):
+        super().__init__(409, detail)
+
+
+def approved_pack_text(jid, manifest):
+    from voice_builder_text import require_approval
+    from voice_builder_engine import validate_prompts
+    doc = validate_prompts(json.loads((state.job_dir(jid)/'prompts.json').read_text()))
+    try:
+        approval = require_approval(jid, doc)
+    except RuntimeError as err:
+        raise ReviewRequired(str(err)) from None
+    if manifest.get('prompt_sha256') != state.digest(doc) or manifest.get('text_verification') != approval:
+        raise ReviewRequired('A csomag nem az ellenőrzött szövegkönyv alapján készült; újraépítés szükséges')
+    return approval
+
+
 def publish_job(jid, request=None):
     # The HTTP route authorizes callers. The worker publishes only validated
     # jobs already created by that admin route, without any network loopback.
@@ -22,15 +41,8 @@ def publish_job(jid, request=None):
         return job['published']
     directory = state.job_dir(jid)
     manifest = json.loads((directory / 'manifest.json').read_text())
-    from voice_builder_text import require_approval
-    from voice_builder_engine import validate_prompts, voice_set_template
-    doc = validate_prompts(json.loads((directory/'prompts.json').read_text()))
-    try:
-        approval = require_approval(jid,doc)
-    except RuntimeError as err:
-        raise HTTPException(409,str(err)) from None
-    if manifest.get('prompt_sha256') != state.digest(doc) or manifest.get('text_verification') != approval:
-        raise HTTPException(409,'A csomag nem az ellenőrzött szövegkönyv alapján készült; újraépítés szükséges')
+    from voice_builder_engine import voice_set_template
+    approval = approved_pack_text(jid, manifest)
     # File mutation/publishing uses the existing upload path and server version allocator.
     import hashlib
     if hashlib.sha256((directory / 'pack.tar.gz').read_bytes()).hexdigest() != manifest['sha256']:
