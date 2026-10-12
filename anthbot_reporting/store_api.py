@@ -4733,7 +4733,7 @@ async def stripe_webhook(
         if payment_intent:
             _init_store_tables()
             with core._db() as conn:
-                conn.execute(
+                cursor = conn.execute(
                     """
                     UPDATE store_orders
                     SET status = 'refunded',
@@ -4743,6 +4743,13 @@ async def stripe_webhook(
                     """,
                     (core._iso(), str(payment_intent)),
                 )
+                refunded_count = max(0, int(cursor.rowcount or 0))
+            if refunded_count:
+                try:
+                    from store_notifications import on_refund
+                    on_refund(str(payment_intent), refunded_count)
+                except Exception as err:
+                    _LOGGER.warning("Admin refund notification unavailable: %s", type(err).__name__)
 
     return {"received": True}
 
