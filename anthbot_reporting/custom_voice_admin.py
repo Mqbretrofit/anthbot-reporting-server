@@ -61,7 +61,7 @@ def _init() -> None:
         fields = {r["name"] for r in conn.execute("PRAGMA table_info(store_custom_voice_messages)")}
         if "rfc_message_id" not in fields:
             conn.execute("ALTER TABLE store_custom_voice_messages ADD COLUMN rfc_message_id TEXT")
-        conn.executescript("""
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS store_custom_voice_inbox (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 request_id TEXT NOT NULL,
@@ -76,9 +76,9 @@ def _init() -> None:
                 translation_error TEXT NOT NULL DEFAULT '',
                 read_at TEXT,
                 FOREIGN KEY(request_id) REFERENCES store_custom_voice_requests(request_id)
-            );
-            CREATE INDEX IF NOT EXISTS idx_voice_inbox_req ON store_custom_voice_inbox(request_id,id);
+            )
         """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_voice_inbox_req ON store_custom_voice_inbox(request_id,id)")
         conn.execute("""CREATE INDEX IF NOT EXISTS idx_custom_voice_messages_request
                         ON store_custom_voice_messages(request_id, sent_at)""")
 
@@ -133,7 +133,10 @@ def _entry(conn: sqlite3.Connection, request_id: str) -> dict:
                ORDER BY id DESC LIMIT 30""", (request_id,)
         )
     ]
-    result["incoming_unread"] = sum(not item["read_at"] for item in result["incoming_messages"])
+    result["incoming_unread"] = conn.execute(
+        "SELECT COUNT(*) FROM store_custom_voice_inbox WHERE request_id=? AND read_at IS NULL",
+        (request_id,)
+    ).fetchone()[0]
     return result
 
 
