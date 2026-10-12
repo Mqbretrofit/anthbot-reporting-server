@@ -942,6 +942,111 @@
         return '<tr><td>'+esc(fmt(o.paid_at||o.updated_at||o.created_at))+'</td><td class="mono">'+esc(session)+'</td><td class="mono">'+esc(o.pack_id)+'</td><td><span class="pill '+(o.payment_status==='paid'?'good':'warn')+'">'+esc(o.payment_status||o.status)+'</span></td><td>'+esc(o.customer_email||'—')+'</td><td>'+esc(money(o.amount_total||0,o.currency||'eur'))+'</td><td>'+action+'</td></tr>';
       }).join('');
     }
+    const adminNotifyRoot='/api/anthbot/admin/notifications';
+    let adminPushKey='';
+    let notificationUiInitialized=false;
+    function adminNotificationMessage(message,error=false){
+      const el=document.getElementById('admin-notification-info');
+      el.textContent=message;
+      el.style.color=error?'#ffc4cc':'#baf7e7';
+    }
+    function renderAdminNotifications(data){
+      document.getElementById('admin-notification-badge').textContent=(data.unread||0)+' olvasatlan';
+      const settings=data.settings||{};
+      if(!notificationUiInitialized){
+        document.getElementById('admin-notification-email').value=settings.admin_email||'';
+        document.getElementById('admin-notification-email-enabled').checked=!!settings.email_enabled;
+        document.getElementById('admin-notification-push-enabled').checked=!!settings.push_enabled;
+        notificationUiInitialized=true;
+      }
+      adminPushKey=data.vapid_public_key||'';
+      const content=document.getElementById('admin-notification-inbox');
+      const list=(data.items||[]);
+      content.innerHTML=list.length?list.map(e=>'<div class="admin-notification-item '+(!e.read_at?'unread':'')+'"><strong>'+esc(e.title)+'</strong><span class="small">'+esc(fmt(e.created_at))+'</span><pre>'+esc(e.message)+'</pre></div>').join(''):'<div class="small">Még nincs adminértesítés.</div>';
+    }
+    async function refreshAdminNotifications(){
+      try{renderAdminNotifications(await api(adminNotifyRoot+'?limit=20'))}
+      catch(e){adminNotificationMessage('Értesítések lekérése sikertelen: '+e.message,true)}
+    }
+    async function saveAdminNotificationSettings(){
+      const button=document.getElementById('admin-notification-save');button.disabled=true;
+      try{
+        const settings={
+          admin_email:document.getElementById('admin-notification-email').value.trim(),
+          email_enabled:document.getElementById('admin-notification-email-enabled').checked,
+          push_enabled:document.getElementById('admin-notification-push-enabled').checked
+        };
+        await api(adminNotifyRoot+'/settings',{method:'PUT',
+          headers:{'Content-Type':'application/json','X-ANTHBOT-Builder':'1'},
+          body:JSON.stringify(settings)});
+        adminNotificationMessage('Értesítési beállítások mentve. Az emailhez működő SMTP-kapcsolat szükséges.');
+        await refreshAdminNotifications();
+      }catch(e){adminNotificationMessage(e.message,true)}
+      finally{button.disabled=false}
+    }
+    function adminVapidBytes(text){
+      const padded=text.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-text.length%4)%4);
+      return Uint8Array.from(atob(padded),c=>c.charCodeAt(0));
+    }
+    async function enableAdminPush(){
+      const button=document.getElementById('admin-notification-subscribe');button.disabled=true;
+      try{
+        if(!window.isSecureContext||!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window)){
+          throw new Error('Ehhez biztonságos HTTPS oldal és Push API-t támogató böngésző szükséges. Home Assistant iframe helyett nyisd meg közvetlenül az adminoldalt.');
+        }
+        if(window.top!==window.self)throw new Error('Push engedélyezéséhez nyisd meg közvetlenül a Hangbolt adminoldalát, ne Home Assistant beágyazásban.');
+        const permission=await Notification.requestPermission();
+        if(permission!=='granted')throw new Error('A böngésző nem engedélyezte az értesítéseket.');
+        if(!adminPushKey)await refreshAdminNotifications();
+        if(!adminPushKey)throw new Error('Hiányzik a push szolgáltatás nyilvános kulcsa.');
+        const registration=await navigator.serviceWorker.register('/anthbot-admin-push-sw.js',{scope:'/'});
+        let sub=await registration.pushManager.getSubscription();
+        if(sub){
+          const raw=sub.toJSON();
+          if(!raw.options||raw.options.applicationServerKey!==adminPushKey){
+            // Existing subscription can be reused when the current browser retained
+            // the same VAPID key. If server disagrees, register a fresh one.
+            await sub.unsubscribe();
+            sub=null;
+          }
+        }
+        if(!sub)sub=await registration.pushManager.subscribe({
+          userVisibleOnly:true,applicationServerKey:adminVapidBytes(adminPushKey)
+        });
+        const result=await api(adminNotifyRoot+'/subscriptions',{
+          method:'POST',headers:{'Content-Type':'application/json','X-ANTHBOT-Builder':'1'},
+          body:JSON.stringify(sub.toJSON())
+        });
+        localStorage.setItem('anthbot_admin_push_hash',result.endpoint_hash);
+        adminNotificationMessage('Push bekapcsolva ezen az eszközön. Új eseményekről értesítést kaphatsz akkor is, ha az oldal nincs megnyitva.');
+        await refreshAdminNotifications();
+      }catch(e){adminNotificationMessage('Push engedélyezése sikertelen: '+e.message,true)}
+      finally{button.disabled=false}
+    }
+    async function disableAdminPush(){
+      const button=document.getElementById('admin-notification-unsubscribe');button.disabled=true;
+      try{
+        const hash=localStorage.getItem('anthbot_admin_push_hash');
+        if(hash)await api(adminNotifyRoot+'/subscriptions/'+encodeURIComponent(hash),{
+          method:'DELETE',headers:{'X-ANTHBOT-Builder':'1'}
+        });
+        if('serviceWorker' in navigator){
+          const registration=await navigator.serviceWorker.getRegistration('/');
+          const sub=registration?await registration.pushManager.getSubscription():null;
+          if(sub)await sub.unsubscribe();
+        }
+        localStorage.removeItem('anthbot_admin_push_hash');
+        adminNotificationMessage('Push kikapcsolva ezen az eszközön.');
+        await refreshAdminNotifications();
+      }catch(e){adminNotificationMessage('Push kikapcsolása sikertelen: '+e.message,true)}
+      finally{button.disabled=false}
+    }
+    async function markAdminNotificationsRead(){
+      try{
+        await api(adminNotifyRoot+'/read',{method:'POST',headers:{'X-ANTHBOT-Builder':'1'}});
+        await refreshAdminNotifications();
+      }catch(e){adminNotificationMessage(e.message,true)}
+    }
     async function load(){
       try{
         const [catalog,stats,orders,customRequests,privacyRequests,siteAnalytics,ownerPairings,storeAccounts,newVoicePacks]=await Promise.all([api('/api/anthbot/admin/store/voice-packs'),api('/api/anthbot/admin/store/stats'),api('/api/anthbot/admin/store/orders?limit=100'),api(customWorkflowApiRoot+'?limit=100'),api('/api/anthbot/admin/privacy-requests?limit=100'),api('/api/anthbot/admin/site-analytics?days=30'),api('/api/anthbot/admin/store/pairings?limit=200'),api('/api/anthbot/admin/store/accounts?limit=200'),api('/api/anthbot/admin/store/new-voice-packs')]);
@@ -959,7 +1064,11 @@
     ['custom-workflow-subject','custom-workflow-email'].forEach(id=>
       document.getElementById(id).addEventListener('input',updateCustomEmailTranslationStatus)
     );
-    setupVoiceAdminFilters();document.getElementById('refresh').onclick=load;document.getElementById('delete-test-orders').onclick=deleteAllTestOrders;document.getElementById('delete-all-orders').onclick=deleteAllLocalOrders;load();
+    document.getElementById('admin-notification-save').addEventListener('click',saveAdminNotificationSettings);
+    document.getElementById('admin-notification-subscribe').addEventListener('click',enableAdminPush);
+    document.getElementById('admin-notification-unsubscribe').addEventListener('click',disableAdminPush);
+    document.getElementById('admin-notification-read').addEventListener('click',markAdminNotificationsRead);
+    setupVoiceAdminFilters();document.getElementById('refresh').onclick=load;document.getElementById('delete-test-orders').onclick=deleteAllTestOrders;document.getElementById('delete-all-orders').onclick=deleteAllLocalOrders;load();refreshAdminNotifications();
   </script>
 </body>
 </html>
