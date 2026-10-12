@@ -213,7 +213,7 @@ def _ingest(data: bytes, account_key: str, uid: int) -> bool:
         incoming_id=insert.lastrowid
         conn.execute("""
             UPDATE store_custom_voice_requests
-            SET updated_at=?,status=CASE WHEN status='contacted' THEN 'contacted' ELSE status END
+            SET updated_at=?,status=CASE WHEN status='contacted' THEN 'replied' ELSE status END
             WHERE request_id=?
         """,(core._iso(),rid))
     try:
