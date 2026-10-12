@@ -806,7 +806,8 @@
       const correspondence=[
         ...(r.messages||[]).map(m=>({kind:'sent',time:m.sent_at,subject:m.subject,body:m.body,recipient:m.recipient,id:m.message_id})),
         ...(r.incoming_messages||[]).map(m=>({kind:'received',time:m.received_at,subject:m.subject,body:m.body,sender:m.sender,id:m.id,
-          translated:m.translation_hu,translateStatus:m.translation_state,translateError:m.translation_error}))
+          translated:m.translation_hu,translateStatus:m.translation_state,translateError:m.translation_error,
+          attachments:m.attachments||[]}))
       ].sort((a,b)=>new Date(a.time)-new Date(b.time));
       history.innerHTML=correspondence.length?correspondence.map(m=>{
         const incoming=m.kind==='received';
@@ -818,7 +819,11 @@
             (m.translateStatus==='failed'?'<button type="button" class="btn" data-retry-translation="'+Number(m.id)+'">Fordítás újrapróbálása</button>':''))+
             '</div>'
           :'';
-        return '<details '+(incoming?'open':'')+'><summary><strong>'+subtitle+'</strong> · '+esc(fmt(m.time))+' · '+esc(m.subject)+'</summary><pre>'+esc(m.body)+'</pre>'+translation+'</details>';
+        const attachments=incoming&&(m.attachments||[]).length
+          ?'<div class="workflow-actions"><strong>Ügyfélmellékletek:</strong> '+
+            m.attachments.map(a=>'<a class="btn" download href="/api/anthbot/admin/store/custom-voice-inbox/files/'+Number(a.id)+'">'+esc(a.filename)+' ('+Math.ceil(Number(a.size_bytes)/1024)+' KB)</a>').join('')+
+            '</div>':'';
+        return '<details '+(incoming?'open':'')+'><summary><strong>'+subtitle+'</strong> · '+esc(fmt(m.time))+' · '+esc(m.subject)+'</summary><pre>'+esc(m.body)+'</pre>'+attachments+translation+'</details>';
       }).join(''):'<div class="small">Még nincs levelezés ehhez a hangkéréshez.</div>';
       if(resetEmail){
         const draft=customEmailDraft(r);
