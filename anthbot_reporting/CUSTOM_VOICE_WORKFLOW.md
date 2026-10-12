@@ -43,6 +43,10 @@ voice packs, entitlements and worker jobs are not modified by this feature.
 
 Regression tests: tests/test_custom_voice_admin.py.
 
+## 1.0.56 – OpenAI HTTP 400, strukturált JSON válasz
+
+Az egyedihang-kérés AI-válasza most a Responses API dokumentált `text.format: json_schema` formátumát használja a korábbi `json_object` mód helyett. A cseh ügyfél levelét és a magyar fordítását kötelező, ellenőrzött mezőkkel adja vissza; a módosított levél `translate` módja csak a három szükséges magyar mezőt kéri. Ha az OpenAI mégis hibás paraméter miatt utasítja el a kérést, a biztonságosan szűrt API-paraméter neve megjelenik a hibában, az API-kulcs és a szolgáltató nyers válasza nem. A kész hangok, levelek, Stripe és Companion értesítések változatlanok maradnak. A korábban sikertelen AI-feladatot az „Új AI választervezet” gombbal lehet újból indítani.
+
 ## 1.0.55 – AI fordítás Home Assistant 502 hibájának kezelése
 
 Az AI-fordítás külön háttérfeladatot indít, így az oldalra ágyazott Home Assistant HTTP-kérése nem vár perceket egy külső OpenAI-válaszra. Az adminoldal rövid, külön API-hívásokkal figyeli a folyamatot, és valódi szolgáltatói hibánál kiírja a konkrét hibát. Korábbi eredmények titkosítottan megmaradnak; azonos tartalomnál nem indul új fizetős hívás. Sikertelen kérés nem ismétlődik automatikusan: az újrapróbálkozáshoz külön gombnyomás kell. A már működő Voice Builder, HA mobilértesítések, hangcsomagok és Stripe-folyamat nem módosul.
