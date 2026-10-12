@@ -46,6 +46,49 @@ class AdminAlertTests(unittest.TestCase):
         self.assertEqual(result.status_code,200)
         self.assertEqual(result.json()["unread"],2)
 
+    def test_test_push_only_uses_selected_real_mobile_target(self):
+        with patch.object(notify,"_available_ha_targets",
+                          return_value=["notify.mobile_app_phone"]),\
+             patch.object(notify,"_notify_ha") as send:
+            result=self.c.post("/api/anthbot/admin/notifications/ha-test",
+                headers=self.write,json={"ha_target":"notify.mobile_app_phone"})
+            self.assertEqual(result.status_code,200,result.text)
+            send.assert_called_once()
+            reject=self.c.post("/api/anthbot/admin/notifications/ha-test",
+                headers=self.write,json={"ha_target":"notify.mobile_app_unknown"})
+            self.assertEqual(reject.status_code,422)
+            send.assert_called_once()
+
+    def test_ai_customer_reply_is_cached_and_never_auto_sends(self):
+        import json
+        import custom_voice_ai
+        import voice_builder_state as builder
+        import voice_builder_engine as engine
+        import store_accounts
+        made=self.c.post("/api/anthbot/store/custom-voice-requests",json={
+            "requested_language":"čeština","voice_style":"vřelý ženský",
+            "model":"Genie 1000","contact":"customer@example.test",
+            "notes":"","site_language":"cs"
+        })
+        self.assertEqual(made.status_code,201,made.text)
+        request_id=made.json()["request_id"]
+        url="/api/anthbot/admin/store/custom-voice-workflow/"+request_id+"/ai"
+        answer={"output_text":json.dumps({
+            "subject":"Žádost","body":"Dobrý den",
+            "subject_hu":"Kérés","body_hu":"Jó napot","request_hu":"Női hangot kér"
+        })}
+        with patch.object(builder,"credentials",return_value={"openai_key":"test-key"}),\
+             patch.object(engine,"request",return_value=answer) as provider,\
+             patch.object(store_accounts,"_smtp_send_message") as mail:
+            first=self.c.post(url,headers=self.write,json={"mode":"draft"})
+            self.assertEqual(first.status_code,200,first.text)
+            self.assertEqual(first.json()["body_hu"],"Jó napot")
+            second=self.c.post(url,headers=self.write,json={"mode":"draft"})
+            self.assertEqual(second.status_code,200,second.text)
+            self.assertTrue(second.json()["cached"])
+            provider.assert_called_once()
+            mail.assert_not_called()
+
     def test_security_and_notify_target_validation(self):
         self.assertEqual(self.c.get("/api/anthbot/admin/notifications").status_code,401)
         invalid=self.c.put("/api/anthbot/admin/notifications/settings",
