@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import os
+import re
+import shutil
+import subprocess
 from pathlib import Path
 import smtplib
 import tempfile
@@ -48,6 +51,19 @@ class CustomVoiceWorkflowTests(unittest.TestCase):
     def tearDown(self):
         self.context.__exit__(None, None, None)
         self.temp.cleanup()
+
+    def test_workflow_frontend_javascript_is_valid(self):
+        if not shutil.which("node"):
+            self.skipTest("node unavailable")
+        source = (Path(__file__).resolve().parents[1] / "store_admin.html").read_text()
+        self.assertIn('id="custom-workflow-dialog"', source)
+        self.assertIn('data-custom-request', source)
+        scripts = re.findall(r"<script[^>]*>(.*?)</script>", source, re.S | re.I)
+        self.assertTrue(scripts)
+        for script in scripts:
+            result = subprocess.run(["node", "--check"], input=script,
+                                    text=True, capture_output=True, timeout=15)
+            self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_requires_admin_and_same_origin_write_marker(self):
         self.assertEqual(self.client.get(self.endpoint).status_code, 401)
