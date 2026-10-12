@@ -57,6 +57,12 @@ schema:
   site_analytics_enabled: bool
   google_site_verification: str?
   web_voice_installer_enabled: bool
+  imap_enabled: bool
+  imap_host: str?
+  imap_port: int(1,65535)
+  imap_username: str?
+  imap_password: password?
+  imap_mailbox: str
   smtp_host: str?
   smtp_port: int(1,65535)
   smtp_username: str?
