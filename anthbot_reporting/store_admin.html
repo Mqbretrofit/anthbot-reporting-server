@@ -147,7 +147,7 @@
       <div class="workflow-translation"><strong>Az ügyfél kérése magyarul (AI):</strong><div id="custom-workflow-request-hu" style="margin-top:7px;white-space:pre-wrap">Fordítás folyamatban…</div></div>
       <div class="workflow-grid">
         <label>Állapot<select class="control" id="custom-workflow-status">
-          <option value="new">Új</option><option value="contacted">Kapcsolatfelvétel</option>
+          <option value="new">Új</option><option value="contacted">Kapcsolatfelvétel</option><option value="replied">Ügyfél válaszolt</option>
           <option value="preview">Próbahang készül</option><option value="quoted">Árajánlat elkészült</option>
           <option value="awaiting_payment">Fizetésre vár</option><option value="in_production">Készítés alatt</option>
           <option value="ready">Kész / átadásra vár</option><option value="completed">Lezárva</option>
@@ -175,7 +175,13 @@
       </div>
       <div class="workflow-actions"><button class="btn primary" type="button" id="custom-workflow-send">Email küldése (megerősítéssel)</button></div>
       <p class="small">Az email csak külön jóváhagyásra megy ki. A fizetést kizárólag a tényleges Stripe-rendelés igazolja; az állapot és az árajánlat nem hoz létre vásárlást. Hangot a Builderben csak saját indítással generálunk.</p>
-      <h3>Korábbi emailek</h3><div id="custom-workflow-history"></div>
+      <h3>Ügyféllevelezés – küldött és beérkezett üzenetek</h3>
+      <div class="workflow-actions">
+        <button class="btn" type="button" id="custom-workflow-sync-inbox">Új ügyfélválaszok ellenőrzése (IMAP)</button>
+        <button class="btn" type="button" id="custom-workflow-refresh-thread">Beszélgetés frissítése</button>
+      </div>
+      <p class="small" id="custom-workflow-inbox-status">Beérkező levelek állapotának lekérése…</p>
+      <div id="custom-workflow-history"></div>
       <div id="custom-workflow-message" role="status" aria-live="polite"></div>
     </dialog>
     <section class="card section"><div class="head">Adatvédelmi / GDPR kérelmek</div><div class="table-wrap"><table><thead><tr><th>Idő</th><th>Azonosító</th><th>Típus</th><th>Kapcsolat</th><th>Részletek</th><th>Nyelv</th><th>Állapot</th></tr></thead><tbody id="privacy-requests"></tbody></table></div></section>
@@ -678,12 +684,12 @@
     let customWorkflowItems=[];
     let activeCustomRequest=null;
     const customWorkflowApiRoot='/api/anthbot/admin/store/custom-voice-workflow';
-    const customStatusLabels={new:'Új',contacted:'Kapcsolatfelvétel',preview:'Próbahang',quoted:'Árajánlat',awaiting_payment:'Fizetésre vár',in_production:'Készítés alatt',ready:'Kész',completed:'Lezárva',cancelled:'Visszavonva'};
+    const customStatusLabels={new:'Új',contacted:'Kapcsolatfelvétel',replied:'Ügyfél válaszolt',preview:'Próbahang',quoted:'Árajánlat',awaiting_payment:'Fizetésre vár',in_production:'Készítés alatt',ready:'Kész',completed:'Lezárva',cancelled:'Visszavonva'};
     function customRequestRows(items){
       customWorkflowItems=items;
       const body=document.getElementById('custom-requests');
       if(!items.length){body.innerHTML='<tr><td colspan="10" class="empty">Még nincs egyedi hang kérés.</td></tr>';return}
-      body.innerHTML=items.map(r=>'<tr><td>'+esc(fmt(r.created_at))+'</td><td class="mono">'+esc(r.request_id)+'</td><td><strong>'+esc(r.requested_language)+'</strong></td><td>'+esc(r.voice_style)+'</td><td>'+esc(r.model)+'</td><td>'+esc(r.contact)+'</td><td>'+esc(r.notes||'—')+'</td><td>'+esc(r.site_language||'—')+'</td><td><span class="pill '+(r.status==='new'?'warn':'good')+'">'+esc(customStatusLabels[r.status]||r.status||'Új')+'</span></td><td><button type="button" class="btn" data-custom-request="'+esc(r.request_id)+'">Kezelés</button></td></tr>').join('');
+      body.innerHTML=items.map(r=>'<tr><td>'+esc(fmt(r.created_at))+'</td><td class="mono">'+esc(r.request_id)+'</td><td><strong>'+esc(r.requested_language)+'</strong></td><td>'+esc(r.voice_style)+'</td><td>'+esc(r.model)+'</td><td>'+esc(r.contact)+'</td><td>'+esc(r.notes||'—')+'</td><td>'+esc(r.site_language||'—')+'</td><td><span class="pill '+(r.status==='new'?'warn':'good')+'">'+esc(customStatusLabels[r.status]||r.status||'Új')+'</span> '+(r.incoming_unread?'<span class="pill warn">'+esc(r.incoming_unread)+' új válasz</span>':'')+'</td><td><button type="button" class="btn" data-custom-request="'+esc(r.request_id)+'">Kezelés</button></td></tr>').join('');
     }
     function customEmailDraft(r){
       const cs=String(r.site_language||'').toLowerCase().startsWith('cs')||/čes|czech/i.test(r.requested_language||'');
@@ -797,7 +803,23 @@
       const p=r.payment||{};
       document.getElementById('custom-workflow-payment').innerHTML='<strong>Fizetés: '+(p.verified?'<span style="color:#80e0c7">Stripe által igazolt fizetés</span>':'<span style="color:#ffcc66">Nincs igazolt fizetés</span>')+'</strong>'+(p.verified?' · '+esc(money(p.amount_total,p.currency))+' · '+esc(p.stripe_session_id):' · A beállított árajánlat önmagában nem fizetési link.');
       const history=document.getElementById('custom-workflow-history');
-      history.innerHTML=(r.messages||[]).length?(r.messages||[]).map(m=>'<details><summary>'+esc(fmt(m.sent_at))+' · '+esc(m.subject)+' → '+esc(m.recipient)+'</summary><pre>'+esc(m.body)+'</pre></details>').join(''):'<div class="small">Még nem küldtél emailt ebből a kérésből.</div>';
+      const correspondence=[
+        ...(r.messages||[]).map(m=>({kind:'sent',time:m.sent_at,subject:m.subject,body:m.body,recipient:m.recipient,id:m.message_id})),
+        ...(r.incoming_messages||[]).map(m=>({kind:'received',time:m.received_at,subject:m.subject,body:m.body,sender:m.sender,id:m.id,
+          translated:m.translation_hu,translateStatus:m.translation_state,translateError:m.translation_error}))
+      ].sort((a,b)=>new Date(a.time)-new Date(b.time));
+      history.innerHTML=correspondence.length?correspondence.map(m=>{
+        const incoming=m.kind==='received';
+        const subtitle=incoming?'BEJÖVŐ • '+esc(m.sender):'ELKÜLDVE • '+esc(m.recipient);
+        const translation=incoming
+          ?'<div class="workflow-translation"><strong>Magyar fordítás:</strong> '+
+            (m.translateStatus==='done'?'<pre>'+esc(m.translated)+'</pre>':
+            '<span class="small">'+esc(m.translateStatus==='failed'?(m.translateError||'Fordítási hiba'):'A fordítás készül…')+'</span> '+
+            (m.translateStatus==='failed'?'<button type="button" class="btn" data-retry-translation="'+Number(m.id)+'">Fordítás újrapróbálása</button>':''))+
+            '</div>'
+          :'';
+        return '<details '+(incoming?'open':'')+'><summary><strong>'+subtitle+'</strong> · '+esc(fmt(m.time))+' · '+esc(m.subject)+'</summary><pre>'+esc(m.body)+'</pre>'+translation+'</details>';
+      }).join(''):'<div class="small">Még nincs levelezés ehhez a hangkéréshez.</div>';
       if(resetEmail){
         const draft=customEmailDraft(r);
         document.getElementById('custom-workflow-subject').value=draft.subject;
@@ -810,6 +832,58 @@
       updateCustomEmailTranslationStatus();
       document.getElementById('custom-workflow-message').textContent='';
     }
+    async function updateCustomInboxStatus(){
+      try{
+        const info=await api('/api/anthbot/admin/store/custom-voice-inbox/status');
+        document.getElementById('custom-workflow-inbox-status').textContent=
+          !info.enabled?'IMAP fogadás kikapcsolva. Engedélyezd az ANTHBOT Reporting Server App beállításaiban.':
+          !info.configured?'IMAP beállítás hiányzik. Add meg a postafiókot és az alkalmazásjelszót a HA App beállításaiban.':
+          'IMAP aktív • Utolsó ellenőrzés: '+(info.last_sync_at?fmt(info.last_sync_at):'még nem futott')+
+          ' • '+Number(info.unread||0)+' olvasatlan ügyfélválasz'+
+          (info.last_error?' • Hiba: '+info.last_error:'');
+      }catch(e){
+        document.getElementById('custom-workflow-inbox-status').textContent='IMAP állapot lekérése sikertelen: '+e.message;
+      }
+    }
+    async function refreshCustomThread(){
+      if(!activeCustomRequest)return;
+      const id=activeCustomRequest.request_id;
+      try{
+        const result=await api(customWorkflowApiRoot+'/'+encodeURIComponent(id));
+        if(!activeCustomRequest||activeCustomRequest.request_id!==id)return;
+        // Keep unsent edits intact; only refresh message history and status.
+        const subject=document.getElementById('custom-workflow-subject').value;
+        const body=document.getElementById('custom-workflow-email').value;
+        renderCustomWorkflow(result,false);
+        document.getElementById('custom-workflow-subject').value=subject;
+        document.getElementById('custom-workflow-email').value=body;
+        updateCustomEmailTranslationStatus();
+        const idx=customWorkflowItems.findIndex(x=>x.request_id===id);
+        if(idx>=0){customWorkflowItems[idx]=result;customRequestRows(customWorkflowItems)}
+        await updateCustomInboxStatus();
+        workflowNotice('A levelezést frissítettem.');
+      }catch(e){workflowNotice('Beszélgetés frissítési hiba: '+e.message,true)}
+    }
+    async function syncCustomInbox(){
+      const button=document.getElementById('custom-workflow-sync-inbox');button.disabled=true;
+      try{
+        await api('/api/anthbot/admin/store/custom-voice-inbox/sync',{
+          method:'POST',headers:{'X-ANTHBOT-Builder':'1'}
+        });
+        workflowNotice('IMAP ellenőrzés elindítva. A válaszok nem kerülnek automatikusan kiküldésre.');
+        await new Promise(resolve=>setTimeout(resolve,2500));
+        await refreshCustomThread();
+      }catch(e){workflowNotice('IMAP ellenőrzés sikertelen: '+e.message,true)}
+      finally{button.disabled=false}
+    }
+    async function retryCustomIncomingTranslation(messageId){
+      try{
+        await api('/api/anthbot/admin/store/custom-voice-inbox/'+encodeURIComponent(messageId)+'/translate',
+          {method:'POST',headers:{'X-ANTHBOT-Builder':'1'}});
+        workflowNotice('Bejövő üzenet fordítása elindult.');
+        await refreshCustomThread();
+      }catch(e){workflowNotice('Fordítás újraindítása sikertelen: '+e.message,true)}
+    }
     function workflowNotice(message,error=false){const target=document.getElementById('custom-workflow-message');target.textContent=message;target.style.color=error?'#ffb5c1':'#a9f8dd'}
     async function openCustomWorkflow(id){
       const r=customWorkflowItems.find(x=>x.request_id===id);
@@ -817,7 +891,20 @@
       ++activeCustomAiRequest;
       renderCustomWorkflow(r,true);
       document.getElementById('custom-workflow-dialog').showModal();
-      customAiWork('draft',true);
+      updateCustomInboxStatus();
+      // Initial requests receive a draft automatically. After sending, wait
+      // for a real customer reply instead of regenerating the initial email.
+      const received=(r.incoming_messages||[])[0];
+      const sent=(r.messages||[])[0];
+      if(!sent||(received&&new Date(received.received_at)>new Date(sent.sent_at))){
+        customAiWork('draft',true);
+      }else{
+        document.getElementById('custom-workflow-request-hu').textContent='Az ügyfél válaszára várunk.';
+      }
+      if(r.incoming_unread){
+        api('/api/anthbot/admin/store/custom-voice-inbox/request/'+encodeURIComponent(id)+'/read',
+          {method:'POST',headers:{'X-ANTHBOT-Builder':'1'}}).catch(()=>{});
+      }
     }
     async function saveCustomWorkflow(){
       if(!activeCustomRequest)return;
@@ -1075,6 +1162,12 @@
     document.getElementById('custom-requests').addEventListener('click',e=>{const button=e.target.closest('button[data-custom-request]');if(button)openCustomWorkflow(button.dataset.customRequest)});
     document.getElementById('custom-workflow-save').addEventListener('click',saveCustomWorkflow);
     document.getElementById('custom-workflow-send').addEventListener('click',sendCustomWorkflowEmail);
+    document.getElementById('custom-workflow-sync-inbox').addEventListener('click',syncCustomInbox);
+    document.getElementById('custom-workflow-refresh-thread').addEventListener('click',refreshCustomThread);
+    document.getElementById('custom-workflow-history').addEventListener('click',e=>{
+      const button=e.target.closest('button[data-retry-translation]');
+      if(button)retryCustomIncomingTranslation(Number(button.dataset.retryTranslation));
+    });
     document.getElementById('custom-workflow-ai-draft').addEventListener('click',()=>customAiWork('draft'));
     document.getElementById('custom-workflow-ai-translate').addEventListener('click',()=>customAiWork('translate'));
     ['custom-workflow-subject','custom-workflow-email'].forEach(id=>
