@@ -5,4 +5,3 @@ stripe>=12,<20
 boto3>=1.40,<2
 
 cryptography>=43,<50
-pywebpush>=2.0.3,<3
