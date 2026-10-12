@@ -85,7 +85,8 @@ class AdminAlertTests(unittest.TestCase):
              patch.object(store_accounts,"_smtp_send_message") as mail:
             first=self.c.post(url,headers=self.write,json={"mode":"draft"})
             self.assertEqual(first.status_code,200,first.text)
-            self.assertEqual(first.json()["body_hu"],"Jó napot")
+            self.assertIn("Jó napot",first.json()["body_hu"])
+            self.assertTrue(first.json()["body_hu"].endswith("ANTHBOT Map"))
             second=self.c.post(url,headers=self.write,json={"mode":"draft"})
             self.assertEqual(second.status_code,200,second.text)
             self.assertTrue(second.json()["cached"])
@@ -142,7 +143,8 @@ class AdminAlertTests(unittest.TestCase):
                     break
                 time.sleep(.04)
             self.assertEqual(progress["status"],"completed",progress)
-            self.assertEqual(progress["result"]["body_hu"],"Jó napot")
+            self.assertIn("Jó napot",progress["result"]["body_hu"])
+            self.assertTrue(progress["result"]["body_hu"].endswith("ANTHBOT Map"))
             third=self.c.post(url,headers=self.write,json={"mode":"draft"})
             self.assertEqual(third.json()["status"],"completed")
             self.assertEqual(external.call_count,1)

@@ -1,5 +1,5 @@
 name: ANTHBOT Reporting Server
-version: "1.0.56"
+version: "1.0.57"
 slug: anthbot_reporting
 homeassistant_api: true
 description: ANTHBOT Map presence, opt-in telemetry, diagnostics, and admin dashboard backend
@@ -29,6 +29,12 @@ options:
   site_analytics_enabled: true
   google_site_verification: ""
   web_voice_installer_enabled: false
+  imap_enabled: false
+  imap_host: ""
+  imap_port: 993
+  imap_username: ""
+  imap_password: ""
+  imap_mailbox: "INBOX"
   smtp_host: ""
   smtp_port: 587
   smtp_username: ""
@@ -51,6 +57,12 @@ schema:
   site_analytics_enabled: bool
   google_site_verification: str?
   web_voice_installer_enabled: bool
+  imap_enabled: bool
+  imap_host: str?
+  imap_port: int(1,65535)
+  imap_username: str?
+  imap_password: password?
+  imap_mailbox: str
   smtp_host: str?
   smtp_port: int(1,65535)
   smtp_username: str?

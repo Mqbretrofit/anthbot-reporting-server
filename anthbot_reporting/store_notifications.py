@@ -28,7 +28,7 @@ from voice_builder_api import require_builder_admin
 _LOG = logging.getLogger(__name__)
 router = APIRouter(dependencies=[Depends(require_builder_admin)])
 ROOT = "/api/anthbot/admin/notifications"
-_TYPES = ("purchase", "custom_voice", "privacy_request", "refund")
+_TYPES = ("purchase", "custom_voice", "custom_voice_reply", "privacy_request", "refund")
 _DEVICE_RE = re.compile(r"^notify\.mobile_app_[a-z0-9_]{1,100}$")
 _HA_API = "http://supervisor/core/api"
 _SEND_LOCK = threading.Lock()

@@ -85,3 +85,64 @@ telefon(oka)t és mentsd el. A Tesztértesítés gombbal próbáld ki,
 hogy megjön-e ugyanúgy, mint a hazaérkezési értesítés.
 A tényleges kézbesítés teszteléséhez működő Home Assistant Core
 és Companion telefon szükséges.
+
+
+## 1.0.57 – kétirányú levelezés és automatikus magyar fordítás
+
+A Hangbolt admin Egyedi hang kérések / Kezelés ablakában az ügyfélnek
+küldött email és az ügyféltől beérkezett email ugyanabban az időrendi
+beszélgetésben jelenik meg. A beérkező levelet az OpenAI automatikusan
+magyarra fordítja, és a fordítás a levél alatt látszik. Ha a fordítás
+nem elérhető, az eredeti levél megmarad, és külön újrapróbálható.
+Ha új válasz érkezik, a Home Assistant Companion beállított telefonjai
+„Új válasz egyedi hangkérésre” értesítést kaphatnak. A külföldi
+ügyfélnek soha nem küldünk automatikusan választ.
+
+### IMAP bekapcsolása
+
+Home Assistant → Beállítások → Alkalmazások → ANTHBOT Reporting Server →
+Konfiguráció:
+
+- imap_enabled: true
+- imap_host: a válaszokat fogadó email-postafiók IMAP-kiszolgálója,
+  például Google-fióknál imap.gmail.com
+- imap_port: 993 (kötelező TLS)
+- imap_username: a válaszokat fogadó teljes email-cím
+- imap_password: az email-szolgáltató IMAP-alkalmazásjelszava
+  (titkos HA App mező)
+- imap_mailbox: INBOX
+
+Mentsd a HA App konfigurációt, majd indítsd újra a Reporting Servert.
+A Hangbolt admin/egyedi hangkérés Kezelés ablakában
+„Új ügyfélválaszok ellenőrzése (IMAP)” kézi szinkront indít.
+A szerver 90 másodpercenként önállóan is ellenőrzi a beérkező leveleket.
+Az IMAP TLS-sel csatlakozik, csak olvassa az INBOX-ot, az üzeneteket
+nem jelöli olvasottnak, nem törli és nem mozgatja.
+
+### Biztonság, adatkezelés, téves párosítás elkerülése
+
+Az újabb kimenő levelek Message-ID és ANTHBOT:cvr_ kezdetű
+tárgyazonosítót kapnak. A beérkező válaszok RFC referenciafejléce
+vagy tárgya alapján hozzárendelhetők a megfelelő kérelemhez.
+Csak akkor fogadunk el választ, ha a feladó email-címe pontosan
+egyezik az eredeti kérés kapcsolatcímével. Régi, még azonosító
+nélkül elküldött üzeneteknél csak egyértelmű ügyfél-visszaválasz
+párosítható; kétes esetben inkább nem importálunk tévesen.
+
+Az első bekapcsoláskor a közelmúlt levelei között keres, ezért
+az első korábban elküldött cseh levélre érkező válaszokat is
+megkísérli hozzárendelni. A beérkező levelek és fordítások a
+Reporting Server meglévő /data adatbázisába kerülnek; az AI
+fordításhoz a levél tartalma továbbításra kerül az OpenAI-nak
+a Voice Builderben mentett API-kulccsal. Ez OpenAI API-költséggel
+járhat. Az admin felület nem teszi elérhetővé az IMAP jelszavát.
+
+Élő IMAP-jelszó és tényleges ügyfél-válasz nélkül a külső
+kézbesítés nem ellenőrizhető automatikus tesztekből.
+
+Az engedélyezett hangminta-mellékletek (.mp3, .wav, .m4a, .ogg, .opus,
+.flac, .aac), képek (.jpg, .png, .webp) és PDF-ek adminjogosultsággal
+letölthetők az érkező üzenet alatt. Egy üzenet legfeljebb 15 MiB,
+egy fájl legfeljebb 8 MiB lehet, legfeljebb nyolc melléklet kerül
+mentésre. A támogatott méretnél nagyobb levelet az eredeti
+postafiókban kell megnyitni, mivel az ANTHBOT nem tölti le.

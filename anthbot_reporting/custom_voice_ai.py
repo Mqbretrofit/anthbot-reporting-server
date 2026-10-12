@@ -22,7 +22,7 @@ from voice_builder_api import require_builder_admin
 router = APIRouter(dependencies=[Depends(require_builder_admin)])
 ROOT = "/api/anthbot/admin/store/custom-voice-workflow"
 MODEL = "gpt-4o-mini"
-CACHE_VERSION = 2
+CACHE_VERSION = 3
 
 class TranslateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -91,6 +91,37 @@ def _response_format(mode: str) -> dict:
     }
 
 
+def _ensure_request_details(result: dict, item: dict) -> dict:
+    """Guarantee the outgoing reply explicitly includes the requested voice."""
+    import re
+    clean=lambda value: re.sub(r"[\r\n\x00-\x1f<>]+", " ", str(value or "")).strip()[:160]
+    language=clean(item["requested_language"])
+    voice=clean(item["voice_style"])
+    model=clean(item["model"])
+    body=result["body"]
+    if not all(value.casefold() in body.casefold() for value in (language,voice,model) if value):
+        locale=str(item.get("site_language") or "").lower()
+        if locale.startswith("cs"):
+            summary=f"Požadovaný hlas: jazyk {language}, charakter {voice}, robot {model}."
+        elif locale.startswith("hu"):
+            summary=f"A kért hang: nyelv {language}, hangkarakter {voice}, robot {model}."
+        else:
+            summary=f"Your requested voice: language {language}, voice style {voice}, robot {model}."
+        # Place after the first greeting paragraph, without rewriting the
+        # AI's substantive explanation, and add the same facts in Hungarian.
+        para=body.split("\n\n",1)
+        result["body"]=(para[0]+"\n\n"+summary+"\n\n"+para[1] if len(para)==2
+                        else summary+"\n\n"+body)
+        voice_hu=("meleg tónusú női hang" if voice.casefold()=="vřelý ženský"
+                  else voice)
+        lang_hu="cseh" if language.lower().startswith("čeština") else language
+        result["body_hu"]=(
+            f"A kért hang: {lang_hu}; {voice_hu}; robot: {model}.\n\n"+
+            result["body_hu"]
+        )
+    return result
+
+
 def _instructions(mode: str) -> str:
     base = (
         "You are a professional Hungarian-speaking customer-support translator "
@@ -109,11 +140,24 @@ def _instructions(mode: str) -> str:
         return base + (
             "Draft a short, polite customer-support response in the provided "
             "site language (use the native language for its code), and a faithful "
-            "Hungarian translation of that exact email. Ask the customer to "
-            "clarify the voice character or share a reference voice sample, "
-            "explain that the final quote is agreed in advance, price starts "
-            "at EUR 24.99, and no payment is needed yet. "
+            "Hungarian translation of that exact email. "
+            "Explicitly repeat the customer's EXACT requested target language "
+            "and voice characteristics, and robot model, in the outgoing reply. "
+            "Do not replace the requested warm female Czech voice with a vague "
+            "generic voice-pack enquiry. "
+            "If customer_last_reply is present, respond to that latest reply "
+            "SPECIFICALLY; do not repeat the initial clarification question "
+            "if the customer has already answered it, and do not pretend this "
+            "is their first contact. Otherwise ask the customer to clarify the "
+            "voice character or share a reference voice sample. "
+            "Explain that the final quote is agreed in advance, price starts "
+            "at EUR 24.99, and no payment is needed yet, unless that has already "
+            "been explained in the existing correspondence. "
             "Never assume a named actor's voice will be cloned. "
+            "The LAST line of the outgoing email body MUST be EXACTLY ANTHBOT Map "
+            "(not customer service team or another signature). "
+            "The Hungarian translation must correspond faithfully and end with "
+            "the same signature: ANTHBOT Map. "
             "JSON keys: subject, body, subject_hu, body_hu, request_hu. "
             "Do not put a Hungarian translation in the outgoing subject/body "
             "unless the site language is Hungarian."
@@ -140,6 +184,7 @@ def translate(request_id: str, payload: TranslateRequest) -> dict:
         "voice_style": row["voice_style"],
         "robot": row["model"],
         "notes": row["notes"],
+        "customer_last_reply": (row.get("incoming_messages") or [{}])[0].get("body","")[:3500],
     }
     if payload.mode == "translate":
         input_data.update(subject=payload.subject, body=payload.body)
@@ -179,8 +224,25 @@ def translate(request_id: str, payload: TranslateRequest) -> dict:
                 json_result=True,
             )
             result = _text(response)
-            if payload.mode == "draft" and ("subject" not in result or "body" not in result):
-                raise ValueError("Hiányos választervezet")
+            if payload.mode == "draft":
+                if "subject" not in result or "body" not in result:
+                    raise ValueError("Hiányos választervezet")
+                result=_ensure_request_details(result,row)
+                # Enforce the owner's brand signature, even if the model uses
+                # a generic support-team signature despite the instruction.
+                for field in ("body", "body_hu"):
+                    lines=result[field].rstrip().splitlines()
+                    if not lines:
+                        raise ValueError("Üres választervezet")
+                    if lines[-1].strip() != "ANTHBOT Map":
+                        tail=lines[-1].strip().casefold()
+                        if len(tail)<100 and any(x in tail for x in (
+                            "team","tým","zákaznick","support","ügyfélszolgál","customer service"
+                        )):
+                            lines[-1]="ANTHBOT Map"
+                        else:
+                            lines.extend(["","ANTHBOT Map"])
+                        result[field]="\n".join(lines)
         except (engine.ProviderError, ValueError, TypeError, RuntimeError) as err:
             if isinstance(err, engine.ProviderError):
                 message = str(err)
@@ -295,8 +357,14 @@ def submit_ai_job(request_id: str, payload: AsyncTranslateRequest) -> dict:
     clean_payload = TranslateRequest(
         mode=payload.mode, subject=payload.subject, body=payload.body
     )
+    with core._db() as conn:
+        last_reply = conn.execute(
+            "SELECT id FROM store_custom_voice_inbox WHERE request_id=? ORDER BY id DESC LIMIT 1",
+            (request_id,)
+        ).fetchone()
     job_id = state.digest({
-        "kind": "custom-voice-ai-job-v1",
+        "kind": "custom-voice-ai-job-v2",
+        "last_reply_id": last_reply["id"] if last_reply else None,
         "request_id": request_id,
         "mode": clean_payload.mode,
         "subject": clean_payload.subject if clean_payload.mode == "translate" else "",

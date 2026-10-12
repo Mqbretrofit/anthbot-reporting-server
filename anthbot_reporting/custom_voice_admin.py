@@ -6,6 +6,7 @@ remain unchanged. Never infer a payment from an admin-entered status.
 from __future__ import annotations
 
 from email.message import EmailMessage
+from email.utils import make_msgid
 import re
 import smtplib
 import sqlite3
@@ -22,7 +23,7 @@ from voice_builder_api import require_builder_admin
 
 router = APIRouter(dependencies=[Depends(require_builder_admin)])
 ROOT = "/api/anthbot/admin/store/custom-voice-workflow"
-STATUS = ("new", "contacted", "preview", "quoted", "awaiting_payment",
+STATUS = ("new", "contacted", "replied", "preview", "quoted", "awaiting_payment",
           "in_production", "ready", "completed", "cancelled")
 EXTRA_COLUMNS = {
     "admin_notes": "TEXT NOT NULL DEFAULT ''",
@@ -55,6 +56,41 @@ def _init() -> None:
                 body TEXT NOT NULL,
                 sent_at TEXT NOT NULL,
                 FOREIGN KEY (request_id) REFERENCES store_custom_voice_requests(request_id)
+            )
+        """)
+        fields = {r["name"] for r in conn.execute("PRAGMA table_info(store_custom_voice_messages)")}
+        if "rfc_message_id" not in fields:
+            conn.execute("ALTER TABLE store_custom_voice_messages ADD COLUMN rfc_message_id TEXT")
+        if "subject_hu" not in fields:
+            conn.execute("ALTER TABLE store_custom_voice_messages ADD COLUMN subject_hu TEXT NOT NULL DEFAULT ''")
+        if "body_hu" not in fields:
+            conn.execute("ALTER TABLE store_custom_voice_messages ADD COLUMN body_hu TEXT NOT NULL DEFAULT ''")
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS store_custom_voice_inbox (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                request_id TEXT NOT NULL,
+                message_hash TEXT NOT NULL UNIQUE,
+                rfc_message_id TEXT NOT NULL DEFAULT '',
+                sender TEXT NOT NULL,
+                subject TEXT NOT NULL,
+                body TEXT NOT NULL,
+                received_at TEXT NOT NULL,
+                translation_hu TEXT NOT NULL DEFAULT '',
+                translation_state TEXT NOT NULL DEFAULT 'pending',
+                translation_error TEXT NOT NULL DEFAULT '',
+                read_at TEXT,
+                FOREIGN KEY(request_id) REFERENCES store_custom_voice_requests(request_id)
+            )
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_voice_inbox_req ON store_custom_voice_inbox(request_id,id)")
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS store_custom_voice_inbox_files (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                incoming_id INTEGER NOT NULL,
+                filename TEXT NOT NULL,
+                size_bytes INTEGER NOT NULL,
+                file_path TEXT NOT NULL,
+                FOREIGN KEY(incoming_id) REFERENCES store_custom_voice_inbox(id)
             )
         """)
         conn.execute("""CREATE INDEX IF NOT EXISTS idx_custom_voice_messages_request
@@ -98,18 +134,38 @@ def _entry(conn: sqlite3.Connection, request_id: str) -> dict:
     result["payment"] = _verified_payment(conn, result)
     result["messages"] = [
         dict(item) for item in conn.execute(
-            """SELECT message_id, recipient, subject, body, sent_at
+            """SELECT message_id, recipient, subject, body, sent_at, rfc_message_id,subject_hu,body_hu
                FROM store_custom_voice_messages WHERE request_id=?
                ORDER BY message_id DESC LIMIT 30""", (request_id,)
         )
     ]
+    result["incoming_messages"] = [
+        dict(item) for item in conn.execute(
+            """SELECT id, sender, subject, body, received_at, rfc_message_id,
+                      translation_hu,translation_state,translation_error,read_at
+               FROM store_custom_voice_inbox WHERE request_id=?
+               ORDER BY id DESC LIMIT 30""", (request_id,)
+        )
+    ]
+    for message in result["incoming_messages"]:
+        message["attachments"] = [
+            {"id": f["id"],"filename": f["filename"],"size_bytes": f["size_bytes"]}
+            for f in conn.execute(
+                """SELECT id,filename,size_bytes FROM store_custom_voice_inbox_files
+                   WHERE incoming_id=? ORDER BY id""",(message["id"],)
+            )
+        ]
+    result["incoming_unread"] = conn.execute(
+        "SELECT COUNT(*) FROM store_custom_voice_inbox WHERE request_id=? AND read_at IS NULL",
+        (request_id,)
+    ).fetchone()[0]
     return result
 
 
 class Edit(BaseModel):
     model_config = ConfigDict(extra="forbid")
     status: Literal[
-        "new", "contacted", "preview", "quoted", "awaiting_payment",
+        "new", "contacted", "replied", "preview", "quoted", "awaiting_payment",
         "in_production", "ready", "completed", "cancelled"
     ] | None = None
     admin_notes: str | None = Field(default=None, max_length=4000)
@@ -122,6 +178,14 @@ class Email(BaseModel):
     model_config = ConfigDict(extra="forbid")
     subject: str = Field(min_length=1, max_length=180)
     body: str = Field(min_length=1, max_length=8000)
+    subject_hu: str = Field(default="", max_length=250)
+    body_hu: str = Field(default="", max_length=12000)
+
+
+class HistoryTranslation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    subject_hu: str = Field(min_length=1, max_length=250)
+    body_hu: str = Field(min_length=1, max_length=12000)
 
 
 @router.get(ROOT)
@@ -196,10 +260,28 @@ def send_email(request_id: str, payload: Email) -> dict:
     if not store_accounts._smtp_ready():
         raise HTTPException(503, "Az SMTP nincs konfigurálva")
     mail = EmailMessage()
+    # Message-ID and stable request tag allow accurate reply threading.
+    # Earlier untagged messages remain supported by conservative IMAP fallback.
+    marker = "[ANTHBOT:" + request_id + "]"
+    if marker not in subject:
+        subject = (subject[:max(1,180-len(marker)-1)].rstrip() + " " + marker)
     mail["Subject"] = subject
+    mail["Message-ID"] = make_msgid(domain="anthbotmap.com")
+    mail["X-ANTHBOT-Request-ID"] = request_id
     mail["To"] = recipient
     mail["From"] = (f"{store_accounts._smtp_from_name()} "
                     f"<{store_accounts._smtp_from_email()}>")
+    mail["Reply-To"] = store_accounts._smtp_from_email()
+    # Keep follow-up messages in the same conversation where possible.
+    with core._db() as conn:
+        previous = conn.execute(
+            """SELECT rfc_message_id FROM store_custom_voice_inbox
+               WHERE request_id=? AND rfc_message_id!=''
+               ORDER BY id DESC LIMIT 1""",(request_id,)
+        ).fetchone()
+        if previous and previous["rfc_message_id"]:
+            mail["In-Reply-To"] = previous["rfc_message_id"]
+            mail["References"] = previous["rfc_message_id"]
     mail.set_content(body)
     try:
         store_accounts._smtp_send_message(mail)
@@ -211,9 +293,10 @@ def send_email(request_id: str, payload: Email) -> dict:
     with core._db() as conn:
         conn.execute(
             """INSERT INTO store_custom_voice_messages
-               (request_id, recipient, subject, body, sent_at)
-               VALUES (?, ?, ?, ?, ?)""",
-            (request_id, recipient, subject, body, now)
+               (request_id, recipient, subject, body, sent_at, rfc_message_id,subject_hu,body_hu)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (request_id, recipient, subject, body, now, str(mail["Message-ID"]),
+             payload.subject_hu.strip(),payload.body_hu.strip())
         )
         conn.execute(
             """UPDATE store_custom_voice_requests
@@ -223,3 +306,20 @@ def send_email(request_id: str, payload: Email) -> dict:
             (now, now, request_id)
         )
         return {"sent": True, "item": _entry(conn, request_id)}
+
+
+@router.post(ROOT + "/{request_id}/email/{message_id}/translation")
+def set_outgoing_translation(request_id: str, message_id: int,
+                             payload: HistoryTranslation) -> dict:
+    _init()
+    with core._db() as conn:
+        _entry(conn, request_id)
+        updated=conn.execute(
+            """UPDATE store_custom_voice_messages
+               SET subject_hu=?,body_hu=?
+               WHERE request_id=? AND message_id=?""",
+            (payload.subject_hu.strip(),payload.body_hu.strip(),request_id,message_id)
+        )
+        if not updated.rowcount:
+            raise HTTPException(404,"Nem található ilyen elküldött email")
+        return {"saved":True}
