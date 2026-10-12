@@ -139,3 +139,10 @@ járhat. Az admin felület nem teszi elérhetővé az IMAP jelszavát.
 
 Élő IMAP-jelszó és tényleges ügyfél-válasz nélkül a külső
 kézbesítés nem ellenőrizhető automatikus tesztekből.
+
+Az engedélyezett hangminta-mellékletek (.mp3, .wav, .m4a, .ogg, .opus,
+.flac, .aac), képek (.jpg, .png, .webp) és PDF-ek adminjogosultsággal
+letölthetők az érkező üzenet alatt. Egy üzenet legfeljebb 15 MiB,
+egy fájl legfeljebb 8 MiB lehet, legfeljebb nyolc melléklet kerül
+mentésre. A támogatott méretnél nagyobb levelet az eredeti
+postafiókban kell megnyitni, mivel az ANTHBOT nem tölti le.
