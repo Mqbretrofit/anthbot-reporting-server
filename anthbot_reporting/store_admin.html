@@ -140,6 +140,7 @@
       <form method="dialog"><button class="btn workflow-close" aria-label="Bezárás">✕</button></form>
       <h2 id="custom-workflow-title">Egyedi hangkérés kezelése</h2>
       <div id="custom-workflow-details" class="workflow-info"></div>
+      <div class="workflow-translation"><strong>Az ügyfél kérése magyarul (AI):</strong><div id="custom-workflow-request-hu" style="margin-top:7px;white-space:pre-wrap">Fordítás folyamatban…</div></div>
       <div class="workflow-grid">
         <label>Állapot<select class="control" id="custom-workflow-status">
           <option value="new">Új</option><option value="contacted">Kapcsolatfelvétel</option>
@@ -163,6 +164,10 @@
         <div class="small" id="custom-workflow-translation-status" role="status" aria-live="polite"></div>
         <div class="workflow-translation-subject"><strong>Tárgy:</strong> <span id="custom-workflow-subject-hu"></span></div>
         <pre id="custom-workflow-email-hu"></pre>
+      </div>
+      <div class="workflow-actions">
+        <button class="btn" type="button" id="custom-workflow-ai-draft">Új AI választervezet</button>
+        <button class="btn" type="button" id="custom-workflow-ai-translate">Magyar fordítás frissítése AI-val</button>
       </div>
       <div class="workflow-actions"><button class="btn primary" type="button" id="custom-workflow-send">Email küldése (megerősítéssel)</button></div>
       <p class="small">Az email csak külön jóváhagyásra megy ki. A fizetést kizárólag a tényleges Stripe-rendelés igazolja; az állapot és az árajánlat nem hoz létre vásárlást. Hangot a Builderben csak saját indítással generálunk.</p>
