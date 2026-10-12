@@ -845,7 +845,7 @@
         document.getElementById('custom-workflow-inbox-status').textContent='IMAP állapot lekérése sikertelen: '+e.message;
       }
     }
-    async function refreshCustomThread(){
+    async function refreshCustomThread(silent=false){
       if(!activeCustomRequest)return;
       const id=activeCustomRequest.request_id;
       try{
@@ -861,7 +861,7 @@
         const idx=customWorkflowItems.findIndex(x=>x.request_id===id);
         if(idx>=0){customWorkflowItems[idx]=result;customRequestRows(customWorkflowItems)}
         await updateCustomInboxStatus();
-        workflowNotice('A levelezést frissítettem.');
+        if(!silent)workflowNotice('A levelezést frissítettem.');
       }catch(e){workflowNotice('Beszélgetés frissítési hiba: '+e.message,true)}
     }
     async function syncCustomInbox(){
@@ -1177,6 +1177,12 @@
     document.getElementById('admin-notification-reload-devices').addEventListener('click',loadAdminHaDevices);
     document.getElementById('admin-notification-ha-test').addEventListener('click',testAdminHaNotification);
     document.getElementById('admin-notification-read').addEventListener('click',markAdminNotificationsRead);
+    // The backend polls IMAP independently; an open admin conversation
+    // refreshes the message history without overwriting unsent edits.
+    setInterval(()=>{
+      const dialog=document.getElementById('custom-workflow-dialog');
+      if(dialog.open)refreshCustomThread(true);
+    },30000);
     setupVoiceAdminFilters();document.getElementById('refresh').onclick=load;document.getElementById('delete-test-orders').onclick=deleteAllTestOrders;document.getElementById('delete-all-orders').onclick=deleteAllLocalOrders;load();refreshAdminNotifications().then(loadAdminHaDevices);
   </script>
 </body>
