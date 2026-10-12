@@ -61,6 +61,10 @@ def _init() -> None:
         fields = {r["name"] for r in conn.execute("PRAGMA table_info(store_custom_voice_messages)")}
         if "rfc_message_id" not in fields:
             conn.execute("ALTER TABLE store_custom_voice_messages ADD COLUMN rfc_message_id TEXT")
+        if "subject_hu" not in fields:
+            conn.execute("ALTER TABLE store_custom_voice_messages ADD COLUMN subject_hu TEXT NOT NULL DEFAULT ''")
+        if "body_hu" not in fields:
+            conn.execute("ALTER TABLE store_custom_voice_messages ADD COLUMN body_hu TEXT NOT NULL DEFAULT ''")
         conn.execute("""
             CREATE TABLE IF NOT EXISTS store_custom_voice_inbox (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -130,7 +134,7 @@ def _entry(conn: sqlite3.Connection, request_id: str) -> dict:
     result["payment"] = _verified_payment(conn, result)
     result["messages"] = [
         dict(item) for item in conn.execute(
-            """SELECT message_id, recipient, subject, body, sent_at, rfc_message_id
+            """SELECT message_id, recipient, subject, body, sent_at, rfc_message_id,subject_hu,body_hu
                FROM store_custom_voice_messages WHERE request_id=?
                ORDER BY message_id DESC LIMIT 30""", (request_id,)
         )
@@ -174,6 +178,14 @@ class Email(BaseModel):
     model_config = ConfigDict(extra="forbid")
     subject: str = Field(min_length=1, max_length=180)
     body: str = Field(min_length=1, max_length=8000)
+    subject_hu: str = Field(default="", max_length=250)
+    body_hu: str = Field(default="", max_length=12000)
+
+
+class HistoryTranslation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    subject_hu: str = Field(min_length=1, max_length=250)
+    body_hu: str = Field(min_length=1, max_length=12000)
 
 
 @router.get(ROOT)
@@ -281,9 +293,10 @@ def send_email(request_id: str, payload: Email) -> dict:
     with core._db() as conn:
         conn.execute(
             """INSERT INTO store_custom_voice_messages
-               (request_id, recipient, subject, body, sent_at, rfc_message_id)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (request_id, recipient, subject, body, now, str(mail["Message-ID"]))
+               (request_id, recipient, subject, body, sent_at, rfc_message_id,subject_hu,body_hu)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (request_id, recipient, subject, body, now, str(mail["Message-ID"]),
+             payload.subject_hu.strip(),payload.body_hu.strip())
         )
         conn.execute(
             """UPDATE store_custom_voice_requests
@@ -293,3 +306,20 @@ def send_email(request_id: str, payload: Email) -> dict:
             (now, now, request_id)
         )
         return {"sent": True, "item": _entry(conn, request_id)}
+
+
+@router.post(ROOT + "/{request_id}/email/{message_id}/translation")
+def set_outgoing_translation(request_id: str, message_id: int,
+                             payload: HistoryTranslation) -> dict:
+    _init()
+    with core._db() as conn:
+        _entry(conn, request_id)
+        updated=conn.execute(
+            """UPDATE store_custom_voice_messages
+               SET subject_hu=?,body_hu=?
+               WHERE request_id=? AND message_id=?""",
+            (payload.subject_hu.strip(),payload.body_hu.strip(),request_id,message_id)
+        )
+        if not updated.rowcount:
+            raise HTTPException(404,"Nem található ilyen elküldött email")
+        return {"saved":True}
