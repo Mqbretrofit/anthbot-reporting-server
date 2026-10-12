@@ -700,18 +700,64 @@
     }
     let customEmailBaseline=null;
     function customEmailIsModified(){
-      return Boolean(customEmailBaseline)&&(
-        document.getElementById('custom-workflow-subject').value!==customEmailBaseline.subject||
-        document.getElementById('custom-workflow-email').value!==customEmailBaseline.body
-      );
+      return !customEmailTranslatedSource||
+        document.getElementById('custom-workflow-subject').value!==customEmailTranslatedSource.subject||
+        document.getElementById('custom-workflow-email').value!==customEmailTranslatedSource.body;
     }
+    let customEmailTranslatedSource=null;
+    let activeCustomAiRequest=0;
     function updateCustomEmailTranslationStatus(){
       const note=document.getElementById('custom-workflow-translation-status');
       const changed=customEmailIsModified();
       note.textContent=changed
-        ? 'FIGYELEM: Módosítottad a küldendő szöveget. A magyar jelentés az eredeti sablonhoz tartozik, nem az új változat fordítása. Küldés előtt külön ellenőrizd a módosításokat.'
-        : 'A magyar szöveg a fenti, változatlan levélsablon jelentését mutatja. Az ügyfélnek csak az idegen nyelvű szöveg megy ki.';
+        ? 'FIGYELEM: a magyar szöveg még nem a fent látható módosított levél fordítása. Kattints a „Magyar fordítás frissítése AI-val” gombra.'
+        : 'A magyar jelentés a fent látható levélszöveghez tartozik. Az ügyfélnek csak a küldendő idegen nyelvű levél megy ki.';
       note.classList.toggle('outdated',changed);
+    }
+    async function customAiWork(mode,automated=false){
+      if(!activeCustomRequest)return;
+      const id=activeCustomRequest.request_id;
+      const nonce=++activeCustomAiRequest;
+      const subjectField=document.getElementById('custom-workflow-subject');
+      const bodyField=document.getElementById('custom-workflow-email');
+      const oldSubject=subjectField.value,oldBody=bodyField.value;
+      const draftButton=document.getElementById('custom-workflow-ai-draft');
+      const translateButton=document.getElementById('custom-workflow-ai-translate');
+      draftButton.disabled=true;translateButton.disabled=true;
+      if(!automated)workflowNotice('AI-feldolgozás folyamatban…');
+      const requestBody=mode==='draft'?{mode}:{mode,subject:oldSubject,body:oldBody};
+      try{
+        const answer=await api(customWorkflowApiRoot+'/'+encodeURIComponent(id)+'/ai',{
+          method:'POST',headers:{'Content-Type':'application/json','X-ANTHBOT-Builder':'1'},
+          body:JSON.stringify(requestBody)
+        });
+        if(!activeCustomRequest||activeCustomRequest.request_id!==id||nonce!==activeCustomAiRequest)return;
+        document.getElementById('custom-workflow-request-hu').textContent=answer.request_hu;
+        if(mode==='draft'){
+          if(subjectField.value===oldSubject&&bodyField.value===oldBody){
+            subjectField.value=answer.subject;
+            bodyField.value=answer.body;
+          }else{
+            workflowNotice('Közben szerkesztetted a levelet. Az AI nem írta felül. A megadott szöveget külön fordítsd le.',true);
+            return;
+          }
+        }else if(subjectField.value!==oldSubject||bodyField.value!==oldBody){
+          workflowNotice('Közben módosult a levél, ezért a fordítás már nem aktuális. Fordíttasd le újra.',true);
+          return;
+        }
+        document.getElementById('custom-workflow-subject-hu').textContent=answer.subject_hu;
+        document.getElementById('custom-workflow-email-hu').textContent=answer.body_hu;
+        customEmailTranslatedSource={subject:subjectField.value,body:bodyField.value};
+        updateCustomEmailTranslationStatus();
+        workflowNotice('AI: '+(answer.cached?'mentett fordítás betöltve.':'új fordítás elkészült. Ellenőrizd küldés előtt.'));
+      }catch(err){
+        if(activeCustomRequest&&activeCustomRequest.request_id===id&&nonce===activeCustomAiRequest){
+          document.getElementById('custom-workflow-request-hu').textContent='A magyar AI-fordítás nem érhető el. Az eredeti igény fent olvasható.';
+          workflowNotice('AI: '+err.message+' A levélsablon továbbra is használható.',true);
+        }
+      }finally{
+        if(nonce===activeCustomAiRequest){draftButton.disabled=false;translateButton.disabled=false}
+      }
     }
     function renderCustomWorkflow(r,resetEmail=false){
       activeCustomRequest=r;
@@ -726,15 +772,26 @@
       document.getElementById('custom-workflow-payment').innerHTML='<strong>Fizetés: '+(p.verified?'<span style="color:#80e0c7">Stripe által igazolt fizetés</span>':'<span style="color:#ffcc66">Nincs igazolt fizetés</span>')+'</strong>'+(p.verified?' · '+esc(money(p.amount_total,p.currency))+' · '+esc(p.stripe_session_id):' · A beállított árajánlat önmagában nem fizetési link.');
       const history=document.getElementById('custom-workflow-history');
       history.innerHTML=(r.messages||[]).length?(r.messages||[]).map(m=>'<details><summary>'+esc(fmt(m.sent_at))+' · '+esc(m.subject)+' → '+esc(m.recipient)+'</summary><pre>'+esc(m.body)+'</pre></details>').join(''):'<div class="small">Még nem küldtél emailt ebből a kérésből.</div>';
-      if(resetEmail){const draft=customEmailDraft(r);document.getElementById('custom-workflow-subject').value=draft.subject;document.getElementById('custom-workflow-email').value=draft.body}
+      if(resetEmail){
+        const draft=customEmailDraft(r);
+        document.getElementById('custom-workflow-subject').value=draft.subject;
+        document.getElementById('custom-workflow-email').value=draft.body;
+        document.getElementById('custom-workflow-subject-hu').textContent=draft.huSubject;
+        document.getElementById('custom-workflow-email-hu').textContent=draft.huBody;
+        document.getElementById('custom-workflow-request-hu').textContent='Fordítás folyamatban…';
+        customEmailTranslatedSource={subject:draft.subject,body:draft.body};
+      }
+      updateCustomEmailTranslationStatus();
       document.getElementById('custom-workflow-message').textContent='';
     }
     function workflowNotice(message,error=false){const target=document.getElementById('custom-workflow-message');target.textContent=message;target.style.color=error?'#ffb5c1':'#a9f8dd'}
     async function openCustomWorkflow(id){
       const r=customWorkflowItems.find(x=>x.request_id===id);
       if(!r)return;
+      ++activeCustomAiRequest;
       renderCustomWorkflow(r,true);
       document.getElementById('custom-workflow-dialog').showModal();
+      customAiWork('draft',true);
     }
     async function saveCustomWorkflow(){
       if(!activeCustomRequest)return;
@@ -765,7 +822,7 @@
       const subject=document.getElementById('custom-workflow-subject').value.trim();
       const body=document.getElementById('custom-workflow-email').value.trim();
       if(!subject||!body){workflowNotice('Töltsd ki a tárgyat és az üzenetet.',true);return}
-      if(!confirm('Biztosan elküldöd az emailt erre a címre?\n'+activeCustomRequest.contact+'\n\n'+subject))return;
+      if(!confirm((customEmailIsModified()?'FIGYELEM: A magyar fordítás nem egyezik a módosított levéllel. Ellenőrizted a tényleges idegen nyelvű szöveget?\n\n':'')+'Biztosan elküldöd az emailt erre a címre?\n'+activeCustomRequest.contact+'\n\n'+subject))return;
       const button=document.getElementById('custom-workflow-send');button.disabled=true;
       try{
         const result=await api(customWorkflowApiRoot+'/'+encodeURIComponent(activeCustomRequest.request_id)+'/email',{
@@ -897,6 +954,11 @@
     document.getElementById('custom-requests').addEventListener('click',e=>{const button=e.target.closest('button[data-custom-request]');if(button)openCustomWorkflow(button.dataset.customRequest)});
     document.getElementById('custom-workflow-save').addEventListener('click',saveCustomWorkflow);
     document.getElementById('custom-workflow-send').addEventListener('click',sendCustomWorkflowEmail);
+    document.getElementById('custom-workflow-ai-draft').addEventListener('click',()=>customAiWork('draft'));
+    document.getElementById('custom-workflow-ai-translate').addEventListener('click',()=>customAiWork('translate'));
+    ['custom-workflow-subject','custom-workflow-email'].forEach(id=>
+      document.getElementById(id).addEventListener('input',updateCustomEmailTranslationStatus)
+    );
     setupVoiceAdminFilters();document.getElementById('refresh').onclick=load;document.getElementById('delete-test-orders').onclick=deleteAllTestOrders;document.getElementById('delete-all-orders').onclick=deleteAllLocalOrders;load();
   </script>
 </body>
