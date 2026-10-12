@@ -6,6 +6,7 @@ from migration_api import router as migration_router
 from store_api import router as store_router
 from custom_voice_admin import router as custom_voice_admin_router
 from custom_voice_ai import router as custom_voice_ai_router
+from custom_voice_inbox import router as custom_voice_inbox_router
 from store_notifications import router as store_notifications_router
 from store_accounts import router as store_accounts_router
 from web_voice_installer import router as web_voice_installer_router
