@@ -156,7 +156,8 @@ class CustomVoiceWorkflowTests(unittest.TestCase):
             sent_mail = sender.call_args.args[0]
             self.assertEqual(sent_mail["To"], "customer@example.test")
             self.assertEqual(result.json()["item"]["status"], "contacted")
-            self.assertEqual(result.json()["item"]["messages"][0]["subject"], "Váš hlas ANTHBOT")
+            self.assertIn("Váš hlas ANTHBOT", result.json()["item"]["messages"][0]["subject"])
+            self.assertIn("[ANTHBOT:"+self.id+"]",result.json()["item"]["messages"][0]["subject"])
         self.assertEqual(len(self.client.get(self.endpoint, headers=self.read_headers).json()["messages"]), 1)
 
     def test_smtp_failure_does_not_claim_sent_and_rejects_header_injection(self):
