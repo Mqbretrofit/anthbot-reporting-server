@@ -40,6 +40,11 @@
     #custom-workflow-history pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}
     #custom-workflow-message{margin-top:12px;font-size:.88rem;min-height:24px}
     @media(max-width:600px){.workflow-grid{grid-template-columns:1fr}.workflow-wide{grid-column:auto}}
+    .workflow-translation{margin-top:14px;padding:14px;background:#0d2033;border:1px solid #365575;border-radius:13px}
+    .workflow-translation h3{margin:0 0 10px!important}
+    .workflow-translation-subject{margin-top:12px;padding:8px 0;color:#e4eefe;overflow-wrap:anywhere}
+    .workflow-translation pre{margin:8px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55;color:#d9eaff;font:inherit;font-size:.89rem}
+    #custom-workflow-translation-status.outdated{color:#ffe2a8;font-weight:700}
   </style>
 </head>
 <body>
@@ -126,6 +131,12 @@
       <h3>Üzenet az ügyfélnek</h3>
       <div class="workflow-grid"><label class="workflow-wide">Tárgy<input class="control" id="custom-workflow-subject" maxlength="180"></label>
       <label class="workflow-wide">Email szövege<textarea class="control" rows="7" maxlength="8000" id="custom-workflow-email"></textarea></label></div>
+      <div class="workflow-translation" aria-label="Magyar fordítás az adminisztrátornak">
+        <h3>Magyar jelentés – csak neked, az ügyfél nem kapja meg</h3>
+        <div class="small" id="custom-workflow-translation-status" role="status" aria-live="polite"></div>
+        <div class="workflow-translation-subject"><strong>Tárgy:</strong> <span id="custom-workflow-subject-hu"></span></div>
+        <pre id="custom-workflow-email-hu"></pre>
+      </div>
       <div class="workflow-actions"><button class="btn primary" type="button" id="custom-workflow-send">Email küldése (megerősítéssel)</button></div>
       <p class="small">Az email csak külön jóváhagyásra megy ki. A fizetést kizárólag a tényleges Stripe-rendelés igazolja; az állapot és az árajánlat nem hoz létre vásárlást. Hangot a Builderben csak saját indítással generálunk.</p>
       <h3>Korábbi emailek</h3><div id="custom-workflow-history"></div>
@@ -640,14 +651,35 @@
     }
     function customEmailDraft(r){
       const cs=String(r.site_language||'').toLowerCase().startsWith('cs')||/čes|czech/i.test(r.requested_language||'');
+      const huLang=/^čeština/i.test(r.requested_language||'')?'cseh':r.requested_language;
+      const huVoice=/^vřelý ženský$/i.test(r.voice_style||'')?'meleg tónusú női':r.voice_style;
+      const huSubject='ANTHBOT – egyedi hangkérés visszaigazolása';
+      const huBody='Jó napot kívánunk!\n\nKöszönjük, hogy egyedi hangot kért az ANTHBOT '+r.model+' robotjához.\n\nRögzítettük a kért nyelvet: '+huLang+', valamint a hang jellemzőjét: '+huVoice+'.\n\nKérjük, pontosítsa, milyennek képzeli el a hangot. Ha van hasonló hangminta, küldje el nekünk a linkjét. Elkészítünk egy javaslatot, és előre egyeztetjük a végleges árat. Az ár 24,99 eurótól kezdődik, jelenleg még nem kérünk fizetést.\n\nÜdvözlettel:\nANTHBOT Map';
       if(cs)return {
         subject:'ANTHBOT – vaše žádost o vlastní hlas',
-        body:'Dobrý den,\n\nděkujeme za vaši žádost o vlastní hlas pro '+r.model+'.\n\nZaznamenali jsme jazyk: '+r.requested_language+' a požadovaný hlas: '+r.voice_style+'.\n\nMůžete nám prosím upřesnit, jak si hlas představujete? Pokud máte ukázku podobného hlasu, pošlete nám odkaz. Připravíme návrh a předem potvrdíme konečnou cenu. Cena začíná na 24,99 €; zatím nepožadujeme žádnou platbu.\n\nS pozdravem,\nANTHBOT Map'
+        body:'Dobrý den,\n\nděkujeme za vaši žádost o vlastní hlas pro '+r.model+'.\n\nZaznamenali jsme jazyk: '+r.requested_language+' a požadovaný hlas: '+r.voice_style+'.\n\nMůžete nám prosím upřesnit, jak si hlas představujete? Pokud máte ukázku podobného hlasu, pošlete nám odkaz. Připravíme návrh a předem potvrdíme konečnou cenu. Cena začíná na 24,99 €; zatím nepožadujeme žádnou platbu.\n\nS pozdravem,\nANTHBOT Map',
+        huSubject,huBody
       };
       return {
         subject:'ANTHBOT – your custom voice request',
-        body:'Hello,\n\nThank you for your custom voice request for '+r.model+'.\n\nWe noted your requested language: '+r.requested_language+' and voice: '+r.voice_style+'.\n\nCould you tell us more about the voice you have in mind? A link to a similar voice sample would be helpful. We will confirm the final quote before production. Prices start at €24.99; no payment is required at this stage.\n\nBest regards,\nANTHBOT Map'
+        body:'Hello,\n\nThank you for your custom voice request for '+r.model+'.\n\nWe noted your requested language: '+r.requested_language+' and voice: '+r.voice_style+'.\n\nCould you tell us more about the voice you have in mind? A link to a similar voice sample would be helpful. We will confirm the final quote before production. Prices start at €24.99; no payment is required at this stage.\n\nBest regards,\nANTHBOT Map',
+        huSubject,huBody
       };
+    }
+    let customEmailBaseline=null;
+    function customEmailIsModified(){
+      return Boolean(customEmailBaseline)&&(
+        document.getElementById('custom-workflow-subject').value!==customEmailBaseline.subject||
+        document.getElementById('custom-workflow-email').value!==customEmailBaseline.body
+      );
+    }
+    function updateCustomEmailTranslationStatus(){
+      const note=document.getElementById('custom-workflow-translation-status');
+      const changed=customEmailIsModified();
+      note.textContent=changed
+        ? 'FIGYELEM: Módosítottad a küldendő szöveget. A magyar jelentés az eredeti sablonhoz tartozik, nem az új változat fordítása. Küldés előtt külön ellenőrizd a módosításokat.'
+        : 'A magyar szöveg a fenti, változatlan levélsablon jelentését mutatja. Az ügyfélnek csak az idegen nyelvű szöveg megy ki.';
+      note.classList.toggle('outdated',changed);
     }
     function renderCustomWorkflow(r,resetEmail=false){
       activeCustomRequest=r;
