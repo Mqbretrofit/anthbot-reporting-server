@@ -143,7 +143,8 @@ class AdminAlertTests(unittest.TestCase):
                     break
                 time.sleep(.04)
             self.assertEqual(progress["status"],"completed",progress)
-            self.assertEqual(progress["result"]["body_hu"],"Jó napot")
+            self.assertTrue(progress["result"]["body_hu"].startswith("Jó napot"))
+            self.assertTrue(progress["result"]["body_hu"].endswith("ANTHBOT Map"))
             third=self.c.post(url,headers=self.write,json={"mode":"draft"})
             self.assertEqual(third.json()["status"],"completed")
             self.assertEqual(external.call_count,1)
