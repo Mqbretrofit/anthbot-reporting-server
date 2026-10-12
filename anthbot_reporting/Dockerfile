@@ -31,6 +31,7 @@ COPY migration_api.py ./migration_api.py
 COPY voice_packs.json ./voice_packs.json
 COPY store_api.py ./store_api.py
 COPY custom_voice_admin.py ./custom_voice_admin.py
+COPY custom_voice_ai.py ./custom_voice_ai.py
 COPY assets ./assets
 COPY store_accounts.py ./store_accounts.py
 COPY store.html ./store.html
