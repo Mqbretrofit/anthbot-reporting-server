@@ -128,4 +128,4 @@ class CustomVoiceInboxTests(unittest.TestCase):
         self.assertEqual(stat.status_code,200)
         self.assertFalse(stat.json()["configured"])
         self.assertEqual(self.c.post("/api/anthbot/admin/store/custom-voice-inbox/sync",
-                                     headers=self.write).status_code,503 if False else 500)
+                                     headers=self.write).status_code,503)
