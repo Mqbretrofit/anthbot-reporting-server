@@ -90,6 +90,14 @@ class AdminAlertTests(unittest.TestCase):
             self.assertEqual(second.status_code,200,second.text)
             self.assertTrue(second.json()["cached"])
             provider.assert_called_once()
+            outgoing=provider.call_args.kwargs["payload"]
+            self.assertEqual(outgoing["model"],"gpt-4o-mini")
+            self.assertEqual(outgoing["text"]["format"]["type"],"json_schema")
+            self.assertEqual(outgoing["text"]["format"]["strict"],True)
+            schema=outgoing["text"]["format"]["schema"]
+            self.assertEqual(set(schema["required"]),
+                {"subject","body","subject_hu","body_hu","request_hu"})
+            self.assertFalse(schema["additionalProperties"])
             mail.assert_not_called()
 
     def test_ai_job_avoids_slow_ingress_and_reuses_completed_result(self):
@@ -179,6 +187,24 @@ class AdminAlertTests(unittest.TestCase):
                 time.sleep(.04)
             self.assertEqual(record["status"],"completed",record)
             self.assertEqual(external.call_count,2)
+
+    def test_openai_translate_schema_and_safe_400_detail(self):
+        import custom_voice_ai
+        import voice_builder_engine as engine
+        schema=custom_voice_ai._response_format("translate")["format"]
+        self.assertEqual(schema["type"],"json_schema")
+        self.assertEqual(set(schema["schema"]["required"]),
+            {"subject_hu","body_hu","request_hu"})
+        self.assertNotIn("body",schema["schema"]["required"])
+        msg=str(engine.ProviderError(400,
+            operation="OpenAI szöveg- vagy hangfeldolgozás",
+            parameter="text.format.schema"))
+        self.assertIn("HTTP 400",msg)
+        self.assertIn("text.format.schema",msg)
+        unsafe=str(engine.ProviderError(400,
+            operation="OpenAI szöveg- vagy hangfeldolgozás",
+            parameter="key: confidential=123"))
+        self.assertNotIn("confidential",unsafe)
 
     def test_security_and_notify_target_validation(self):
         self.assertEqual(self.c.get("/api/anthbot/admin/notifications").status_code,401)
