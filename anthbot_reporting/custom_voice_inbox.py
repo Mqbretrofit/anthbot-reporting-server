@@ -286,6 +286,8 @@ def _poll_once() -> int:
     _init()
     account=hashlib.sha256((host+"\0"+user+"\0"+mailbox).encode()).hexdigest()
     imported=0
+    with core._db() as db:
+        db.execute("INSERT OR IGNORE INTO store_custom_voice_imap_cursors(mailbox_key) VALUES(?)",(account,))
     conn=imaplib.IMAP4_SSL(host,port,ssl_context=ssl.create_default_context(),timeout=18)
     try:
         conn.login(user,password)
@@ -336,10 +338,17 @@ def sync_once() -> None:
             # Do not persist raw IMAP server exception messages, which can
             # contain mailbox names and auth details.
             _init()  # make sure cursor table exists
+            ident=hashlib.sha256((
+                os.environ.get("ANTHBOT_IMAP_HOST","").strip()+"\0"+
+                os.environ.get("ANTHBOT_IMAP_USERNAME","").strip()+"\0"+
+                (os.environ.get("ANTHBOT_IMAP_MAILBOX","INBOX").strip() or "INBOX")
+            ).encode()).hexdigest()
             with core._db() as db:
+                db.execute("""INSERT OR IGNORE INTO store_custom_voice_imap_cursors(mailbox_key)
+                              VALUES(?)""",(ident,))
                 db.execute("""UPDATE store_custom_voice_imap_cursors SET last_error=?
-                              WHERE mailbox_key IN (SELECT mailbox_key FROM store_custom_voice_imap_cursors)""",
-                           ("IMAP kapcsolat vagy beállítási hiba ("+type(err).__name__+")",))
+                              WHERE mailbox_key=?""",
+                           ("IMAP kapcsolat vagy beállítási hiba ("+type(err).__name__+")",ident))
     finally:_MUTEX.release()
 
 
@@ -366,8 +375,13 @@ def status() -> dict:
                     os.environ.get("ANTHBOT_IMAP_USERNAME") and
                     os.environ.get("ANTHBOT_IMAP_PASSWORD"))
     with core._db() as conn:
+        ident=hashlib.sha256((
+            os.environ.get("ANTHBOT_IMAP_HOST","").strip()+"\0"+
+            os.environ.get("ANTHBOT_IMAP_USERNAME","").strip()+"\0"+
+            (os.environ.get("ANTHBOT_IMAP_MAILBOX","INBOX").strip() or "INBOX")
+        ).encode()).hexdigest()
         rows=conn.execute("""SELECT last_sync_at,last_error FROM store_custom_voice_imap_cursors
-                             ORDER BY last_sync_at DESC LIMIT 1""").fetchone()
+                             WHERE mailbox_key=?""",(ident,)).fetchone()
         unread=conn.execute("SELECT COUNT(*) FROM store_custom_voice_inbox WHERE read_at IS NULL").fetchone()[0]
     return {"enabled":os.environ.get("ANTHBOT_IMAP_ENABLED","false").lower() in
             ("1","true","yes","on"),"configured":configured,
