@@ -29,6 +29,12 @@ options:
   site_analytics_enabled: true
   google_site_verification: ""
   web_voice_installer_enabled: false
+  imap_enabled: false
+  imap_host: ""
+  imap_port: 993
+  imap_username: ""
+  imap_password: ""
+  imap_mailbox: "INBOX"
   smtp_host: ""
   smtp_port: 587
   smtp_username: ""
