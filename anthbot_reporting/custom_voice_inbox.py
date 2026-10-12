@@ -17,6 +17,8 @@ import imaplib
 import json
 import logging
 import os
+from pathlib import Path
+import secrets
 import queue
 import re
 import ssl
@@ -24,6 +26,7 @@ import threading
 import time
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 import app as core
 from voice_builder_api import require_builder_admin
 
@@ -36,7 +39,9 @@ _TRANSLATOR_STARTED=False
 _TRANSLATOR_LOCK=threading.Lock()
 _TRANSLATOR_QUEUE=queue.Queue(maxsize=200)
 _TRANSLATOR_QUEUED=set()
-_MAX_MAIL=384*1024
+_MAX_MAIL=15*1024*1024
+_MAX_ATTACHMENT=8*1024*1024
+_EXTS={'.mp3','.wav','.m4a','.ogg','.opus','.flac','.aac','.png','.jpg','.jpeg','.webp','.pdf'}
 _TAG=re.compile(r"\[ANTHBOT:(cvr_[A-Za-z0-9_-]+)\]",re.IGNORECASE)
 _ADDRESS=re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _MESSAGE_ID=re.compile(r"^<[^\s<>]{1,240}>$")
@@ -175,6 +180,42 @@ def _match(conn, sender: str, message) -> str | None:
     return rid
 
 
+def _attachment_root() -> Path:
+    return core._db_path().parent / "custom_voice_inbox_attachments"
+
+
+def _save_attachments(message, incoming_id: int, message_hash: str) -> None:
+    """Save allowlisted reference samples, never executable attachments."""
+    root=_attachment_root() / message_hash
+    count=0
+    for part in message.walk():
+        filename=part.get_filename()
+        if not filename or part.is_multipart():
+            continue
+        # Refuse traversal, control characters and non-reference-file extensions.
+        safe_name=Path(str(filename).replace("\\","/")).name[:140]
+        if not safe_name or any(ord(ch)<32 for ch in safe_name):continue
+        suffix=Path(safe_name).suffix.lower()
+        if suffix not in _EXTS:continue
+        content=part.get_payload(decode=True)
+        if not isinstance(content,bytes) or not (1<=len(content)<=_MAX_ATTACHMENT):
+            continue
+        if count>=8:break
+        root.mkdir(parents=True,exist_ok=True,mode=0o700)
+        destination=root/(secrets.token_hex(16)+suffix)
+        try:
+            fd=os.open(destination,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+            with os.fdopen(fd,"wb") as out:
+                out.write(content)
+            with core._db() as db:
+                db.execute("""INSERT INTO store_custom_voice_inbox_files
+                    (incoming_id,filename,size_bytes,file_path)
+                    VALUES(?,?,?,?)""",(incoming_id,safe_name,len(content),str(destination)))
+            count+=1
+        except OSError as err:
+            _LOG.warning("Unable to store incoming reference file (%s)",type(err).__name__)
+
+
 def _ingest(data: bytes, account_key: str, uid: int) -> bool:
     if len(data)>_MAX_MAIL:return False
     try:
@@ -187,6 +228,11 @@ def _ingest(data: bytes, account_key: str, uid: int) -> bool:
         if message.get("List-ID"):return False
         subject=str(message.get("Subject",""))[:180]
         body=_body(message)
+        has_reference=any(
+            p.get_filename() and Path(str(p.get_filename()).replace("\\","/")).suffix.lower() in _EXTS
+            for p in message.walk() if not p.is_multipart()
+        )
+        if not body and has_reference:body="[Csatolt referenciahang vagy fájl – a mellékletek lent érhetők el.]"
         if not body:return False
         rfcid=str(message.get("Message-ID","")).strip()[:255]
         if not _MESSAGE_ID.fullmatch(rfcid):rfcid=""
@@ -221,6 +267,7 @@ def _ingest(data: bytes, account_key: str, uid: int) -> bool:
             SET updated_at=?,status=CASE WHEN status='contacted' THEN 'replied' ELSE status END
             WHERE request_id=?
         """,(core._iso(),rid))
+    _save_attachments(message,incoming_id,msg_hash)
     try:
         from store_notifications import create_event
         create_event("custom_voice_reply",msg_hash,
@@ -452,6 +499,28 @@ def sync_now() -> dict:
     except RuntimeError as err:raise HTTPException(503,str(err)) from None
     threading.Thread(target=sync_once,daemon=True).start()
     return {"started":True}
+
+
+@router.get(PREFIX+"/files/{file_id}")
+def download_incoming_file(file_id: int) -> FileResponse:
+    _init()
+    with core._db() as db:
+        item=db.execute(
+            "SELECT filename,file_path FROM store_custom_voice_inbox_files WHERE id=?",
+            (file_id,)
+        ).fetchone()
+    if not item:raise HTTPException(404,"Nem található ilyen ügyfélmelléklet")
+    root=_attachment_root().resolve()
+    path=Path(item["file_path"]).resolve()
+    if not path.is_relative_to(root) or not path.is_file():
+        raise HTTPException(404,"A melléklet nem érhető el")
+    return FileResponse(
+        path,
+        filename=item["filename"],
+        media_type="application/octet-stream",
+        content_disposition_type="attachment",
+        headers={"X-Content-Type-Options":"nosniff","Cache-Control":"no-store"},
+    )
 
 
 @router.post(PREFIX+"/{incoming_id}/translate",status_code=202)
