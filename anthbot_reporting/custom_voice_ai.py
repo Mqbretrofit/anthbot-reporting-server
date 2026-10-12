@@ -31,13 +31,18 @@ class TranslateRequest(BaseModel):
 def _text(response: dict) -> dict:
     if response.get("status") in ("incomplete", "failed") or response.get("error"):
         raise ValueError("AI válasz nem teljes")
-    chunks = response.get("output_text") or "".join(
-        part.get("text", "") for message in response.get("output", [])
-        if message.get("type") == "message"
-        for part in message.get("content", [])
-        if part.get("type") == "output_text"
-    )
-    parsed = json.loads(chunks)
+    # Cached entries contain already-validated reply fields, while provider
+    # responses contain output_text / output content parts.
+    if {"subject_hu", "body_hu", "request_hu"} <= set(response):
+        parsed = response
+    else:
+        chunks = response.get("output_text") or "".join(
+            part.get("text", "") for message in response.get("output", [])
+            if message.get("type") == "message"
+            for part in message.get("content", [])
+            if part.get("type") == "output_text"
+        )
+        parsed = json.loads(chunks)
     if not isinstance(parsed, dict):
         raise ValueError("AI JSON-válasz nem objektum")
     keys = {"subject_hu", "body_hu", "request_hu"}
