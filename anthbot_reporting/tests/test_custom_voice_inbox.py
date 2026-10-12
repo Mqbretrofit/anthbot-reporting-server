@@ -123,6 +123,68 @@ class CustomVoiceInboxTests(unittest.TestCase):
         with patch.object(inbox,"_launch_translation"):
             self.assertFalse(inbox._ingest(mail.as_bytes(),self.key,3))
 
+    def test_imap_only_peeks_and_imports_each_uid_once(self):
+        mail=self._message()
+        class FakeIMAP:
+            selected=[]
+            fetched=[]
+            def __init__(self,*args,**kwargs):
+                self.calls=[]
+            def login(self,user,password):
+                self.asserted_login=(user,password)
+            def select(self,mailbox,readonly=False):
+                FakeIMAP.selected.append((mailbox,readonly))
+                return ("OK",[b"2"])
+            def response(self,name):
+                return ("UIDVALIDITY",[b"54321"])
+            def uid(self,command,*args):
+                if command=="SEARCH":return ("OK",[b"101 102"])
+                if command=="FETCH":
+                    FakeIMAP.fetched.append(args)
+                    if args[0]=="101":return ("OK",[(b"101 FETCH",mail.as_bytes())])
+                    return ("OK",[(b"102 FETCH",b"unrelated")])
+                raise AssertionError("unexpected IMAP operation")
+            def logout(self):
+                return ("BYE",[])
+        with patch.dict(os.environ,{
+             "ANTHBOT_IMAP_ENABLED":"true","ANTHBOT_IMAP_HOST":"imap.example.test",
+             "ANTHBOT_IMAP_PORT":"993","ANTHBOT_IMAP_USERNAME":"support@example.test",
+             "ANTHBOT_IMAP_PASSWORD":"test-app-password","ANTHBOT_IMAP_MAILBOX":"INBOX"
+             }),patch.object(inbox.imaplib,"IMAP4_SSL",FakeIMAP),\
+             patch.object(inbox,"_launch_translation"),\
+             patch.object(store_notifications,"create_event"):
+            self.assertEqual(inbox._poll_once(),1)
+            self.assertEqual(inbox._poll_once(),0)
+            self.assertTrue(FakeIMAP.selected)
+            self.assertTrue(all(readonly for _,readonly in FakeIMAP.selected))
+            self.assertEqual(len(FakeIMAP.fetched),2)
+            self.assertTrue(all(fetch_args[1]=="(BODY.PEEK[])" for fetch_args in FakeIMAP.fetched))
+        self.assertEqual(len(self.c.get(self.url,headers=self.auth).json()["incoming_messages"]),1)
+
+    def test_incoming_message_translates_and_never_sends_email(self):
+        mail=self._message()
+        with patch.object(inbox,"_launch_translation"),\
+             patch.object(store_notifications,"create_event"):
+            self.assertTrue(inbox._ingest(mail.as_bytes(),self.key,3))
+        item=self.c.get(self.url,headers=self.auth).json()
+        incoming_id=item["incoming_messages"][0]["id"]
+        import voice_builder_state as builder
+        import voice_builder_engine as engine
+        reply={"output_text":json.dumps({"translation_hu":
+            "Meleg női hangot szeretnék. Köszönöm."},ensure_ascii=False)}
+        with patch.object(builder,"credentials",return_value={"openai_key":"test-only"}),\
+             patch.object(engine,"request",return_value=reply) as ai,\
+             patch.object(store_accounts,"_smtp_send_message") as smtp:
+            inbox._translate(incoming_id)
+            self.assertEqual(ai.call_count,1)
+            arguments=json.loads(ai.call_args.kwargs["payload"]["input"])
+            self.assertIn("teplý ženský",arguments["body"])
+            self.assertNotIn("client@example.test",ai.call_args.kwargs["payload"]["input"])
+            smtp.assert_not_called()
+        after=self.c.get(self.url,headers=self.auth).json()["incoming_messages"][0]
+        self.assertEqual(after["translation_state"],"done")
+        self.assertIn("Meleg női",after["translation_hu"])
+
     def test_server_imap_sync_requires_configuration(self):
         stat=self.c.get("/api/anthbot/admin/store/custom-voice-inbox/status",headers=self.auth)
         self.assertEqual(stat.status_code,200)
