@@ -163,6 +163,8 @@ def _init_db() -> None:
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     _init_db()
+    from store_notifications import start_worker
+    start_worker()
     from voice_builder_review import scan_and_quarantine
     try:
         await asyncio.to_thread(scan_and_quarantine)
