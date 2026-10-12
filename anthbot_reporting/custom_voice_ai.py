@@ -91,6 +91,37 @@ def _response_format(mode: str) -> dict:
     }
 
 
+def _ensure_request_details(result: dict, item: dict) -> dict:
+    """Guarantee the outgoing reply explicitly includes the requested voice."""
+    import re
+    clean=lambda value: re.sub(r"[\r\n\x00-\x1f<>]+", " ", str(value or "")).strip()[:160]
+    language=clean(item["requested_language"])
+    voice=clean(item["voice_style"])
+    model=clean(item["model"])
+    body=result["body"]
+    if not all(value.casefold() in body.casefold() for value in (language,voice,model) if value):
+        locale=str(item.get("site_language") or "").lower()
+        if locale.startswith("cs"):
+            summary=f"Požadovaný hlas: jazyk {language}, charakter {voice}, robot {model}."
+        elif locale.startswith("hu"):
+            summary=f"A kért hang: nyelv {language}, hangkarakter {voice}, robot {model}."
+        else:
+            summary=f"Your requested voice: language {language}, voice style {voice}, robot {model}."
+        # Place after the first greeting paragraph, without rewriting the
+        # AI's substantive explanation, and add the same facts in Hungarian.
+        para=body.split("\n\n",1)
+        result["body"]=(para[0]+"\n\n"+summary+"\n\n"+para[1] if len(para)==2
+                        else summary+"\n\n"+body)
+        voice_hu=("meleg tónusú női hang" if voice.casefold()=="vřelý ženský"
+                  else voice)
+        lang_hu="cseh" if language.lower().startswith("čeština") else language
+        result["body_hu"]=(
+            f"A kért hang: {lang_hu}; {voice_hu}; robot: {model}.\n\n"+
+            result["body_hu"]
+        )
+    return result
+
+
 def _instructions(mode: str) -> str:
     base = (
         "You are a professional Hungarian-speaking customer-support translator "
@@ -196,6 +227,7 @@ def translate(request_id: str, payload: TranslateRequest) -> dict:
             if payload.mode == "draft":
                 if "subject" not in result or "body" not in result:
                     raise ValueError("Hiányos választervezet")
+                result=_ensure_request_details(result,row)
                 # Enforce the owner's brand signature, even if the model uses
                 # a generic support-team signature despite the instruction.
                 for field in ("body", "body_hu"):
