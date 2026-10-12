@@ -1,5 +1,8 @@
 """Admin native Home Assistant Companion notification regression tests."""
 import os
+import json
+import threading
+import time
 import tempfile
 import unittest
 from pathlib import Path
@@ -88,6 +91,94 @@ class AdminAlertTests(unittest.TestCase):
             self.assertTrue(second.json()["cached"])
             provider.assert_called_once()
             mail.assert_not_called()
+
+    def test_ai_job_avoids_slow_ingress_and_reuses_completed_result(self):
+        import voice_builder_state as builder
+        import voice_builder_engine as engine
+        made=self.c.post("/api/anthbot/store/custom-voice-requests",json={
+            "requested_language":"čeština","voice_style":"vřelý ženský",
+            "model":"Genie 1000","contact":"customer@example.test",
+            "notes":"natural","site_language":"cs"
+        })
+        self.assertEqual(made.status_code,201,made.text)
+        request_id=made.json()["request_id"]
+        url="/api/anthbot/admin/store/custom-voice-workflow/"+request_id+"/ai/jobs"
+        started=threading.Event()
+        release=threading.Event()
+        reply={"output_text":json.dumps({
+            "subject":"Vlastní hlas","body":"Dobrý den",
+            "subject_hu":"Egyedi hang","body_hu":"Jó napot",
+            "request_hu":"Meleg női hang"
+        })}
+        def slow_ai(*a,**kw):
+            started.set()
+            release.wait(6)
+            return reply
+        with patch.object(builder,"credentials",return_value={"openai_key":"test-key"}),\
+             patch.object(engine,"request",side_effect=slow_ai) as external:
+            first=self.c.post(url,headers=self.write,json={"mode":"draft"})
+            self.assertEqual(first.status_code,202,first.text)
+            self.assertIn(first.json()["status"],("queued","running"))
+            self.assertTrue(started.wait(2))
+            again=self.c.post(url,headers=self.write,json={"mode":"draft"})
+            self.assertEqual(again.status_code,202)
+            self.assertEqual(again.json()["job_id"],first.json()["job_id"])
+            self.assertEqual(external.call_count,1)
+            release.set()
+            progress={}
+            for _ in range(100):
+                checked=self.c.get(url+"/"+first.json()["job_id"],headers=self.head)
+                self.assertEqual(checked.status_code,200,checked.text)
+                progress=checked.json()
+                if progress["status"]=="completed":
+                    break
+                time.sleep(.04)
+            self.assertEqual(progress["status"],"completed",progress)
+            self.assertEqual(progress["result"]["body_hu"],"Jó napot")
+            third=self.c.post(url,headers=self.write,json={"mode":"draft"})
+            self.assertEqual(third.json()["status"],"completed")
+            self.assertEqual(external.call_count,1)
+        self.assertEqual(self.c.get(url+"/"+first.json()["job_id"]).status_code,401)
+
+    def test_ai_upstream_error_keeps_failed_state_until_manual_retry(self):
+        import voice_builder_state as builder
+        import voice_builder_engine as engine
+        made=self.c.post("/api/anthbot/store/custom-voice-requests",json={
+            "requested_language":"čeština","voice_style":"vřelý ženský",
+            "model":"Genie 1000","contact":"customer@example.test",
+            "notes":"warm","site_language":"cs"
+        })
+        request_id=made.json()["request_id"]
+        url="/api/anthbot/admin/store/custom-voice-workflow/"+request_id+"/ai/jobs"
+        reply={"output_text":json.dumps({
+            "subject":"Vlastní hlas","body":"Dobrý den",
+            "subject_hu":"Egyedi hang","body_hu":"Jó napot",
+            "request_hu":"Meleg női hang"
+        })}
+        with patch.object(builder,"credentials",return_value={"openai_key":"test-key"}),\
+             patch.object(engine,"request",side_effect=[
+                 engine.ProviderError(502,operation="OpenAI fordítás"),reply
+             ]) as external:
+            first=self.c.post(url,headers=self.write,json={"mode":"draft"})
+            jid=first.json()["job_id"]
+            record={}
+            for _ in range(100):
+                record=self.c.get(url+"/"+jid,headers=self.head).json()
+                if record["status"]=="failed":break
+                time.sleep(.04)
+            self.assertEqual(record["status"],"failed",record)
+            self.assertEqual(record["error_status"],502)
+            self.assertIn("HTTP 502",record["error"])
+            self.assertEqual(self.c.post(url,headers=self.write,json={"mode":"draft"}).json()["status"],"failed")
+            self.assertEqual(external.call_count,1)
+            retry=self.c.post(url,headers=self.write,json={"mode":"draft","retry":True})
+            self.assertEqual(retry.status_code,202,retry.text)
+            for _ in range(100):
+                record=self.c.get(url+"/"+jid,headers=self.head).json()
+                if record["status"]=="completed":break
+                time.sleep(.04)
+            self.assertEqual(record["status"],"completed",record)
+            self.assertEqual(external.call_count,2)
 
     def test_security_and_notify_target_validation(self):
         self.assertEqual(self.c.get("/api/anthbot/admin/notifications").status_code,401)

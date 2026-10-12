@@ -728,13 +728,35 @@
       const draftButton=document.getElementById('custom-workflow-ai-draft');
       const translateButton=document.getElementById('custom-workflow-ai-translate');
       draftButton.disabled=true;translateButton.disabled=true;
-      if(!automated)workflowNotice('AI-feldolgozás folyamatban…');
+      if(!automated)workflowNotice('AI-feldolgozás indítása…');
       const requestBody=mode==='draft'?{mode}:{mode,subject:oldSubject,body:oldBody};
       try{
-        const answer=await api(customWorkflowApiRoot+'/'+encodeURIComponent(id)+'/ai',{
+        const endpoint=customWorkflowApiRoot+'/'+encodeURIComponent(id)+'/ai/jobs';
+        let status=await api(endpoint,{
           method:'POST',headers:{'Content-Type':'application/json','X-ANTHBOT-Builder':'1'},
-          body:JSON.stringify(requestBody)
+          body:JSON.stringify({...requestBody,retry:!automated})
         });
+        if(!activeCustomRequest||activeCustomRequest.request_id!==id||nonce!==activeCustomAiRequest)return;
+        const jobId=String(status.job_id||'');
+        if(!/^[a-f0-9]{64}$/.test(jobId))throw new Error('Az AI-feladat nem adott vissza érvényes azonosítót.');
+        let answer;
+        for(let attempt=0;attempt<175;attempt++){
+          if(!activeCustomRequest||activeCustomRequest.request_id!==id||nonce!==activeCustomAiRequest)return;
+          if(status.status==='completed'){
+            answer=status.result;
+            break;
+          }
+          if(status.status==='failed'||status.status==='interrupted'){
+            throw new Error((status.error||'Az AI-fordítás sikertelen.')+
+              (automated?' Az „Új AI választervezet” gombbal újrapróbálható.':''));
+          }
+          if(!['running','queued'].includes(status.status))throw new Error('Ismeretlen AI-feladatállapot.');
+          if(attempt===0)workflowNotice('Az AI-fordítás a szerveren fut a háttérben. A levélsablon közben használható.');
+          await new Promise(resolve=>setTimeout(resolve,1600));
+          if(nonce!==activeCustomAiRequest)return;
+          status=await api(endpoint+'/'+encodeURIComponent(jobId));
+        }
+        if(!answer)throw new Error('Az AI-fordítás túl sokáig tart. Az eredmény később újra megnyitható.');
         if(!activeCustomRequest||activeCustomRequest.request_id!==id||nonce!==activeCustomAiRequest)return;
         document.getElementById('custom-workflow-request-hu').textContent=answer.request_hu;
         if(mode==='draft'){
@@ -753,11 +775,11 @@
         document.getElementById('custom-workflow-email-hu').textContent=answer.body_hu;
         customEmailTranslatedSource={subject:subjectField.value,body:bodyField.value};
         updateCustomEmailTranslationStatus();
-        workflowNotice('AI: '+(answer.cached?'mentett fordítás betöltve.':'új fordítás elkészült. Ellenőrizd küldés előtt.'));
+        workflowNotice('AI-fordítás elkészült. Küldés előtt ellenőrizd.');
       }catch(err){
         if(activeCustomRequest&&activeCustomRequest.request_id===id&&nonce===activeCustomAiRequest){
-          document.getElementById('custom-workflow-request-hu').textContent='A magyar AI-fordítás nem érhető el. Az eredeti igény fent olvasható.';
-          workflowNotice('AI: '+err.message+' A levélsablon továbbra is használható.',true);
+          document.getElementById('custom-workflow-request-hu').textContent='Az automatikus fordítás nem elérhető. Az eredeti kérelem fent olvasható.';
+          workflowNotice('AI-hiba: '+err.message+' Az elkészített levélsablon megmaradt.',true);
         }
       }finally{
         if(nonce===activeCustomAiRequest){draftButton.disabled=false;translateButton.disabled=false}

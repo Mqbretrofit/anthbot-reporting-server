@@ -43,6 +43,10 @@ voice packs, entitlements and worker jobs are not modified by this feature.
 
 Regression tests: tests/test_custom_voice_admin.py.
 
+## 1.0.55 – AI fordítás Home Assistant 502 hibájának kezelése
+
+Az AI-fordítás külön háttérfeladatot indít, így az oldalra ágyazott Home Assistant HTTP-kérése nem vár perceket egy külső OpenAI-válaszra. Az adminoldal rövid, külön API-hívásokkal figyeli a folyamatot, és valódi szolgáltatói hibánál kiírja a konkrét hibát. Korábbi eredmények titkosítottan megmaradnak; azonos tartalomnál nem indul új fizetős hívás. Sikertelen kérés nem ismétlődik automatikusan: az újrapróbálkozáshoz külön gombnyomás kell. A már működő Voice Builder, HA mobilértesítések, hangcsomagok és Stripe-folyamat nem módosul.
+
 ## 1.0.54 – magyar AI-fordítás és adminértesítések
 
 A Hangbolt admin Egyedi hangkérések Kezelés ablakában a Voice Builderben
