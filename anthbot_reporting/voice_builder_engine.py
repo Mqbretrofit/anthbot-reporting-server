@@ -29,7 +29,7 @@ class Paused(Exception):
 
 
 class ProviderError(RuntimeError):
-    def __init__(self, status=0, *, reason='', operation='', retry_after=0):
+    def __init__(self, status=0, *, reason='', operation='', retry_after=0, parameter=''):
         self.status = status
         self.retry_after = retry_after
         messages = {
@@ -63,6 +63,15 @@ class ProviderError(RuntimeError):
                     message += ' ElevenLabs → Developers → API Keys → Edit: ' + permission + '.'
         elif status in (401,403):
             message += ' Ellenőrizd a kulcs érvényességét és a művelethez tartozó jogosultságot.'
+        # Only names of API fields are safe to show. NEVER echo arbitrary
+        # provider error messages, request data or security credentials.
+        safe_parameter = parameter if (
+            isinstance(parameter, str) and
+            re.fullmatch(r'[a-zA-Z][a-zA-Z0-9_.\[\]-]{0,119}', parameter)
+        ) else ''
+        self.parameter = safe_parameter
+        if self.parameter and operation == 'OpenAI szöveg- vagy hangfeldolgozás' and status == 400:
+            message += ' Elutasított API-paraméter: ' + self.parameter + '.'
         super().__init__(message)
 
 
@@ -101,6 +110,7 @@ def request(url, payload=None, headers=None, *, json_result=False):
         # Parse only a bounded, allowlisted reason code. Never log provider text,
         # headers, credentials, voice IDs, URLs or user-supplied query strings.
         reason = ''
+        parameter = ''
         retry_after = 0
         try:
             retry_after = max(0, min(300, int(e.headers.get('Retry-After','0'))))
@@ -114,11 +124,12 @@ def request(url, payload=None, headers=None, *, json_result=False):
             error = body.get('error',{}) if isinstance(body,dict) else {}
             if isinstance(error,dict):
                 reason = error.get('code') or error.get('type') or reason
+                parameter = error.get('param') or ''
         except (ValueError, UnicodeError, OSError, TypeError):
             pass
         finally:
             e.close()
-        raise ProviderError(e.code, reason=reason, operation=provider_operation(url), retry_after=retry_after) from None
+        raise ProviderError(e.code, reason=reason, operation=provider_operation(url), retry_after=retry_after, parameter=parameter) from None
     except (URLError, TimeoutError, OSError):
         raise ProviderError() from None
     if json_result:
