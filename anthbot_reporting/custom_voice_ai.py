@@ -22,7 +22,7 @@ from voice_builder_api import require_builder_admin
 router = APIRouter(dependencies=[Depends(require_builder_admin)])
 ROOT = "/api/anthbot/admin/store/custom-voice-workflow"
 MODEL = "gpt-4o-mini"
-CACHE_VERSION = 1
+CACHE_VERSION = 2
 
 class TranslateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -64,6 +64,31 @@ def _text(response: dict) -> dict:
         if not isinstance(parsed[key], str) or not parsed[key].strip() or len(parsed[key]) > limit:
             raise ValueError("Érvénytelen AI-fordítás")
     return {key: parsed[key].strip() for key in sorted(parsed) if key in keys | {"subject", "body"}}
+
+
+def _response_format(mode: str) -> dict:
+    """Responses API strict Structured Outputs for the selected reply mode.
+
+    Unlike legacy json_object mode, the schema declares exact expected keys;
+    it is supported by gpt-4o-mini and does not depend on a JSON keyword in
+    the user input. See OpenAI Responses API text.format documentation.
+    """
+    keys = ["subject_hu", "body_hu", "request_hu"]
+    if mode == "draft":
+        keys = ["subject", "body", *keys]
+    return {
+        "format": {
+            "type": "json_schema",
+            "name": "anthbot_custom_voice_reply",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": {key: {"type": "string"} for key in keys},
+                "required": keys,
+                "additionalProperties": False,
+            },
+        }
+    }
 
 
 def _instructions(mode: str) -> str:
@@ -147,7 +172,7 @@ def translate(request_id: str, payload: TranslateRequest) -> dict:
                     "store": False,
                     "instructions": _instructions(payload.mode),
                     "input": json.dumps(input_data, ensure_ascii=False),
-                    "text": {"format": {"type": "json_object"}},
+                    "text": _response_format(payload.mode),
                     "max_output_tokens": 4500,
                 },
                 headers={"Authorization": "Bearer " + key},
