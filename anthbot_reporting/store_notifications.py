@@ -259,7 +259,14 @@ def create_event(event_type: str, event_key: str, title: str, message: str) -> N
                 (event_type,event_key,title,message,created_at)
             VALUES (?,?,?,?,?)
         """,(event_type,event_key,title[:180],message[:2500],core._iso()))
-    dispatch_soon()
+    # Do not open SMTP or start worker threads before an admin has configured a target.
+    with core._db() as conn:
+        cfg=_config(conn)
+        have_push=bool(conn.execute(
+            "SELECT 1 FROM store_admin_push_subscriptions LIMIT 1"
+        ).fetchone())
+    if (cfg["email_enabled"] and cfg["admin_email"]) or (cfg["push_enabled"] and have_push):
+        dispatch_soon()
 
 
 def on_voice_request(request_id: str, *, language: str, voice: str, model: str, contact: str) -> None:
@@ -321,11 +328,20 @@ def save_settings(payload: Settings) -> dict:
     if addr and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+",addr):
         raise HTTPException(422,"Érvénytelen értesítési email cím")
     with core._db() as conn:
+        existing=_config(conn)
         conn.execute("""
             UPDATE store_admin_notification_config
             SET admin_email=?,email_enabled=?,push_enabled=?
             WHERE id=1
         """,(addr,int(payload.email_enabled),int(payload.push_enabled)))
+        # A new destination receives future notifications, not the entire
+        # history. Earlier alerts remain visible in the admin inbox.
+        if addr and addr != existing["admin_email"]:
+            conn.execute("""
+                INSERT OR IGNORE INTO store_admin_notification_deliveries
+                    (event_id,channel,target,status,updated_at)
+                SELECT id,'email',?,'sent',? FROM store_admin_notifications
+            """,(addr,core._iso()))
     dispatch_soon()
     return {"saved":True,"settings":payload.model_copy(update={"admin_email":addr}).model_dump()}
 
