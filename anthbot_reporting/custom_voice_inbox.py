@@ -436,6 +436,12 @@ def sync_once() -> None:
         try:_poll_once()
         except Exception as err:
             _LOG.warning("Custom voice inbox sync failed (%s)",type(err).__name__)
+            if isinstance(err, imaplib.IMAP4.error):
+                safe_error="IMAP hitelesítési vagy mappahiba. Ellenőrizd az IMAP-felhasználót és az alkalmazásjelszót."
+            elif isinstance(err, (ssl.SSLError,TimeoutError,OSError)):
+                safe_error="IMAP TLS-kapcsolati vagy hálózati hiba."
+            else:
+                safe_error="IMAP beállítási vagy szerverhiba ("+type(err).__name__+")"
             # Do not persist raw IMAP server exception messages, which can
             # contain mailbox names and auth details.
             _init()  # make sure cursor table exists
@@ -449,7 +455,7 @@ def sync_once() -> None:
                               VALUES(?)""",(ident,))
                 db.execute("""UPDATE store_custom_voice_imap_cursors SET last_error=?
                               WHERE mailbox_key=?""",
-                           ("IMAP kapcsolat vagy beállítási hiba ("+type(err).__name__+")",ident))
+                           (safe_error,ident))
     finally:_MUTEX.release()
 
 
