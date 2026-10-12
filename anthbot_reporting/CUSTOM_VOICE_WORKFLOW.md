@@ -42,3 +42,38 @@ as successful. The original incoming records, public requests, Stripe orders,
 voice packs, entitlements and worker jobs are not modified by this feature.
 
 Regression tests: tests/test_custom_voice_admin.py.
+
+## 1.0.54 – magyar AI-fordítás és adminértesítések
+
+A Hangbolt admin Egyedi hangkérések Kezelés ablakában a Voice Builderben
+már megadott OpenAI API-kulccsal készülhet az ügyfél nyelvén emailtervezet
+és a hozzá tartozó magyar jelentés. Az ügyfél eredeti igénye is lefordítható.
+A fordítás az aktuális szöveghez kötött; manuális levélmódosításkor figyelmeztet,
+és külön „Magyar fordítás frissítése AI-val” gombot biztosít. Ugyanarra a
+szövegre titkosított cache-ből válaszol, ismételt AI-költség nélkül. Küldés
+nem automatikus; a felhasználó minden levelet külön megerősít.
+
+A Hangbolt admin Értesítések részében beállítható egy email cím, és
+kiválasztható a Home Assistant Companionban regisztrált egy vagy több
+notify.mobile_app_* céleszköz. A szerver a HAOS Supervisor belső
+http://supervisor/core/api/ proxyját használja, amelyhez a
+config.yaml homeassistant_api: true és SUPERVISOR_TOKEN szükséges.
+Nem kell új hosszú életű HA token, böngészős push-előfizetés vagy
+külső értesítési szolgáltatás.
+
+Az email és a HA telefonos push egymástól függetlenül engedélyezhető.
+Események: új egyedi hangkérés, sikeres Stripe hangvásárlás,
+Stripe visszatérítés, GDPR kérelem. Van adminértesítési lista,
+olvasottként jelölés és tesztüzenet a kiválasztott telefonra.
+A Stripe session és a kérelemazonosító alapján egy esemény csak
+egyszer jön létre; a kézbesítés csatornánként és telefononként
+nyilvántartott, hiba esetén legfeljebb öt próbálkozással.
+A beállítás előtt keletkezett események nem okoznak utólag
+tömeges értesítésküldést.
+
+Beüzemelés: frissítsd az ANTHBOT Reporting Server HA alkalmazást,
+nyisd meg a Hangbolt admint, válaszd ki a notify.mobile_app_*
+telefon(oka)t és mentsd el. A Tesztértesítés gombbal próbáld ki,
+hogy megjön-e ugyanúgy, mint a hazaérkezési értesítés.
+A tényleges kézbesítés teszteléséhez működő Home Assistant Core
+és Companion telefon szükséges.

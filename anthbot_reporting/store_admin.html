@@ -40,6 +40,21 @@
     #custom-workflow-history pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}
     #custom-workflow-message{margin-top:12px;font-size:.88rem;min-height:24px}
     @media(max-width:600px){.workflow-grid{grid-template-columns:1fr}.workflow-wide{grid-column:auto}}
+    .workflow-translation{margin-top:14px;padding:14px;background:#0d2033;border:1px solid #365575;border-radius:13px}
+    .workflow-translation h3{margin:0 0 10px!important}
+    .workflow-translation-subject{margin-top:12px;padding:8px 0;color:#e4eefe;overflow-wrap:anywhere}
+    .workflow-translation pre{margin:8px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55;color:#d9eaff;font:inherit;font-size:.89rem}
+    #custom-workflow-translation-status.outdated{color:#ffe2a8;font-weight:700}
+
+    #admin-notification-inbox{display:grid;gap:8px}
+    .admin-notification-item{padding:11px;border:1px solid #293b58;border-radius:12px;background:#111d2e}
+    .admin-notification-item.unread{border-left:4px solid #ffcc66}
+    .admin-notification-item strong{font-size:.89rem}
+    .admin-notification-item pre{margin:8px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:.8rem;color:#c9d6e8}
+    .admin-notification-item .small{margin-left:10px}
+    #admin-notification-section .workflow-actions{align-items:center}
+    #admin-notification-section .workflow-actions label{display:flex;align-items:center;gap:7px;font-size:.85rem}
+    #admin-notification-section .workflow-actions label:has(input[type=email]){display:grid;align-items:initial}
   </style>
 </head>
 <body>
@@ -48,6 +63,27 @@
     <div class="grid kpis" id="kpis"></div>
     <div class="card status" id="status">Betöltés…</div>
     <div class="new-voice-alert" id="new-voice-alert" role="status" aria-live="polite"></div>
+    <section class="card section" id="admin-notification-section">
+      <div class="head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <span>ANTHBOT értesítések <span class="pill warn" id="admin-notification-badge">0 olvasatlan</span></span>
+        <button class="btn" type="button" id="admin-notification-read">Összes megjelölése olvasottként</button>
+      </div>
+      <div class="small" style="padding:12px 16px">Értesítés sikeres hangvásárlásról, egyedi hangkérésről, adatvédelmi kérelemről és visszatérítésről. Telefonon a <strong>Home Assistant alkalmazásban</strong> jelenik meg, ugyanúgy, mint a hazaérkezési üzenet. Válaszd ki a kívánt telefont, és küldj tesztértesítést!</div>
+      <div class="workflow-actions" style="padding:0 16px 12px">
+        <label>Email cím <input class="control" id="admin-notification-email" type="email" placeholder="Saját értesítési email címed" maxlength="254"></label>
+        <label><input id="admin-notification-email-enabled" type="checkbox" checked> Email értesítés</label>
+        <label><input id="admin-notification-ha-enabled" type="checkbox" checked> Home Assistant telefonos push</label>
+      </div>
+      <div class="small" style="padding:0 16px 8px">Céltelefonok (a HA Companion regisztrált <code>notify.mobile_app_*</code> szolgáltatásai):</div>
+      <div id="admin-notification-ha-devices" style="display:flex;gap:10px;flex-wrap:wrap;padding:0 16px 12px"></div>
+      <div class="workflow-actions" style="padding:0 16px 12px">
+        <button class="btn primary" id="admin-notification-save" type="button">Értesítési beállítások mentése</button>
+        <button class="btn" id="admin-notification-reload-devices" type="button">Telefonok frissítése</button>
+        <button class="btn" id="admin-notification-ha-test" type="button">Tesztértesítés a kiválasztott telefonra</button>
+      </div>
+      <div class="small" id="admin-notification-info" style="padding:0 16px 12px" role="status" aria-live="polite"></div>
+      <div id="admin-notification-inbox" style="padding:0 16px 15px"></div>
+    </section>
     <section class="card section">
       <div class="head">Saját Home Assistant</div>
       <div class="small pairing-current-note">A saját Hangbolt-kompatibilis ANTHBOT Map telepítésed külön jelenik meg. Ha az emailes Hangbolt-fiókodhoz kapcsolódik, automatikusan felismerjük, és onnantól tartós tulajdonosi azonosításként megőrizzük: a saját HA-d nem jár le a 7 napos ideiglenes párosítással együtt.</div>
@@ -108,6 +144,7 @@
       <form method="dialog"><button class="btn workflow-close" aria-label="Bezárás">✕</button></form>
       <h2 id="custom-workflow-title">Egyedi hangkérés kezelése</h2>
       <div id="custom-workflow-details" class="workflow-info"></div>
+      <div class="workflow-translation"><strong>Az ügyfél kérése magyarul (AI):</strong><div id="custom-workflow-request-hu" style="margin-top:7px;white-space:pre-wrap">Fordítás folyamatban…</div></div>
       <div class="workflow-grid">
         <label>Állapot<select class="control" id="custom-workflow-status">
           <option value="new">Új</option><option value="contacted">Kapcsolatfelvétel</option>
@@ -126,6 +163,16 @@
       <h3>Üzenet az ügyfélnek</h3>
       <div class="workflow-grid"><label class="workflow-wide">Tárgy<input class="control" id="custom-workflow-subject" maxlength="180"></label>
       <label class="workflow-wide">Email szövege<textarea class="control" rows="7" maxlength="8000" id="custom-workflow-email"></textarea></label></div>
+      <div class="workflow-translation" aria-label="Magyar fordítás az adminisztrátornak">
+        <h3>Magyar jelentés – csak neked, az ügyfél nem kapja meg</h3>
+        <div class="small" id="custom-workflow-translation-status" role="status" aria-live="polite"></div>
+        <div class="workflow-translation-subject"><strong>Tárgy:</strong> <span id="custom-workflow-subject-hu"></span></div>
+        <pre id="custom-workflow-email-hu"></pre>
+      </div>
+      <div class="workflow-actions">
+        <button class="btn" type="button" id="custom-workflow-ai-draft">Új AI választervezet</button>
+        <button class="btn" type="button" id="custom-workflow-ai-translate">Magyar fordítás frissítése AI-val</button>
+      </div>
       <div class="workflow-actions"><button class="btn primary" type="button" id="custom-workflow-send">Email küldése (megerősítéssel)</button></div>
       <p class="small">Az email csak külön jóváhagyásra megy ki. A fizetést kizárólag a tényleges Stripe-rendelés igazolja; az állapot és az árajánlat nem hoz létre vásárlást. Hangot a Builderben csak saját indítással generálunk.</p>
       <h3>Korábbi emailek</h3><div id="custom-workflow-history"></div>
@@ -640,14 +687,81 @@
     }
     function customEmailDraft(r){
       const cs=String(r.site_language||'').toLowerCase().startsWith('cs')||/čes|czech/i.test(r.requested_language||'');
+      const huLang=/^čeština/i.test(r.requested_language||'')?'cseh':r.requested_language;
+      const huVoice=/^vřelý ženský$/i.test(r.voice_style||'')?'meleg tónusú női':r.voice_style;
+      const huSubject='ANTHBOT – egyedi hangkérés visszaigazolása';
+      const huBody='Jó napot kívánunk!\n\nKöszönjük, hogy egyedi hangot kért az ANTHBOT '+r.model+' robotjához.\n\nRögzítettük a kért nyelvet: '+huLang+', valamint a hang jellemzőjét: '+huVoice+'.\n\nKérjük, pontosítsa, milyennek képzeli el a hangot. Ha van hasonló hangminta, küldje el nekünk a linkjét. Elkészítünk egy javaslatot, és előre egyeztetjük a végleges árat. Az ár 24,99 eurótól kezdődik, jelenleg még nem kérünk fizetést.\n\nÜdvözlettel:\nANTHBOT Map';
       if(cs)return {
         subject:'ANTHBOT – vaše žádost o vlastní hlas',
-        body:'Dobrý den,\n\nděkujeme za vaši žádost o vlastní hlas pro '+r.model+'.\n\nZaznamenali jsme jazyk: '+r.requested_language+' a požadovaný hlas: '+r.voice_style+'.\n\nMůžete nám prosím upřesnit, jak si hlas představujete? Pokud máte ukázku podobného hlasu, pošlete nám odkaz. Připravíme návrh a předem potvrdíme konečnou cenu. Cena začíná na 24,99 €; zatím nepožadujeme žádnou platbu.\n\nS pozdravem,\nANTHBOT Map'
+        body:'Dobrý den,\n\nděkujeme za vaši žádost o vlastní hlas pro '+r.model+'.\n\nZaznamenali jsme jazyk: '+r.requested_language+' a požadovaný hlas: '+r.voice_style+'.\n\nMůžete nám prosím upřesnit, jak si hlas představujete? Pokud máte ukázku podobného hlasu, pošlete nám odkaz. Připravíme návrh a předem potvrdíme konečnou cenu. Cena začíná na 24,99 €; zatím nepožadujeme žádnou platbu.\n\nS pozdravem,\nANTHBOT Map',
+        huSubject,huBody
       };
       return {
         subject:'ANTHBOT – your custom voice request',
-        body:'Hello,\n\nThank you for your custom voice request for '+r.model+'.\n\nWe noted your requested language: '+r.requested_language+' and voice: '+r.voice_style+'.\n\nCould you tell us more about the voice you have in mind? A link to a similar voice sample would be helpful. We will confirm the final quote before production. Prices start at €24.99; no payment is required at this stage.\n\nBest regards,\nANTHBOT Map'
+        body:'Hello,\n\nThank you for your custom voice request for '+r.model+'.\n\nWe noted your requested language: '+r.requested_language+' and voice: '+r.voice_style+'.\n\nCould you tell us more about the voice you have in mind? A link to a similar voice sample would be helpful. We will confirm the final quote before production. Prices start at €24.99; no payment is required at this stage.\n\nBest regards,\nANTHBOT Map',
+        huSubject,huBody
       };
+    }
+    let customEmailBaseline=null;
+    function customEmailIsModified(){
+      return !customEmailTranslatedSource||
+        document.getElementById('custom-workflow-subject').value!==customEmailTranslatedSource.subject||
+        document.getElementById('custom-workflow-email').value!==customEmailTranslatedSource.body;
+    }
+    let customEmailTranslatedSource=null;
+    let activeCustomAiRequest=0;
+    function updateCustomEmailTranslationStatus(){
+      const note=document.getElementById('custom-workflow-translation-status');
+      const changed=customEmailIsModified();
+      note.textContent=changed
+        ? 'FIGYELEM: a magyar szöveg még nem a fent látható módosított levél fordítása. Kattints a „Magyar fordítás frissítése AI-val” gombra.'
+        : 'A magyar jelentés a fent látható levélszöveghez tartozik. Az ügyfélnek csak a küldendő idegen nyelvű levél megy ki.';
+      note.classList.toggle('outdated',changed);
+    }
+    async function customAiWork(mode,automated=false){
+      if(!activeCustomRequest)return;
+      const id=activeCustomRequest.request_id;
+      const nonce=++activeCustomAiRequest;
+      const subjectField=document.getElementById('custom-workflow-subject');
+      const bodyField=document.getElementById('custom-workflow-email');
+      const oldSubject=subjectField.value,oldBody=bodyField.value;
+      const draftButton=document.getElementById('custom-workflow-ai-draft');
+      const translateButton=document.getElementById('custom-workflow-ai-translate');
+      draftButton.disabled=true;translateButton.disabled=true;
+      if(!automated)workflowNotice('AI-feldolgozás folyamatban…');
+      const requestBody=mode==='draft'?{mode}:{mode,subject:oldSubject,body:oldBody};
+      try{
+        const answer=await api(customWorkflowApiRoot+'/'+encodeURIComponent(id)+'/ai',{
+          method:'POST',headers:{'Content-Type':'application/json','X-ANTHBOT-Builder':'1'},
+          body:JSON.stringify(requestBody)
+        });
+        if(!activeCustomRequest||activeCustomRequest.request_id!==id||nonce!==activeCustomAiRequest)return;
+        document.getElementById('custom-workflow-request-hu').textContent=answer.request_hu;
+        if(mode==='draft'){
+          if(subjectField.value===oldSubject&&bodyField.value===oldBody){
+            subjectField.value=answer.subject;
+            bodyField.value=answer.body;
+          }else{
+            workflowNotice('Közben szerkesztetted a levelet. Az AI nem írta felül. A megadott szöveget külön fordítsd le.',true);
+            return;
+          }
+        }else if(subjectField.value!==oldSubject||bodyField.value!==oldBody){
+          workflowNotice('Közben módosult a levél, ezért a fordítás már nem aktuális. Fordíttasd le újra.',true);
+          return;
+        }
+        document.getElementById('custom-workflow-subject-hu').textContent=answer.subject_hu;
+        document.getElementById('custom-workflow-email-hu').textContent=answer.body_hu;
+        customEmailTranslatedSource={subject:subjectField.value,body:bodyField.value};
+        updateCustomEmailTranslationStatus();
+        workflowNotice('AI: '+(answer.cached?'mentett fordítás betöltve.':'új fordítás elkészült. Ellenőrizd küldés előtt.'));
+      }catch(err){
+        if(activeCustomRequest&&activeCustomRequest.request_id===id&&nonce===activeCustomAiRequest){
+          document.getElementById('custom-workflow-request-hu').textContent='A magyar AI-fordítás nem érhető el. Az eredeti igény fent olvasható.';
+          workflowNotice('AI: '+err.message+' A levélsablon továbbra is használható.',true);
+        }
+      }finally{
+        if(nonce===activeCustomAiRequest){draftButton.disabled=false;translateButton.disabled=false}
+      }
     }
     function renderCustomWorkflow(r,resetEmail=false){
       activeCustomRequest=r;
@@ -662,15 +776,26 @@
       document.getElementById('custom-workflow-payment').innerHTML='<strong>Fizetés: '+(p.verified?'<span style="color:#80e0c7">Stripe által igazolt fizetés</span>':'<span style="color:#ffcc66">Nincs igazolt fizetés</span>')+'</strong>'+(p.verified?' · '+esc(money(p.amount_total,p.currency))+' · '+esc(p.stripe_session_id):' · A beállított árajánlat önmagában nem fizetési link.');
       const history=document.getElementById('custom-workflow-history');
       history.innerHTML=(r.messages||[]).length?(r.messages||[]).map(m=>'<details><summary>'+esc(fmt(m.sent_at))+' · '+esc(m.subject)+' → '+esc(m.recipient)+'</summary><pre>'+esc(m.body)+'</pre></details>').join(''):'<div class="small">Még nem küldtél emailt ebből a kérésből.</div>';
-      if(resetEmail){const draft=customEmailDraft(r);document.getElementById('custom-workflow-subject').value=draft.subject;document.getElementById('custom-workflow-email').value=draft.body}
+      if(resetEmail){
+        const draft=customEmailDraft(r);
+        document.getElementById('custom-workflow-subject').value=draft.subject;
+        document.getElementById('custom-workflow-email').value=draft.body;
+        document.getElementById('custom-workflow-subject-hu').textContent=draft.huSubject;
+        document.getElementById('custom-workflow-email-hu').textContent=draft.huBody;
+        document.getElementById('custom-workflow-request-hu').textContent='Fordítás folyamatban…';
+        customEmailTranslatedSource={subject:draft.subject,body:draft.body};
+      }
+      updateCustomEmailTranslationStatus();
       document.getElementById('custom-workflow-message').textContent='';
     }
     function workflowNotice(message,error=false){const target=document.getElementById('custom-workflow-message');target.textContent=message;target.style.color=error?'#ffb5c1':'#a9f8dd'}
     async function openCustomWorkflow(id){
       const r=customWorkflowItems.find(x=>x.request_id===id);
       if(!r)return;
+      ++activeCustomAiRequest;
       renderCustomWorkflow(r,true);
       document.getElementById('custom-workflow-dialog').showModal();
+      customAiWork('draft',true);
     }
     async function saveCustomWorkflow(){
       if(!activeCustomRequest)return;
@@ -701,7 +826,7 @@
       const subject=document.getElementById('custom-workflow-subject').value.trim();
       const body=document.getElementById('custom-workflow-email').value.trim();
       if(!subject||!body){workflowNotice('Töltsd ki a tárgyat és az üzenetet.',true);return}
-      if(!confirm('Biztosan elküldöd az emailt erre a címre?\n'+activeCustomRequest.contact+'\n\n'+subject))return;
+      if(!confirm((customEmailIsModified()?'FIGYELEM: A magyar fordítás nem egyezik a módosított levéllel. Ellenőrizted a tényleges idegen nyelvű szöveget?\n\n':'')+'Biztosan elküldöd az emailt erre a címre?\n'+activeCustomRequest.contact+'\n\n'+subject))return;
       const button=document.getElementById('custom-workflow-send');button.disabled=true;
       try{
         const result=await api(customWorkflowApiRoot+'/'+encodeURIComponent(activeCustomRequest.request_id)+'/email',{
@@ -821,6 +946,101 @@
         return '<tr><td>'+esc(fmt(o.paid_at||o.updated_at||o.created_at))+'</td><td class="mono">'+esc(session)+'</td><td class="mono">'+esc(o.pack_id)+'</td><td><span class="pill '+(o.payment_status==='paid'?'good':'warn')+'">'+esc(o.payment_status||o.status)+'</span></td><td>'+esc(o.customer_email||'—')+'</td><td>'+esc(money(o.amount_total||0,o.currency||'eur'))+'</td><td>'+action+'</td></tr>';
       }).join('');
     }
+    const adminNotifyRoot='/api/anthbot/admin/notifications';
+    let notificationUiInitialized=false;
+    let configuredHaTargets=[];
+    function adminNotificationMessage(message,error=false){
+      const el=document.getElementById('admin-notification-info');
+      el.textContent=message;
+      el.style.color=error?'#ffc4cc':'#baf7e7';
+    }
+    function chosenHaTargets(){
+      return [...document.querySelectorAll('#admin-notification-ha-devices input[type=checkbox]:checked')].map(el=>el.value);
+    }
+    function renderAdminNotifications(data){
+      document.getElementById('admin-notification-badge').textContent=(data.unread||0)+' olvasatlan';
+      const settings=data.settings||{};
+      if(!notificationUiInitialized){
+        document.getElementById('admin-notification-email').value=settings.admin_email||'';
+        document.getElementById('admin-notification-email-enabled').checked=!!settings.email_enabled;
+        document.getElementById('admin-notification-ha-enabled').checked=!!settings.ha_enabled;
+        notificationUiInitialized=true;
+      }
+      configuredHaTargets=settings.ha_targets||[];
+      const content=document.getElementById('admin-notification-inbox');
+      const list=(data.items||[]);
+      content.innerHTML=list.length
+        ?list.map(e=>'<div class="admin-notification-item '+(!e.read_at?'unread':'')+'"><strong>'+esc(e.title)+'</strong><span class="small">'+esc(fmt(e.created_at))+'</span><pre>'+esc(e.message)+'</pre></div>').join('')
+        :'<div class="small">Még nincs adminértesítés.</div>';
+    }
+    async function refreshAdminNotifications(){
+      try{renderAdminNotifications(await api(adminNotifyRoot+'?limit=20'))}
+      catch(e){adminNotificationMessage('Értesítések lekérése sikertelen: '+e.message,true)}
+    }
+    async function loadAdminHaDevices(){
+      const box=document.getElementById('admin-notification-ha-devices');
+      const selected=chosenHaTargets();
+      box.textContent='Telefonok lekérése…';
+      try{
+        const result=await api(adminNotifyRoot+'/ha-devices');
+        if(!result.available){
+          box.textContent='HA telefonos értesítés nem elérhető.';
+          adminNotificationMessage(result.detail||'Nincs Supervisor Core API kapcsolat.',true);
+          return;
+        }
+        const targets=[...new Set([...(result.items||[]),...configuredHaTargets])];
+        if(!targets.length){
+          box.textContent='Nem található notify.mobile_app szolgáltatás. Ellenőrizd, hogy a HA Companion alkalmazás regisztrált és engedélyezettek az értesítések.';
+          return;
+        }
+        box.innerHTML=targets.map(t=>'<label style="display:flex;align-items:center;gap:6px"><input type="checkbox" class="admin-ha-target" value="'+esc(t)+'" '+(selected.includes(t)||(!selected.length&&configuredHaTargets.includes(t))?'checked':'')+'>'+esc(t)+'</label>').join('');
+      }catch(e){
+        box.textContent='A telefonlista nem elérhető.';
+        adminNotificationMessage('HA: '+e.message,true);
+      }
+    }
+    async function saveAdminNotificationSettings(){
+      const button=document.getElementById('admin-notification-save');
+      button.disabled=true;
+      try{
+        const settings={
+          admin_email:document.getElementById('admin-notification-email').value.trim(),
+          email_enabled:document.getElementById('admin-notification-email-enabled').checked,
+          ha_enabled:document.getElementById('admin-notification-ha-enabled').checked,
+          ha_targets:chosenHaTargets()
+        };
+        await api(adminNotifyRoot+'/settings',{
+          method:'PUT',headers:{'Content-Type':'application/json','X-ANTHBOT-Builder':'1'},
+          body:JSON.stringify(settings)
+        });
+        adminNotificationMessage('Beállítások elmentve. Az új ANTHBOT eseményeket a kijelölt telefonokra küldjük.');
+        await refreshAdminNotifications();
+      }catch(e){adminNotificationMessage('Mentési hiba: '+e.message,true)}
+      finally{button.disabled=false}
+    }
+    async function testAdminHaNotification(){
+      const chosen=chosenHaTargets();
+      if(chosen.length!==1){
+        adminNotificationMessage('A teszthez pontosan egy telefont jelölj ki.',true);
+        return;
+      }
+      const button=document.getElementById('admin-notification-ha-test');
+      button.disabled=true;
+      try{
+        await api(adminNotifyRoot+'/ha-test',{
+          method:'POST',headers:{'Content-Type':'application/json','X-ANTHBOT-Builder':'1'},
+          body:JSON.stringify({ha_target:chosen[0]})
+        });
+        adminNotificationMessage('Tesztértesítést elküldtük: '+chosen[0]+'. Ellenőrizd a telefon Home Assistant alkalmazását.');
+      }catch(e){adminNotificationMessage('Teszt sikertelen: '+e.message,true)}
+      finally{button.disabled=false}
+    }
+    async function markAdminNotificationsRead(){
+      try{
+        await api(adminNotifyRoot+'/read',{method:'POST',headers:{'X-ANTHBOT-Builder':'1'}});
+        await refreshAdminNotifications();
+      }catch(e){adminNotificationMessage(e.message,true)}
+    }
     async function load(){
       try{
         const [catalog,stats,orders,customRequests,privacyRequests,siteAnalytics,ownerPairings,storeAccounts,newVoicePacks]=await Promise.all([api('/api/anthbot/admin/store/voice-packs'),api('/api/anthbot/admin/store/stats'),api('/api/anthbot/admin/store/orders?limit=100'),api(customWorkflowApiRoot+'?limit=100'),api('/api/anthbot/admin/privacy-requests?limit=100'),api('/api/anthbot/admin/site-analytics?days=30'),api('/api/anthbot/admin/store/pairings?limit=200'),api('/api/anthbot/admin/store/accounts?limit=200'),api('/api/anthbot/admin/store/new-voice-packs')]);
@@ -833,7 +1053,16 @@
     document.getElementById('custom-requests').addEventListener('click',e=>{const button=e.target.closest('button[data-custom-request]');if(button)openCustomWorkflow(button.dataset.customRequest)});
     document.getElementById('custom-workflow-save').addEventListener('click',saveCustomWorkflow);
     document.getElementById('custom-workflow-send').addEventListener('click',sendCustomWorkflowEmail);
-    setupVoiceAdminFilters();document.getElementById('refresh').onclick=load;document.getElementById('delete-test-orders').onclick=deleteAllTestOrders;document.getElementById('delete-all-orders').onclick=deleteAllLocalOrders;load();
+    document.getElementById('custom-workflow-ai-draft').addEventListener('click',()=>customAiWork('draft'));
+    document.getElementById('custom-workflow-ai-translate').addEventListener('click',()=>customAiWork('translate'));
+    ['custom-workflow-subject','custom-workflow-email'].forEach(id=>
+      document.getElementById(id).addEventListener('input',updateCustomEmailTranslationStatus)
+    );
+    document.getElementById('admin-notification-save').addEventListener('click',saveAdminNotificationSettings);
+    document.getElementById('admin-notification-reload-devices').addEventListener('click',loadAdminHaDevices);
+    document.getElementById('admin-notification-ha-test').addEventListener('click',testAdminHaNotification);
+    document.getElementById('admin-notification-read').addEventListener('click',markAdminNotificationsRead);
+    setupVoiceAdminFilters();document.getElementById('refresh').onclick=load;document.getElementById('delete-test-orders').onclick=deleteAllTestOrders;document.getElementById('delete-all-orders').onclick=deleteAllLocalOrders;load();refreshAdminNotifications().then(loadAdminHaDevices);
   </script>
 </body>
 </html>

@@ -2898,6 +2898,13 @@ def _upsert_order_from_session(session: dict[str, Any]) -> dict[str, Any]:
             _release_first_purchase_offer_claim(promo_claim_id)
     if user_id and customer_id:
         store_accounts.set_stripe_customer_id(user_id, customer_id)
+    if result.get("payment_status") == "paid":
+        try:
+            from store_notifications import on_paid_purchase
+            on_paid_purchase(result)
+        except Exception as err:
+            # Notifications are optional: they cannot affect paid entitlement.
+            _LOGGER.warning("Admin purchase notification unavailable: %s", type(err).__name__)
     return result
 
 
@@ -4467,6 +4474,13 @@ def create_custom_voice_request(
                 now,
             ),
         )
+    try:
+        from store_notifications import on_voice_request
+        on_voice_request(request_id, language=payload.requested_language,
+                         voice=payload.voice_style, model=payload.model,
+                         contact=payload.contact)
+    except Exception as err:
+        _LOGGER.warning("Admin custom voice notification unavailable: %s", type(err).__name__)
     return {
         "submitted": True,
         "request_id": request_id,
@@ -4501,6 +4515,11 @@ def create_privacy_request(
                 now,
             ),
         )
+    try:
+        from store_notifications import on_privacy_request
+        on_privacy_request(request_id, payload.request_type)
+    except Exception as err:
+        _LOGGER.warning("Admin privacy notification unavailable: %s", type(err).__name__)
     return {
         "submitted": True,
         "request_id": request_id,
@@ -4714,7 +4733,7 @@ async def stripe_webhook(
         if payment_intent:
             _init_store_tables()
             with core._db() as conn:
-                conn.execute(
+                cursor = conn.execute(
                     """
                     UPDATE store_orders
                     SET status = 'refunded',
@@ -4724,6 +4743,13 @@ async def stripe_webhook(
                     """,
                     (core._iso(), str(payment_intent)),
                 )
+                refunded_count = max(0, int(cursor.rowcount or 0))
+            if refunded_count:
+                try:
+                    from store_notifications import on_refund
+                    on_refund(str(payment_intent), refunded_count)
+                except Exception as err:
+                    _LOGGER.warning("Admin refund notification unavailable: %s", type(err).__name__)
 
     return {"received": True}
 

@@ -1,6 +1,7 @@
 name: ANTHBOT Reporting Server
-version: "1.0.53"
+version: "1.0.54"
 slug: anthbot_reporting
+homeassistant_api: true
 description: ANTHBOT Map presence, opt-in telemetry, diagnostics, and admin dashboard backend
 url: https://github.com/Mqbretrofit/anthbot-reporting-server/tree/main/anthbot_reporting
 arch:
