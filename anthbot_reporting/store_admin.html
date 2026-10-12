@@ -1001,15 +1001,6 @@
         if(!adminPushKey)throw new Error('Hiányzik a push szolgáltatás nyilvános kulcsa.');
         const registration=await navigator.serviceWorker.register('/anthbot-admin-push-sw.js',{scope:'/'});
         let sub=await registration.pushManager.getSubscription();
-        if(sub){
-          const raw=sub.toJSON();
-          if(!raw.options||raw.options.applicationServerKey!==adminPushKey){
-            // Existing subscription can be reused when the current browser retained
-            // the same VAPID key. If server disagrees, register a fresh one.
-            await sub.unsubscribe();
-            sub=null;
-          }
-        }
         if(!sub)sub=await registration.pushManager.subscribe({
           userVisibleOnly:true,applicationServerKey:adminVapidBytes(adminPushKey)
         });
