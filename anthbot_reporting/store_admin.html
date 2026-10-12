@@ -65,19 +65,23 @@
     <div class="new-voice-alert" id="new-voice-alert" role="status" aria-live="polite"></div>
     <section class="card section" id="admin-notification-section">
       <div class="head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-        <span>Admin értesítések <span class="pill warn" id="admin-notification-badge">0 olvasatlan</span></span>
+        <span>ANTHBOT értesítések <span class="pill warn" id="admin-notification-badge">0 olvasatlan</span></span>
         <button class="btn" type="button" id="admin-notification-read">Összes megjelölése olvasottként</button>
       </div>
-      <div class="small" style="padding:12px 16px">Sikeres hangvásárlás, új egyedi hangkérés és GDPR-kérelem esetén automatikus email és böngészős push értesítés. Pushhoz HTTPS-en, külön böngészőablakban nyisd meg az adminoldalt, és ezen az eszközön engedélyezd az értesítést.</div>
+      <div class="small" style="padding:12px 16px">Értesítés sikeres hangvásárlásról, egyedi hangkérésről, adatvédelmi kérelemről és visszatérítésről. Telefonon a <strong>Home Assistant alkalmazásban</strong> jelenik meg, ugyanúgy, mint a hazaérkezési üzenet. Válaszd ki a kívánt telefont, és küldj tesztértesítést!</div>
       <div class="workflow-actions" style="padding:0 16px 12px">
         <label>Email cím <input class="control" id="admin-notification-email" type="email" placeholder="Saját értesítési email címed" maxlength="254"></label>
         <label><input id="admin-notification-email-enabled" type="checkbox" checked> Email értesítés</label>
-        <label><input id="admin-notification-push-enabled" type="checkbox" checked> Push értesítés</label>
-        <button class="btn" id="admin-notification-save" type="button">Értesítési beállítások mentése</button>
-        <button class="btn primary" id="admin-notification-subscribe" type="button">Push engedélyezése ezen az eszközön</button>
-        <button class="btn" id="admin-notification-unsubscribe" type="button">Push kikapcsolása ezen az eszközön</button>
+        <label><input id="admin-notification-ha-enabled" type="checkbox" checked> Home Assistant telefonos push</label>
       </div>
-      <div class="small" id="admin-notification-info" style="padding:0 16px 12px" aria-live="polite"></div>
+      <div class="small" style="padding:0 16px 8px">Céltelefonok (a HA Companion regisztrált <code>notify.mobile_app_*</code> szolgáltatásai):</div>
+      <div id="admin-notification-ha-devices" style="display:flex;gap:10px;flex-wrap:wrap;padding:0 16px 12px"></div>
+      <div class="workflow-actions" style="padding:0 16px 12px">
+        <button class="btn primary" id="admin-notification-save" type="button">Értesítési beállítások mentése</button>
+        <button class="btn" id="admin-notification-reload-devices" type="button">Telefonok frissítése</button>
+        <button class="btn" id="admin-notification-ha-test" type="button">Tesztértesítés a kiválasztott telefonra</button>
+      </div>
+      <div class="small" id="admin-notification-info" style="padding:0 16px 12px" role="status" aria-live="polite"></div>
       <div id="admin-notification-inbox" style="padding:0 16px 15px"></div>
     </section>
     <section class="card section">
@@ -943,12 +947,15 @@
       }).join('');
     }
     const adminNotifyRoot='/api/anthbot/admin/notifications';
-    let adminPushKey='';
     let notificationUiInitialized=false;
+    let configuredHaTargets=[];
     function adminNotificationMessage(message,error=false){
       const el=document.getElementById('admin-notification-info');
       el.textContent=message;
       el.style.color=error?'#ffc4cc':'#baf7e7';
+    }
+    function chosenHaTargets(){
+      return [...document.querySelectorAll('#admin-notification-ha-devices input[type=checkbox]:checked')].map(el=>el.value);
     }
     function renderAdminNotifications(data){
       document.getElementById('admin-notification-badge').textContent=(data.unread||0)+' olvasatlan';
@@ -956,80 +963,76 @@
       if(!notificationUiInitialized){
         document.getElementById('admin-notification-email').value=settings.admin_email||'';
         document.getElementById('admin-notification-email-enabled').checked=!!settings.email_enabled;
-        document.getElementById('admin-notification-push-enabled').checked=!!settings.push_enabled;
+        document.getElementById('admin-notification-ha-enabled').checked=!!settings.ha_enabled;
         notificationUiInitialized=true;
       }
-      adminPushKey=data.vapid_public_key||'';
+      configuredHaTargets=settings.ha_targets||[];
       const content=document.getElementById('admin-notification-inbox');
       const list=(data.items||[]);
-      content.innerHTML=list.length?list.map(e=>'<div class="admin-notification-item '+(!e.read_at?'unread':'')+'"><strong>'+esc(e.title)+'</strong><span class="small">'+esc(fmt(e.created_at))+'</span><pre>'+esc(e.message)+'</pre></div>').join(''):'<div class="small">Még nincs adminértesítés.</div>';
+      content.innerHTML=list.length
+        ?list.map(e=>'<div class="admin-notification-item '+(!e.read_at?'unread':'')+'"><strong>'+esc(e.title)+'</strong><span class="small">'+esc(fmt(e.created_at))+'</span><pre>'+esc(e.message)+'</pre></div>').join('')
+        :'<div class="small">Még nincs adminértesítés.</div>';
     }
     async function refreshAdminNotifications(){
       try{renderAdminNotifications(await api(adminNotifyRoot+'?limit=20'))}
       catch(e){adminNotificationMessage('Értesítések lekérése sikertelen: '+e.message,true)}
     }
+    async function loadAdminHaDevices(){
+      const box=document.getElementById('admin-notification-ha-devices');
+      const selected=chosenHaTargets();
+      box.textContent='Telefonok lekérése…';
+      try{
+        const result=await api(adminNotifyRoot+'/ha-devices');
+        if(!result.available){
+          box.textContent='HA telefonos értesítés nem elérhető.';
+          adminNotificationMessage(result.detail||'Nincs Supervisor Core API kapcsolat.',true);
+          return;
+        }
+        const targets=[...new Set([...(result.items||[]),...configuredHaTargets])];
+        if(!targets.length){
+          box.textContent='Nem található notify.mobile_app szolgáltatás. Ellenőrizd, hogy a HA Companion alkalmazás regisztrált és engedélyezettek az értesítések.';
+          return;
+        }
+        box.innerHTML=targets.map(t=>'<label style="display:flex;align-items:center;gap:6px"><input type="checkbox" class="admin-ha-target" value="'+esc(t)+'" '+(selected.includes(t)||(!selected.length&&configuredHaTargets.includes(t))?'checked':'')+'>'+esc(t)+'</label>').join('');
+      }catch(e){
+        box.textContent='A telefonlista nem elérhető.';
+        adminNotificationMessage('HA: '+e.message,true);
+      }
+    }
     async function saveAdminNotificationSettings(){
-      const button=document.getElementById('admin-notification-save');button.disabled=true;
+      const button=document.getElementById('admin-notification-save');
+      button.disabled=true;
       try{
         const settings={
           admin_email:document.getElementById('admin-notification-email').value.trim(),
           email_enabled:document.getElementById('admin-notification-email-enabled').checked,
-          push_enabled:document.getElementById('admin-notification-push-enabled').checked
+          ha_enabled:document.getElementById('admin-notification-ha-enabled').checked,
+          ha_targets:chosenHaTargets()
         };
-        await api(adminNotifyRoot+'/settings',{method:'PUT',
-          headers:{'Content-Type':'application/json','X-ANTHBOT-Builder':'1'},
-          body:JSON.stringify(settings)});
-        adminNotificationMessage('Értesítési beállítások mentve. Az emailhez működő SMTP-kapcsolat szükséges.');
+        await api(adminNotifyRoot+'/settings',{
+          method:'PUT',headers:{'Content-Type':'application/json','X-ANTHBOT-Builder':'1'},
+          body:JSON.stringify(settings)
+        });
+        adminNotificationMessage('Beállítások elmentve. Az új ANTHBOT eseményeket a kijelölt telefonokra küldjük.');
         await refreshAdminNotifications();
-      }catch(e){adminNotificationMessage(e.message,true)}
+      }catch(e){adminNotificationMessage('Mentési hiba: '+e.message,true)}
       finally{button.disabled=false}
     }
-    function adminVapidBytes(text){
-      const padded=text.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-text.length%4)%4);
-      return Uint8Array.from(atob(padded),c=>c.charCodeAt(0));
-    }
-    async function enableAdminPush(){
-      const button=document.getElementById('admin-notification-subscribe');button.disabled=true;
+    async function testAdminHaNotification(){
+      const chosen=chosenHaTargets();
+      if(chosen.length!==1){
+        adminNotificationMessage('A teszthez pontosan egy telefont jelölj ki.',true);
+        return;
+      }
+      const button=document.getElementById('admin-notification-ha-test');
+      button.disabled=true;
       try{
-        if(!window.isSecureContext||!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window)){
-          throw new Error('Ehhez biztonságos HTTPS oldal és Push API-t támogató böngésző szükséges. Home Assistant iframe helyett nyisd meg közvetlenül az adminoldalt.');
-        }
-        if(window.top!==window.self)throw new Error('Push engedélyezéséhez nyisd meg közvetlenül a Hangbolt adminoldalát, ne Home Assistant beágyazásban.');
-        const permission=await Notification.requestPermission();
-        if(permission!=='granted')throw new Error('A böngésző nem engedélyezte az értesítéseket.');
-        if(!adminPushKey)await refreshAdminNotifications();
-        if(!adminPushKey)throw new Error('Hiányzik a push szolgáltatás nyilvános kulcsa.');
-        const registration=await navigator.serviceWorker.register('/anthbot-admin-push-sw.js',{scope:'/'});
-        let sub=await registration.pushManager.getSubscription();
-        if(!sub)sub=await registration.pushManager.subscribe({
-          userVisibleOnly:true,applicationServerKey:adminVapidBytes(adminPushKey)
-        });
-        const result=await api(adminNotifyRoot+'/subscriptions',{
+        await api(adminNotifyRoot+'/ha-test',{
           method:'POST',headers:{'Content-Type':'application/json','X-ANTHBOT-Builder':'1'},
-          body:JSON.stringify(sub.toJSON())
+          body:JSON.stringify({ha_target:chosen[0]})
         });
-        localStorage.setItem('anthbot_admin_push_hash',result.endpoint_hash);
-        adminNotificationMessage('Push bekapcsolva ezen az eszközön. Új eseményekről értesítést kaphatsz akkor is, ha az oldal nincs megnyitva.');
-        await refreshAdminNotifications();
-      }catch(e){adminNotificationMessage('Push engedélyezése sikertelen: '+e.message,true)}
-      finally{button.disabled=false}
-    }
-    async function disableAdminPush(){
-      const button=document.getElementById('admin-notification-unsubscribe');button.disabled=true;
-      try{
-        const hash=localStorage.getItem('anthbot_admin_push_hash');
-        if(hash)await api(adminNotifyRoot+'/subscriptions/'+encodeURIComponent(hash),{
-          method:'DELETE',headers:{'X-ANTHBOT-Builder':'1'}
-        });
-        if('serviceWorker' in navigator){
-          const registration=await navigator.serviceWorker.getRegistration('/');
-          const sub=registration?await registration.pushManager.getSubscription():null;
-          if(sub)await sub.unsubscribe();
-        }
-        localStorage.removeItem('anthbot_admin_push_hash');
-        adminNotificationMessage('Push kikapcsolva ezen az eszközön.');
-        await refreshAdminNotifications();
-      }catch(e){adminNotificationMessage('Push kikapcsolása sikertelen: '+e.message,true)}
+        adminNotificationMessage('Tesztértesítést elküldtük: '+chosen[0]+'. Ellenőrizd a telefon Home Assistant alkalmazását.');
+      }catch(e){adminNotificationMessage('Teszt sikertelen: '+e.message,true)}
       finally{button.disabled=false}
     }
     async function markAdminNotificationsRead(){
@@ -1056,10 +1059,10 @@
       document.getElementById(id).addEventListener('input',updateCustomEmailTranslationStatus)
     );
     document.getElementById('admin-notification-save').addEventListener('click',saveAdminNotificationSettings);
-    document.getElementById('admin-notification-subscribe').addEventListener('click',enableAdminPush);
-    document.getElementById('admin-notification-unsubscribe').addEventListener('click',disableAdminPush);
+    document.getElementById('admin-notification-reload-devices').addEventListener('click',loadAdminHaDevices);
+    document.getElementById('admin-notification-ha-test').addEventListener('click',testAdminHaNotification);
     document.getElementById('admin-notification-read').addEventListener('click',markAdminNotificationsRead);
-    setupVoiceAdminFilters();document.getElementById('refresh').onclick=load;document.getElementById('delete-test-orders').onclick=deleteAllTestOrders;document.getElementById('delete-all-orders').onclick=deleteAllLocalOrders;load();refreshAdminNotifications();
+    setupVoiceAdminFilters();document.getElementById('refresh').onclick=load;document.getElementById('delete-test-orders').onclick=deleteAllTestOrders;document.getElementById('delete-all-orders').onclick=deleteAllLocalOrders;load();refreshAdminNotifications().then(loadAdminHaDevices);
   </script>
 </body>
 </html>
