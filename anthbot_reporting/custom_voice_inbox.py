@@ -17,6 +17,7 @@ import imaplib
 import json
 import logging
 import os
+import queue
 import re
 import ssl
 import threading
@@ -31,6 +32,10 @@ router=APIRouter(dependencies=[Depends(require_builder_admin)])
 PREFIX="/api/anthbot/admin/store/custom-voice-inbox"
 _MUTEX=threading.Lock()
 _STARTED=False
+_TRANSLATOR_STARTED=False
+_TRANSLATOR_LOCK=threading.Lock()
+_TRANSLATOR_QUEUE=queue.Queue(maxsize=200)
+_TRANSLATOR_QUEUED=set()
 _MAX_MAIL=384*1024
 _TAG=re.compile(r"\[ANTHBOT:(cvr_[A-Za-z0-9_-]+)\]",re.IGNORECASE)
 _ADDRESS=re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -276,9 +281,58 @@ def _translate(incoming_id: int):
                 WHERE id=?""",(translated,incoming_id))
 
 
+def _translator_loop() -> None:
+    while True:
+        incoming_id=_TRANSLATOR_QUEUE.get()
+        try:
+            _translate(incoming_id)
+        except Exception as err:
+            _LOG.warning("Incoming message translation worker exception (%s)",type(err).__name__)
+            with core._db() as db:
+                db.execute("""UPDATE store_custom_voice_inbox SET translation_state='failed',
+                              translation_error='Az AI-fordítás váratlan hibával leállt.'
+                              WHERE id=?""",(incoming_id,))
+        finally:
+            with _TRANSLATOR_LOCK:
+                _TRANSLATOR_QUEUED.discard(incoming_id)
+            _TRANSLATOR_QUEUE.task_done()
+
+
 def _launch_translation(incoming_id:int) -> None:
-    threading.Thread(target=_translate,args=(incoming_id,),daemon=True,
-                     name="anthbot-mail-translate").start()
+    _start_translator()
+    with _TRANSLATOR_LOCK:
+        if incoming_id in _TRANSLATOR_QUEUED:
+            return
+        try:
+            _TRANSLATOR_QUEUE.put_nowait(incoming_id)
+            _TRANSLATOR_QUEUED.add(incoming_id)
+        except queue.Full:
+            with core._db() as db:
+                db.execute("""UPDATE store_custom_voice_inbox SET translation_state='failed',
+                              translation_error='Sok fordítás várakozik; később próbáld újra.'
+                              WHERE id=?""",(incoming_id,))
+
+
+def _start_translator() -> None:
+    global _TRANSLATOR_STARTED
+    with _TRANSLATOR_LOCK:
+        if _TRANSLATOR_STARTED:
+            return
+        _init()
+        with core._db() as db:
+            db.execute("""UPDATE store_custom_voice_inbox SET translation_state='failed',
+                          translation_error='Fordítás megszakadt a szerver újraindításakor.'
+                          WHERE translation_state='running'""")
+            pending=[x["id"] for x in db.execute(
+                """SELECT id FROM store_custom_voice_inbox WHERE translation_state='pending'
+                   ORDER BY id LIMIT 200"""
+            )]
+        for mid in pending:
+            _TRANSLATOR_QUEUE.put_nowait(mid)
+            _TRANSLATOR_QUEUED.add(mid)
+        _TRANSLATOR_STARTED=True
+        threading.Thread(target=_translator_loop,daemon=True,
+                         name="anthbot-mail-ai-queue").start()
 
 
 def _poll_once() -> int:
@@ -364,6 +418,7 @@ def start_worker() -> None:
     global _STARTED
     if _STARTED:return
     _STARTED=True
+    _start_translator()
     threading.Thread(target=_loop,name="anthbot-custom-voice-imap",
                      daemon=True).start()
 
