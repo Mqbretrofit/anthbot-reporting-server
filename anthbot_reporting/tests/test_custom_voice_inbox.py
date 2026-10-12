@@ -185,6 +185,25 @@ class CustomVoiceInboxTests(unittest.TestCase):
         self.assertEqual(after["translation_state"],"done")
         self.assertIn("Meleg női",after["translation_hu"])
 
+    def test_reference_audio_attachment_requires_admin_to_download(self):
+        mail=self._message()
+        mail.add_attachment(b"ID3example-audio-bytes",maintype="audio",subtype="mpeg",
+                            filename="czech-sample.mp3")
+        with patch.object(inbox,"_launch_translation"),\
+             patch.object(store_notifications,"create_event"):
+            self.assertTrue(inbox._ingest(mail.as_bytes(),self.key,1))
+        data=self.c.get(self.url,headers=self.auth).json()
+        attachments=data["incoming_messages"][0]["attachments"]
+        self.assertEqual(len(attachments),1)
+        self.assertEqual(attachments[0]["filename"],"czech-sample.mp3")
+        link="/api/anthbot/admin/store/custom-voice-inbox/files/"+str(attachments[0]["id"])
+        self.assertEqual(self.c.get(link).status_code,401)
+        downloaded=self.c.get(link,headers=self.auth)
+        self.assertEqual(downloaded.status_code,200,downloaded.text)
+        self.assertEqual(downloaded.content,b"ID3example-audio-bytes")
+        self.assertIn("attachment",downloaded.headers["content-disposition"].lower())
+        self.assertEqual(downloaded.headers["x-content-type-options"],"nosniff")
+
     def test_server_imap_sync_requires_configuration(self):
         stat=self.c.get("/api/anthbot/admin/store/custom-voice-inbox/status",headers=self.auth)
         self.assertEqual(stat.status_code,200)
