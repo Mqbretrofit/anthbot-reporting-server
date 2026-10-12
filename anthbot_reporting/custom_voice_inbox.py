@@ -230,7 +230,6 @@ def _ingest(data: bytes, account_key: str, uid: int) -> bool:
 def _translate(incoming_id: int):
     import voice_builder_engine as engine
     import voice_builder_state as state
-    from custom_voice_ai import _text
     with core._db() as conn:
         row=conn.execute("SELECT subject,body FROM store_custom_voice_inbox WHERE id=?",
                          (incoming_id,)).fetchone()
@@ -380,7 +379,8 @@ def status() -> dict:
 @router.post(PREFIX+"/sync",status_code=202)
 def sync_now() -> dict:
     _init()
-    _options()
+    try:_options()
+    except RuntimeError as err:raise HTTPException(503,str(err)) from None
     threading.Thread(target=sync_once,daemon=True).start()
     return {"started":True}
 
