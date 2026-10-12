@@ -21,6 +21,25 @@
     @media(max-width:1250px){.voice-admin-toolbar{grid-template-columns:repeat(3,minmax(0,1fr))}.voice-admin-search{grid-column:span 2;min-width:0}.voice-admin-reset{width:100%}}
     @media(max-width:900px){.kpis,.analytics-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.analytics-panels{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}.shell{padding:18px 12px}.voice-admin-toolbar{grid-template-columns:1fr 1fr}.voice-admin-search{grid-column:1/-1}.voice-admin-reset{width:100%}}
     @media(max-width:620px){.voice-admin-toolbar{grid-template-columns:1fr}.voice-admin-search{grid-column:auto}}
+
+    #custom-workflow-dialog{width:min(830px,calc(100vw - 22px));max-height:min(92vh,940px);overflow:auto;border:1px solid #3f5472;border-radius:16px;background:#111b2c;color:#eef4ff;padding:22px;box-shadow:0 22px 90px #000b}
+    #custom-workflow-dialog::backdrop{background:rgba(0,0,0,.78)}
+    #custom-workflow-dialog h2{font-size:1.25rem;margin:0 45px 16px 0}
+    #custom-workflow-dialog h3{font-size:1rem;margin:22px 0 10px}
+    .workflow-close{position:absolute;right:16px;top:14px}
+    .workflow-info{padding:11px;background:#0c1625;border:1px solid #293b58;border-radius:10px;margin:12px 0;overflow-wrap:anywhere;line-height:1.6}
+    .workflow-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .workflow-grid label{display:grid;gap:6px;font-size:.82rem;color:#c4d3e9}
+    .workflow-grid .control{width:100%;min-width:0}
+    .workflow-wide{grid-column:1/-1}
+    #custom-workflow-dialog textarea{resize:vertical;line-height:1.5}
+    .workflow-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+    .workflow-actions a.btn{text-decoration:none;display:inline-flex;align-items:center}
+    #custom-workflow-history details{padding:10px 0;border-bottom:1px solid #293b58;font-size:.85rem}
+    #custom-workflow-history summary{cursor:pointer}
+    #custom-workflow-history pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}
+    #custom-workflow-message{margin-top:12px;font-size:.88rem;min-height:24px}
+    @media(max-width:600px){.workflow-grid{grid-template-columns:1fr}.workflow-wide{grid-column:auto}}
   </style>
 </head>
 <body>
@@ -84,7 +103,34 @@
       </div>
       <div class="table-wrap"><table><thead><tr><th>Csomag</th><th>Nyelv / hang</th><th>Verzió</th><th>Hozzáférés</th><th>Ár</th><th>Pénznem</th><th>Eladás</th><th>Bevétel</th><th>Állapot</th><th>Művelet</th></tr></thead><tbody id="packs"></tbody></table></div>
     </section>
-    <section class="card section"><div class="head">Egyedi hang kérések · €24.99-tól</div><div class="table-wrap"><table><thead><tr><th>Idő</th><th>Azonosító</th><th>Nyelv</th><th>Hang</th><th>Robot</th><th>Kapcsolat</th><th>Megjegyzés</th><th>Oldal nyelve</th><th>Állapot</th></tr></thead><tbody id="custom-requests"></tbody></table></div></section>
+    <section class="card section" id="custom-workflow-section"><div class="head">Egyedi hang kérések · €24.99-tól <span class="small">· Ügyintézés az adott sor Művelet gombjával</span></div><div class="table-wrap"><table><thead><tr><th>Idő</th><th>Azonosító</th><th>Nyelv</th><th>Hang</th><th>Robot</th><th>Kapcsolat</th><th>Megjegyzés</th><th>Oldal nyelve</th><th>Állapot</th><th>Művelet</th></tr></thead><tbody id="custom-requests"></tbody></table></div></section>
+    <dialog id="custom-workflow-dialog" aria-labelledby="custom-workflow-title">
+      <form method="dialog"><button class="btn workflow-close" aria-label="Bezárás">✕</button></form>
+      <h2 id="custom-workflow-title">Egyedi hangkérés kezelése</h2>
+      <div id="custom-workflow-details" class="workflow-info"></div>
+      <div class="workflow-grid">
+        <label>Állapot<select class="control" id="custom-workflow-status">
+          <option value="new">Új</option><option value="contacted">Kapcsolatfelvétel</option>
+          <option value="preview">Próbahang készül</option><option value="quoted">Árajánlat elkészült</option>
+          <option value="awaiting_payment">Fizetésre vár</option><option value="in_production">Készítés alatt</option>
+          <option value="ready">Kész / átadásra vár</option><option value="completed">Lezárva</option>
+          <option value="cancelled">Visszavonva</option>
+        </select></label>
+        <label>Árajánlat, EUR<input class="control" id="custom-workflow-price" type="number" min="24.99" max="100000" step=".01" placeholder="24.99"></label>
+        <label>Voice Builder feladat ID<input class="control" id="custom-workflow-builder" maxlength="128" placeholder="Feladat azonosító (opcionális)"></label>
+        <label>Feltöltött hangcsomag ID<input class="control" id="custom-workflow-pack" maxlength="160" placeholder="Csomag azonosító (opcionális)"></label>
+        <label class="workflow-wide">Belső megjegyzés (csak admin)<textarea class="control" id="custom-workflow-notes" rows="3" maxlength="4000"></textarea></label>
+      </div>
+      <div class="workflow-actions"><button class="btn primary" type="button" id="custom-workflow-save">Módosítások mentése</button><a class="btn" href="/dashboard/voice-builder" target="_blank" rel="noopener">Voice Builder megnyitása ↗</a></div>
+      <div id="custom-workflow-payment" class="workflow-info"></div>
+      <h3>Üzenet az ügyfélnek</h3>
+      <div class="workflow-grid"><label class="workflow-wide">Tárgy<input class="control" id="custom-workflow-subject" maxlength="180"></label>
+      <label class="workflow-wide">Email szövege<textarea class="control" rows="7" maxlength="8000" id="custom-workflow-email"></textarea></label></div>
+      <div class="workflow-actions"><button class="btn primary" type="button" id="custom-workflow-send">Email küldése (megerősítéssel)</button></div>
+      <p class="small">Az email csak külön jóváhagyásra megy ki. A fizetést kizárólag a tényleges Stripe-rendelés igazolja; az állapot és az árajánlat nem hoz létre vásárlást. Hangot a Builderben csak saját indítással generálunk.</p>
+      <h3>Korábbi emailek</h3><div id="custom-workflow-history"></div>
+      <div id="custom-workflow-message" role="status" aria-live="polite"></div>
+    </dialog>
     <section class="card section"><div class="head">Adatvédelmi / GDPR kérelmek</div><div class="table-wrap"><table><thead><tr><th>Idő</th><th>Azonosító</th><th>Típus</th><th>Kapcsolat</th><th>Részletek</th><th>Nyelv</th><th>Állapot</th></tr></thead><tbody id="privacy-requests"></tbody></table></div></section>
     <section class="card section"><div class="head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><span>Legutóbbi rendelések</span><div class="actions"><button class="btn danger" id="delete-test-orders" type="button">Összes Sandbox rendelés törlése</button><button class="btn danger" id="delete-all-orders" type="button">Összes helyi rendelés törlése</button></div></div><div class="table-wrap"><table><thead><tr><th>Idő</th><th>Session</th><th>Csomag</th><th>Állapot</th><th>Email</th><th>Összeg</th><th>Művelet</th></tr></thead><tbody id="orders"></tbody></table></div></section>
   </main>
@@ -582,10 +628,91 @@
       document.getElementById('voice-pack-reset').addEventListener('click',resetVoiceAdminFilters);
     }
 
+    let customWorkflowItems=[];
+    let activeCustomRequest=null;
+    const customWorkflowApiRoot='/api/anthbot/admin/store/custom-voice-workflow';
+    const customStatusLabels={new:'Új',contacted:'Kapcsolatfelvétel',preview:'Próbahang',quoted:'Árajánlat',awaiting_payment:'Fizetésre vár',in_production:'Készítés alatt',ready:'Kész',completed:'Lezárva',cancelled:'Visszavonva'};
     function customRequestRows(items){
+      customWorkflowItems=items;
       const body=document.getElementById('custom-requests');
-      if(!items.length){body.innerHTML='<tr><td colspan="9" class="empty">Még nincs egyedi hang kérés.</td></tr>';return}
-      body.innerHTML=items.map(r=>'<tr><td>'+esc(fmt(r.created_at))+'</td><td class="mono">'+esc(r.request_id)+'</td><td><strong>'+esc(r.requested_language)+'</strong></td><td>'+esc(r.voice_style)+'</td><td>'+esc(r.model)+'</td><td>'+esc(r.contact)+'</td><td>'+esc(r.notes||'—')+'</td><td>'+esc(r.site_language||'—')+'</td><td><span class="pill '+(r.status==='new'?'warn':'good')+'">'+esc(r.status||'new')+'</span></td></tr>').join('');
+      if(!items.length){body.innerHTML='<tr><td colspan="10" class="empty">Még nincs egyedi hang kérés.</td></tr>';return}
+      body.innerHTML=items.map(r=>'<tr><td>'+esc(fmt(r.created_at))+'</td><td class="mono">'+esc(r.request_id)+'</td><td><strong>'+esc(r.requested_language)+'</strong></td><td>'+esc(r.voice_style)+'</td><td>'+esc(r.model)+'</td><td>'+esc(r.contact)+'</td><td>'+esc(r.notes||'—')+'</td><td>'+esc(r.site_language||'—')+'</td><td><span class="pill '+(r.status==='new'?'warn':'good')+'">'+esc(customStatusLabels[r.status]||r.status||'Új')+'</span></td><td><button type="button" class="btn" data-custom-request="'+esc(r.request_id)+'">Kezelés</button></td></tr>').join('');
+    }
+    function customEmailDraft(r){
+      const cs=String(r.site_language||'').toLowerCase().startsWith('cs')||/čes|czech/i.test(r.requested_language||'');
+      if(cs)return {
+        subject:'ANTHBOT – vaše žádost o vlastní hlas',
+        body:'Dobrý den,\n\nděkujeme za vaši žádost o vlastní hlas pro '+r.model+'.\n\nZaznamenali jsme jazyk: '+r.requested_language+' a požadovaný hlas: '+r.voice_style+'.\n\nMůžete nám prosím upřesnit, jak si hlas představujete? Pokud máte ukázku podobného hlasu, pošlete nám odkaz. Připravíme návrh a předem potvrdíme konečnou cenu. Cena začíná na 24,99 €; zatím nepožadujeme žádnou platbu.\n\nS pozdravem,\nANTHBOT Map'
+      };
+      return {
+        subject:'ANTHBOT – your custom voice request',
+        body:'Hello,\n\nThank you for your custom voice request for '+r.model+'.\n\nWe noted your requested language: '+r.requested_language+' and voice: '+r.voice_style+'.\n\nCould you tell us more about the voice you have in mind? A link to a similar voice sample would be helpful. We will confirm the final quote before production. Prices start at €24.99; no payment is required at this stage.\n\nBest regards,\nANTHBOT Map'
+      };
+    }
+    function renderCustomWorkflow(r,resetEmail=false){
+      activeCustomRequest=r;
+      document.getElementById('custom-workflow-title').textContent='Egyedi hangkérés · '+r.request_id;
+      document.getElementById('custom-workflow-details').textContent='Érkezett: '+fmt(r.created_at)+' | '+r.requested_language+' | '+r.voice_style+' | '+r.model+' | '+r.contact+(r.notes?' | Ügyfél megjegyzése: '+r.notes:'');
+      document.getElementById('custom-workflow-status').value=r.status||'new';
+      document.getElementById('custom-workflow-price').value=r.quote_amount==null?'':(r.quote_amount/100).toFixed(2);
+      document.getElementById('custom-workflow-builder').value=r.builder_job_id||'';
+      document.getElementById('custom-workflow-pack').value=r.pack_id||'';
+      document.getElementById('custom-workflow-notes').value=r.admin_notes||'';
+      const p=r.payment||{};
+      document.getElementById('custom-workflow-payment').innerHTML='<strong>Fizetés: '+(p.verified?'<span style="color:#80e0c7">Stripe által igazolt fizetés</span>':'<span style="color:#ffcc66">Nincs igazolt fizetés</span>')+'</strong>'+(p.verified?' · '+esc(money(p.amount_total,p.currency))+' · '+esc(p.stripe_session_id):' · A beállított árajánlat önmagában nem fizetési link.');
+      const history=document.getElementById('custom-workflow-history');
+      history.innerHTML=(r.messages||[]).length?(r.messages||[]).map(m=>'<details><summary>'+esc(fmt(m.sent_at))+' · '+esc(m.subject)+' → '+esc(m.recipient)+'</summary><pre>'+esc(m.body)+'</pre></details>').join(''):'<div class="small">Még nem küldtél emailt ebből a kérésből.</div>';
+      if(resetEmail){const draft=customEmailDraft(r);document.getElementById('custom-workflow-subject').value=draft.subject;document.getElementById('custom-workflow-email').value=draft.body}
+      document.getElementById('custom-workflow-message').textContent='';
+    }
+    function workflowNotice(message,error=false){const target=document.getElementById('custom-workflow-message');target.textContent=message;target.style.color=error?'#ffb5c1':'#a9f8dd'}
+    async function openCustomWorkflow(id){
+      const r=customWorkflowItems.find(x=>x.request_id===id);
+      if(!r)return;
+      renderCustomWorkflow(r,true);
+      document.getElementById('custom-workflow-dialog').showModal();
+    }
+    async function saveCustomWorkflow(){
+      if(!activeCustomRequest)return;
+      const price=document.getElementById('custom-workflow-price').value.trim();
+      const amount=price?Math.round(Number(price)*100):null;
+      if(price&&(!Number.isFinite(amount)||amount<2499)){workflowNotice('Az ajánlati ár legalább 24,99 € lehet.',true);return}
+      const data={
+        status:document.getElementById('custom-workflow-status').value,
+        admin_notes:document.getElementById('custom-workflow-notes').value,
+        quote_amount:amount,
+        builder_job_id:document.getElementById('custom-workflow-builder').value,
+        pack_id:document.getElementById('custom-workflow-pack').value
+      };
+      const button=document.getElementById('custom-workflow-save');button.disabled=true;
+      try{
+        const result=await api(customWorkflowApiRoot+'/'+encodeURIComponent(activeCustomRequest.request_id),{
+          method:'PATCH',headers:{'Content-Type':'application/json','X-ANTHBOT-Builder':'1'},body:JSON.stringify(data)});
+        renderCustomWorkflow(result.item);
+        const idx=customWorkflowItems.findIndex(x=>x.request_id===result.item.request_id);
+        if(idx>=0)customWorkflowItems[idx]=result.item;
+        customRequestRows(customWorkflowItems);
+        workflowNotice('A módosításokat elmentettem.');
+      }catch(e){workflowNotice('Mentési hiba: '+e.message,true)}
+      finally{button.disabled=false}
+    }
+    async function sendCustomWorkflowEmail(){
+      if(!activeCustomRequest)return;
+      const subject=document.getElementById('custom-workflow-subject').value.trim();
+      const body=document.getElementById('custom-workflow-email').value.trim();
+      if(!subject||!body){workflowNotice('Töltsd ki a tárgyat és az üzenetet.',true);return}
+      if(!confirm('Biztosan elküldöd az emailt erre a címre?\n'+activeCustomRequest.contact+'\n\n'+subject))return;
+      const button=document.getElementById('custom-workflow-send');button.disabled=true;
+      try{
+        const result=await api(customWorkflowApiRoot+'/'+encodeURIComponent(activeCustomRequest.request_id)+'/email',{
+          method:'POST',headers:{'Content-Type':'application/json','X-ANTHBOT-Builder':'1'},body:JSON.stringify({subject,body})});
+        renderCustomWorkflow(result.item);
+        const idx=customWorkflowItems.findIndex(x=>x.request_id===result.item.request_id);
+        if(idx>=0)customWorkflowItems[idx]=result.item;
+        customRequestRows(customWorkflowItems);
+        workflowNotice('Az emailt elküldtem és a történetben rögzítettem.');
+      }catch(e){workflowNotice('Küldési hiba: '+e.message,true)}
+      finally{button.disabled=false}
     }
     function privacyRequestRows(items){
       const body=document.getElementById('privacy-requests');
@@ -696,13 +823,16 @@
     }
     async function load(){
       try{
-        const [catalog,stats,orders,customRequests,privacyRequests,siteAnalytics,ownerPairings,storeAccounts,newVoicePacks]=await Promise.all([api('/api/anthbot/admin/store/voice-packs'),api('/api/anthbot/admin/store/stats'),api('/api/anthbot/admin/store/orders?limit=100'),api('/api/anthbot/admin/store/custom-voice-requests?limit=100'),api('/api/anthbot/admin/privacy-requests?limit=100'),api('/api/anthbot/admin/site-analytics?days=30'),api('/api/anthbot/admin/store/pairings?limit=200'),api('/api/anthbot/admin/store/accounts?limit=200'),api('/api/anthbot/admin/store/new-voice-packs')]);
+        const [catalog,stats,orders,customRequests,privacyRequests,siteAnalytics,ownerPairings,storeAccounts,newVoicePacks]=await Promise.all([api('/api/anthbot/admin/store/voice-packs'),api('/api/anthbot/admin/store/stats'),api('/api/anthbot/admin/store/orders?limit=100'),api(customWorkflowApiRoot+'?limit=100'),api('/api/anthbot/admin/privacy-requests?limit=100'),api('/api/anthbot/admin/site-analytics?days=30'),api('/api/anthbot/admin/store/pairings?limit=200'),api('/api/anthbot/admin/store/accounts?limit=200'),api('/api/anthbot/admin/store/new-voice-packs')]);
         const revenue=(stats.revenue||[]).map(x=>money(x.amount,x.currency)).join(' + ')||money(0,'eur');
         document.getElementById('kpis').innerHTML=kpi('Feltöltött csomag',catalog.items.length)+kpi('Új hang',newVoicePacks.count||0)+kpi('Rendelés',stats.orders||0)+kpi('Fizetett rendelés',stats.paid_orders||0)+kpi('Bevétel',revenue);
         document.getElementById('status').innerHTML='<span class="pill good">Tulajdonosi hozzáférés: minden csomag letölthető</span><span class="pill '+(stats.store_enabled?'good':'warn')+'">Store: '+(stats.store_enabled?'bekapcsolva':'kikapcsolva')+'</span><span class="pill '+(stats.checkout_ready?'good':'warn')+'">Stripe: '+(stats.checkout_ready?'kész':'nincs teljesen konfigurálva')+'</span><span class="pill '+(stats.automatic_tax?'good':'warn')+'">Stripe automatic tax: '+(stats.automatic_tax?'be':'ki')+'</span><span class="small">A tulajdonosi letöltés admin jogosultsághoz kötött, nem hoz létre rendelést vagy licencet. A fizetős csomagok publikus letöltése továbbra is vásárláshoz kötött.</span>';
         renderNewVoiceAlert(newVoicePacks);await ownerPairingRows(ownerPairings.items||[]);storeAccountRows(storeAccounts,catalog.items||[]);analyticsRows(siteAnalytics);packRows(catalog.items||[]);customRequestRows(customRequests.items||[]);privacyRequestRows(privacyRequests.items||[]);orderRows(orders.items||[]);
       }catch(e){document.getElementById('status').innerHTML='<span style="color:#ffc4cc">Hiba: '+esc(e.message)+'</span>'}
     }
+    document.getElementById('custom-requests').addEventListener('click',e=>{const button=e.target.closest('button[data-custom-request]');if(button)openCustomWorkflow(button.dataset.customRequest)});
+    document.getElementById('custom-workflow-save').addEventListener('click',saveCustomWorkflow);
+    document.getElementById('custom-workflow-send').addEventListener('click',sendCustomWorkflowEmail);
     setupVoiceAdminFilters();document.getElementById('refresh').onclick=load;document.getElementById('delete-test-orders').onclick=deleteAllTestOrders;document.getElementById('delete-all-orders').onclick=deleteAllLocalOrders;load();
   </script>
 </body>

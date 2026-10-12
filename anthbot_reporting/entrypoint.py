@@ -4,11 +4,13 @@ from app import app as fastapi_app
 from diagnostics_dedupe import DiagnosticsDedupeMiddleware
 from migration_api import router as migration_router
 from store_api import router as store_router
+from custom_voice_admin import router as custom_voice_admin_router
 from store_accounts import router as store_accounts_router
 from web_voice_installer import router as web_voice_installer_router
 
 fastapi_app.include_router(migration_router)
 fastapi_app.include_router(store_router)
+fastapi_app.include_router(custom_voice_admin_router)
 fastapi_app.include_router(store_accounts_router)
 fastapi_app.include_router(web_voice_installer_router)
 
