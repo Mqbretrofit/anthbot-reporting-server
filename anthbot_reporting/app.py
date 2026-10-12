@@ -165,6 +165,8 @@ async def lifespan(_: FastAPI):
     _init_db()
     from store_notifications import start_worker
     start_worker()
+    from custom_voice_inbox import start_worker as start_inbox_worker
+    start_inbox_worker()
     from voice_builder_review import scan_and_quarantine
     try:
         await asyncio.to_thread(scan_and_quarantine)
