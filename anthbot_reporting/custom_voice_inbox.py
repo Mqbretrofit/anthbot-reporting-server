@@ -336,8 +336,8 @@ def sync_once() -> None:
             _LOG.warning("Custom voice inbox sync failed (%s)",type(err).__name__)
             # Do not persist raw IMAP server exception messages, which can
             # contain mailbox names and auth details.
+            _init()  # make sure cursor table exists
             with core._db() as db:
-                _init()  # make sure cursor table exists
                 db.execute("""UPDATE store_custom_voice_imap_cursors SET last_error=?
                               WHERE mailbox_key IN (SELECT mailbox_key FROM store_custom_voice_imap_cursors)""",
                            ("IMAP kapcsolat vagy beállítási hiba ("+type(err).__name__+")",))
