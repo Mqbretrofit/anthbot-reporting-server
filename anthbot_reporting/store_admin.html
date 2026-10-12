@@ -804,7 +804,7 @@
       document.getElementById('custom-workflow-payment').innerHTML='<strong>Fizetés: '+(p.verified?'<span style="color:#80e0c7">Stripe által igazolt fizetés</span>':'<span style="color:#ffcc66">Nincs igazolt fizetés</span>')+'</strong>'+(p.verified?' · '+esc(money(p.amount_total,p.currency))+' · '+esc(p.stripe_session_id):' · A beállított árajánlat önmagában nem fizetési link.');
       const history=document.getElementById('custom-workflow-history');
       const correspondence=[
-        ...(r.messages||[]).map(m=>({kind:'sent',time:m.sent_at,subject:m.subject,body:m.body,recipient:m.recipient,id:m.message_id})),
+        ...(r.messages||[]).map(m=>({kind:'sent',time:m.sent_at,subject:m.subject,body:m.body,recipient:m.recipient,id:m.message_id,subject_hu:m.subject_hu,body_hu:m.body_hu})),
         ...(r.incoming_messages||[]).map(m=>({kind:'received',time:m.received_at,subject:m.subject,body:m.body,sender:m.sender,id:m.id,
           translated:m.translation_hu,translateStatus:m.translation_state,translateError:m.translation_error,
           attachments:m.attachments||[]}))
@@ -818,7 +818,9 @@
             '<span class="small">'+esc(m.translateStatus==='failed'?(m.translateError||'Fordítási hiba'):'A fordítás készül…')+'</span> '+
             (m.translateStatus==='failed'?'<button type="button" class="btn" data-retry-translation="'+Number(m.id)+'">Fordítás újrapróbálása</button>':''))+
             '</div>'
-          :'';
+          :'<div class="workflow-translation"><strong>Magyar jelentés:</strong> '+(m.body_hu
+            ?'<div class="workflow-translation-subject">'+esc(m.subject_hu||'')+'</div><pre>'+esc(m.body_hu)+'</pre>'
+            :'<span class="small">Ehhez a korábban elküldött levélhez még nincs mentett fordítás.</span> <button class="btn" type="button" data-translate-sent="'+Number(m.id)+'">Fordítás magyarra</button>')+'</div>';
         const attachments=incoming&&(m.attachments||[]).length
           ?'<div class="workflow-actions"><strong>Ügyfélmellékletek:</strong> '+
             m.attachments.map(a=>'<a class="btn" download href="/api/anthbot/admin/store/custom-voice-inbox/files/'+Number(a.id)+'">'+esc(a.filename)+' ('+Math.ceil(Number(a.size_bytes)/1024)+' KB)</a>').join('')+
@@ -880,6 +882,32 @@
         await refreshCustomThread();
       }catch(e){workflowNotice('IMAP ellenőrzés sikertelen: '+e.message,true)}
       finally{button.disabled=false}
+    }
+    async function translateOutgoingHistory(messageId){
+      if(!activeCustomRequest)return;
+      const r=activeCustomRequest;
+      const mail=(r.messages||[]).find(x=>x.message_id===messageId);
+      if(!mail)return;
+      try{
+        workflowNotice('Régi elküldött levél AI-fordítása folyamatban…');
+        const endpoint=customWorkflowApiRoot+'/'+encodeURIComponent(r.request_id)+'/ai/jobs';
+        let job=await api(endpoint,{
+          method:'POST',headers:{'Content-Type':'application/json','X-ANTHBOT-Builder':'1'},
+          body:JSON.stringify({mode:'translate',subject:mail.subject,body:mail.body,retry:true})
+        });
+        for(let i=0;i<175&&['queued','running'].includes(job.status);i++){
+          await new Promise(resolve=>setTimeout(resolve,1600));
+          if(!activeCustomRequest||activeCustomRequest.request_id!==r.request_id)return;
+          job=await api(endpoint+'/'+encodeURIComponent(job.job_id));
+        }
+        if(job.status!=='completed')throw new Error(job.error||'A fordítás még nem elérhető.');
+        await api(customWorkflowApiRoot+'/'+encodeURIComponent(r.request_id)+'/email/'+messageId+'/translation',{
+          method:'POST',headers:{'Content-Type':'application/json','X-ANTHBOT-Builder':'1'},
+          body:JSON.stringify({subject_hu:job.result.subject_hu,body_hu:job.result.body_hu})
+        });
+        await refreshCustomThread(true);
+        workflowNotice('A régi levél magyar fordítását elmentettem.');
+      }catch(e){workflowNotice('Korábbi levél fordítása: '+e.message,true)}
     }
     async function retryCustomIncomingTranslation(messageId){
       try{
@@ -944,7 +972,11 @@
       const button=document.getElementById('custom-workflow-send');button.disabled=true;
       try{
         const result=await api(customWorkflowApiRoot+'/'+encodeURIComponent(activeCustomRequest.request_id)+'/email',{
-          method:'POST',headers:{'Content-Type':'application/json','X-ANTHBOT-Builder':'1'},body:JSON.stringify({subject,body})});
+          method:'POST',headers:{'Content-Type':'application/json','X-ANTHBOT-Builder':'1'},body:JSON.stringify({
+            subject,body,
+            subject_hu:customEmailIsModified()?'':document.getElementById('custom-workflow-subject-hu').textContent,
+            body_hu:customEmailIsModified()?'':document.getElementById('custom-workflow-email-hu').textContent
+          })});
         renderCustomWorkflow(result.item);
         const idx=customWorkflowItems.findIndex(x=>x.request_id===result.item.request_id);
         if(idx>=0)customWorkflowItems[idx]=result.item;
@@ -1172,6 +1204,8 @@
     document.getElementById('custom-workflow-history').addEventListener('click',e=>{
       const button=e.target.closest('button[data-retry-translation]');
       if(button)retryCustomIncomingTranslation(Number(button.dataset.retryTranslation));
+      const outbound=e.target.closest('button[data-translate-sent]');
+      if(outbound)translateOutgoingHistory(Number(outbound.dataset.translateSent));
     });
     document.getElementById('custom-workflow-ai-draft').addEventListener('click',()=>customAiWork('draft'));
     document.getElementById('custom-workflow-ai-translate').addEventListener('click',()=>customAiWork('translate'));
