@@ -79,6 +79,16 @@ def _init() -> None:
             )
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_voice_inbox_req ON store_custom_voice_inbox(request_id,id)")
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS store_custom_voice_inbox_files (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                incoming_id INTEGER NOT NULL,
+                filename TEXT NOT NULL,
+                size_bytes INTEGER NOT NULL,
+                file_path TEXT NOT NULL,
+                FOREIGN KEY(incoming_id) REFERENCES store_custom_voice_inbox(id)
+            )
+        """)
         conn.execute("""CREATE INDEX IF NOT EXISTS idx_custom_voice_messages_request
                         ON store_custom_voice_messages(request_id, sent_at)""")
 
@@ -133,6 +143,14 @@ def _entry(conn: sqlite3.Connection, request_id: str) -> dict:
                ORDER BY id DESC LIMIT 30""", (request_id,)
         )
     ]
+    for message in result["incoming_messages"]:
+        message["attachments"] = [
+            {"id": f["id"],"filename": f["filename"],"size_bytes": f["size_bytes"]}
+            for f in conn.execute(
+                """SELECT id,filename,size_bytes FROM store_custom_voice_inbox_files
+                   WHERE incoming_id=? ORDER BY id""",(message["id"],)
+            )
+        ]
     result["incoming_unread"] = conn.execute(
         "SELECT COUNT(*) FROM store_custom_voice_inbox WHERE request_id=? AND read_at IS NULL",
         (request_id,)
