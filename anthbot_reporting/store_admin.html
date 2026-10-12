@@ -45,6 +45,16 @@
     .workflow-translation-subject{margin-top:12px;padding:8px 0;color:#e4eefe;overflow-wrap:anywhere}
     .workflow-translation pre{margin:8px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55;color:#d9eaff;font:inherit;font-size:.89rem}
     #custom-workflow-translation-status.outdated{color:#ffe2a8;font-weight:700}
+
+    #admin-notification-inbox{display:grid;gap:8px}
+    .admin-notification-item{padding:11px;border:1px solid #293b58;border-radius:12px;background:#111d2e}
+    .admin-notification-item.unread{border-left:4px solid #ffcc66}
+    .admin-notification-item strong{font-size:.89rem}
+    .admin-notification-item pre{margin:8px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:.8rem;color:#c9d6e8}
+    .admin-notification-item .small{margin-left:10px}
+    #admin-notification-section .workflow-actions{align-items:center}
+    #admin-notification-section .workflow-actions label{display:flex;align-items:center;gap:7px;font-size:.85rem}
+    #admin-notification-section .workflow-actions label:has(input[type=email]){display:grid;align-items:initial}
   </style>
 </head>
 <body>
@@ -53,6 +63,23 @@
     <div class="grid kpis" id="kpis"></div>
     <div class="card status" id="status">Betöltés…</div>
     <div class="new-voice-alert" id="new-voice-alert" role="status" aria-live="polite"></div>
+    <section class="card section" id="admin-notification-section">
+      <div class="head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <span>Admin értesítések <span class="pill warn" id="admin-notification-badge">0 olvasatlan</span></span>
+        <button class="btn" type="button" id="admin-notification-read">Összes megjelölése olvasottként</button>
+      </div>
+      <div class="small" style="padding:12px 16px">Sikeres hangvásárlás, új egyedi hangkérés és GDPR-kérelem esetén automatikus email és böngészős push értesítés. Pushhoz HTTPS-en, külön böngészőablakban nyisd meg az adminoldalt, és ezen az eszközön engedélyezd az értesítést.</div>
+      <div class="workflow-actions" style="padding:0 16px 12px">
+        <label>Email cím <input class="control" id="admin-notification-email" type="email" placeholder="Saját értesítési email címed" maxlength="254"></label>
+        <label><input id="admin-notification-email-enabled" type="checkbox" checked> Email értesítés</label>
+        <label><input id="admin-notification-push-enabled" type="checkbox" checked> Push értesítés</label>
+        <button class="btn" id="admin-notification-save" type="button">Értesítési beállítások mentése</button>
+        <button class="btn primary" id="admin-notification-subscribe" type="button">Push engedélyezése ezen az eszközön</button>
+        <button class="btn" id="admin-notification-unsubscribe" type="button">Push kikapcsolása ezen az eszközön</button>
+      </div>
+      <div class="small" id="admin-notification-info" style="padding:0 16px 12px" aria-live="polite"></div>
+      <div id="admin-notification-inbox" style="padding:0 16px 15px"></div>
+    </section>
     <section class="card section">
       <div class="head">Saját Home Assistant</div>
       <div class="small pairing-current-note">A saját Hangbolt-kompatibilis ANTHBOT Map telepítésed külön jelenik meg. Ha az emailes Hangbolt-fiókodhoz kapcsolódik, automatikusan felismerjük, és onnantól tartós tulajdonosi azonosításként megőrizzük: a saját HA-d nem jár le a 7 napos ideiglenes párosítással együtt.</div>
