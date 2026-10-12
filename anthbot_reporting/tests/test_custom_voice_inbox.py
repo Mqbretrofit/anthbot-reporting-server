@@ -204,6 +204,19 @@ class CustomVoiceInboxTests(unittest.TestCase):
         self.assertIn("attachment",downloaded.headers["content-disposition"].lower())
         self.assertEqual(downloaded.headers["x-content-type-options"],"nosniff")
 
+    def test_hungarian_translation_of_sent_history_is_persisted_and_protected(self):
+        outgoing=self.c.get(self.url,headers=self.auth).json()["messages"][0]
+        endpoint=self.url+"/email/"+str(outgoing["message_id"])+"/translation"
+        data={"subject_hu":"Egyedi hangkérés","body_hu":"Cseh, meleg női hang a Genie 1000-hez."}
+        self.assertEqual(self.c.post(endpoint,json=data).status_code,401)
+        result=self.c.post(endpoint,headers=self.write,json=data)
+        self.assertEqual(result.status_code,200,result.text)
+        message=self.c.get(self.url,headers=self.auth).json()["messages"][0]
+        self.assertEqual(message["subject_hu"],data["subject_hu"])
+        self.assertEqual(message["body_hu"],data["body_hu"])
+        self.assertEqual(self.c.post(self.url+"/email/999999/translation",
+                        headers=self.write,json=data).status_code,404)
+
     def test_server_imap_sync_requires_configuration(self):
         stat=self.c.get("/api/anthbot/admin/store/custom-voice-inbox/status",headers=self.auth)
         self.assertEqual(stat.status_code,200)
