@@ -61,7 +61,7 @@ try:
 except urllib.error.HTTPError as exc:
     print('ORIGIN HTTP=%s; speed not measured' % exc.code)
 except Exception as exc:
-    print('ORIGIN error=%s: %s' % (type(exc).__name__, str(exc)[:120]))
+    print('ORIGIN error=%s' % type(exc).__name__)
 """
 
 
@@ -99,7 +99,7 @@ def main():
     )
     print(cloudflare.stdout.strip(), flush=True)
     if cloudflare.returncode:
-        print("CLOUDFLARE request error:", cloudflare.stderr.strip()[:180], flush=True)
+        print("CLOUDFLARE curl exit code:", cloudflare.returncode, flush=True)
     print("NB: This measures HA-to-Cloudflare and local origin, NOT mower Wi-Fi speed.")
 
 
