@@ -85,7 +85,7 @@ class MigrationUploadMiddleware:
         await self.app(migrated_scope, receive, send)
 
 
-_VOICE_DOWNLOAD_LOG = logging.getLogger("anthbot.voice_download")
+_VOICE_DOWNLOAD_LOG = logging.getLogger("uvicorn.error")
 
 
 class VoiceDownloadTimingMiddleware:
