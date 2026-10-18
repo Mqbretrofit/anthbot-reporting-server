@@ -89,7 +89,7 @@ _VOICE_DOWNLOAD_LOG = logging.getLogger("anthbot.voice_download")
 
 
 class VoiceDownloadTimingMiddleware:
-    """Log paid voice transfer timing without recording URLs or bearer tokens.
+    """Compare factory and paid voice transfer timing without recording secrets.
 
     ASGI send timings reflect how quickly the application passes bytes to its
     downstream peer (usually a reverse proxy), NOT mower download completion.
@@ -103,12 +103,15 @@ class VoiceDownloadTimingMiddleware:
         if not (
             scope.get("type") == "http"
             and str(scope.get("method", "")).upper() in {"GET", "HEAD"}
-            and path.startswith("/api/anthbot/store/voice-packs/")
-            and path.endswith("/download")
+            and (
+                (path.startswith("/api/anthbot/store/voice-packs/") and path.endswith("/download"))
+                or path.startswith("/voice-packs/")
+            )
         ):
             await self.app(scope, receive, send)
             return
 
+        voice_type = "paid_community" if path.startswith("/api/") else "factory_cached"
         started = time.monotonic()
         status = 0
         sent_bytes = 0
@@ -135,8 +138,9 @@ class VoiceDownloadTimingMiddleware:
         finally:
             elapsed = max(time.monotonic() - started, 0.001)
             _VOICE_DOWNLOAD_LOG.info(
-                "voice_download status=%s bytes=%s elapsed_ms=%s "
+                voice_download type=%s status=%s bytes=%s elapsed_ms=%s "
                 "first_body_ms=%s throughput_mib_s=%.2f range=%s completed=%s",
+                voice_type,
                 status,
                 sent_bytes,
                 round(elapsed * 1000),
@@ -149,4 +153,6 @@ class VoiceDownloadTimingMiddleware:
 
 # Defense in depth: clients deduplicate automatic diagnostics themselves, but
 # production must also protect its persistent store from older/buggy clients.
-app = VoiceDownloadTimingMiddleware(\n    DiagnosticsDedupeMiddleware(MigrationUploadMiddleware(dashboard_app))\n)
+app = VoiceDownloadTimingMiddleware(
+    DiagnosticsDedupeMiddleware(MigrationUploadMiddleware(dashboard_app))
+)
