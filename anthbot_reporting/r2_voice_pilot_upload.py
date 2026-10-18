@@ -63,6 +63,21 @@ def main() -> None:
     )
     if not object_is_verified(s3, settings, pack):
         raise SystemExit("R2 object metadata verification failed")
+
+    # Read the uploaded bytes back from R2, not just object metadata.
+    response = s3.get_object(Bucket=settings.bucket, Key=key)
+    remote_digest = hashlib.md5(usedforsecurity=False)
+    remote_size = 0
+    body = response["Body"]
+    try:
+        for chunk in body.iter_chunks(chunk_size=256 * 1024):
+            if chunk:
+                remote_digest.update(chunk)
+                remote_size += len(chunk)
+    finally:
+        body.close()
+    if remote_size != path.stat().st_size or remote_digest.hexdigest() != digest.hexdigest():
+        raise SystemExit("R2 downloaded content failed byte count / MD5 verification")
     print("R2 PILOT UPLOAD VERIFIED")
     print(f"Voice community ID: {settings.community_id}")
     print(f"Size: {path.stat().st_size} bytes; MD5 match: yes")
