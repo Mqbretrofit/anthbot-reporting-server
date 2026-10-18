@@ -226,7 +226,7 @@ def _install() -> None:
     print("Telepitendo hang:", pack.get("variant_name", pack["community_id"]))
     if input("Mentest keszitek es aktivalom a SAJAT robot tesztjet. Mehet? [igen/N]: ").strip().lower() != "igen":
         print("Megszakitva. Nem tortent valtoztatas.")
-        return
+        raise SystemExit(2)
 
     import shlex
     values = {
