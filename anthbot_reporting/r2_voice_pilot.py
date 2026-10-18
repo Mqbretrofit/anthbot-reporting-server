@@ -19,7 +19,7 @@ _LOG = logging.getLogger(__name__)
 _SAFE_PART = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}\Z")
 _ACCOUNT_ID = re.compile(r"[0-9a-fA-F]{32}\Z")
 _MD5 = re.compile(r"[0-9a-fA-F]{32}\Z")
-_BUCKET = re.compile(r"[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]\Z")
+_BUCKET = re.compile(r"[a-z0-9][a-z0-9-]{1,61}[a-z0-9]\Z")
 _PRESIGNED_TTL = 15 * 60
 
 
