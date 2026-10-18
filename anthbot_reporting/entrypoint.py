@@ -89,7 +89,7 @@ _VOICE_DOWNLOAD_LOG = logging.getLogger("uvicorn.error")
 
 
 class VoiceDownloadTimingMiddleware:
-    """Compare factory and paid voice transfer timing without recording secrets.
+    """Compare public cached and paid voice transfer timing without secrets.
 
     ASGI send timings reflect how quickly the application passes bytes to its
     downstream peer (usually a reverse proxy), NOT mower download completion.
@@ -111,7 +111,7 @@ class VoiceDownloadTimingMiddleware:
             await self.app(scope, receive, send)
             return
 
-        voice_type = "paid_community" if path.startswith("/api/") else "factory_cached"
+        voice_type = "paid_community" if path.startswith("/api/") else "public_cached"
         started = time.monotonic()
         status = 0
         sent_bytes = 0
