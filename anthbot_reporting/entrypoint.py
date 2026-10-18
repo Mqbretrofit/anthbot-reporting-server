@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import logging
+import time
+
 from app import app as fastapi_app
 from diagnostics_dedupe import DiagnosticsDedupeMiddleware
 from migration_api import router as migration_router
@@ -82,6 +85,68 @@ class MigrationUploadMiddleware:
         await self.app(migrated_scope, receive, send)
 
 
+_VOICE_DOWNLOAD_LOG = logging.getLogger("anthbot.voice_download")
+
+
+class VoiceDownloadTimingMiddleware:
+    """Log paid voice transfer timing without recording URLs or bearer tokens.
+
+    ASGI send timings reflect how quickly the application passes bytes to its
+    downstream peer (usually a reverse proxy), NOT mower download completion.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        path = str(scope.get("path", ""))
+        if not (
+            scope.get("type") == "http"
+            and str(scope.get("method", "")).upper() in {"GET", "HEAD"}
+            and path.startswith("/api/anthbot/store/voice-packs/")
+            and path.endswith("/download")
+        ):
+            await self.app(scope, receive, send)
+            return
+
+        started = time.monotonic()
+        status = 0
+        sent_bytes = 0
+        first_body_ms = None
+        range_requested = any(
+            name.lower() == b"range" for name, _ in scope.get("headers", [])
+        )
+        completed = False
+
+        async def measured_send(message):
+            nonlocal status, sent_bytes, first_body_ms, completed
+            if message["type"] == "http.response.start":
+                status = int(message.get("status", 0))
+            elif message["type"] == "http.response.body":
+                if first_body_ms is None:
+                    first_body_ms = round((time.monotonic() - started) * 1000)
+                sent_bytes += len(message.get("body", b""))
+                if not message.get("more_body", False):
+                    completed = True
+            await send(message)
+
+        try:
+            await self.app(scope, receive, measured_send)
+        finally:
+            elapsed = max(time.monotonic() - started, 0.001)
+            _VOICE_DOWNLOAD_LOG.info(
+                "voice_download status=%s bytes=%s elapsed_ms=%s "
+                "first_body_ms=%s throughput_mib_s=%.2f range=%s completed=%s",
+                status,
+                sent_bytes,
+                round(elapsed * 1000),
+                first_body_ms,
+                sent_bytes / (1024 * 1024) / elapsed,
+                range_requested,
+                completed,
+            )
+
+
 # Defense in depth: clients deduplicate automatic diagnostics themselves, but
 # production must also protect its persistent store from older/buggy clients.
-app = DiagnosticsDedupeMiddleware(MigrationUploadMiddleware(dashboard_app))
+app = VoiceDownloadTimingMiddleware(\n    DiagnosticsDedupeMiddleware(MigrationUploadMiddleware(dashboard_app))\n)
