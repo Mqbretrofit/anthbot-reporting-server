@@ -1529,6 +1529,14 @@ def _short_lived_voice_url(
         subject=subject,
         client_id=client_id,
     )
+    # Pilot only: one paid voice may be served directly from private R2.
+    # On any R2 failure the existing licensed Reporting Server link is retained.
+    from r2_voice_pilot import pilot_download_url
+
+    r2_url = pilot_download_url(pack)
+    if r2_url:
+        return r2_url
+
     pack_id = str(pack.get("id") or "").strip()
     base = core._public_base_url(request)
     return (
