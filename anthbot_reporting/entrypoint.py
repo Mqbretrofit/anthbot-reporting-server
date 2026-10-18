@@ -138,7 +138,7 @@ class VoiceDownloadTimingMiddleware:
         finally:
             elapsed = max(time.monotonic() - started, 0.001)
             _VOICE_DOWNLOAD_LOG.info(
-                voice_download type=%s status=%s bytes=%s elapsed_ms=%s "
+                "voice_download type=%s status=%s bytes=%s elapsed_ms=%s "
                 "first_body_ms=%s throughput_mib_s=%.2f range=%s completed=%s",
                 voice_type,
                 status,
