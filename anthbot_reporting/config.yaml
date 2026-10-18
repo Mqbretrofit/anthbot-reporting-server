@@ -1,5 +1,5 @@
 name: ANTHBOT Reporting Server
-version: "1.0.57"
+version: "1.0.58-r2pilot1"
 slug: anthbot_reporting
 homeassistant_api: true
 description: ANTHBOT Map presence, opt-in telemetry, diagnostics, and admin dashboard backend
@@ -22,6 +22,12 @@ options:
   stripe_webhook_secret: ""
   store_license_secret: ""
   stripe_automatic_tax: false
+  r2_pilot_enabled: false
+  r2_pilot_community_id: ""
+  r2_account_id: ""
+  r2_bucket: ""
+  r2_access_key_id: ""
+  r2_secret_access_key: ""
   privacy_controller_name: "ANTHBOT Map"
   privacy_controller_address: ""
   privacy_contact_email: "support@anthbotmap.com"
@@ -50,6 +56,12 @@ schema:
   stripe_webhook_secret: password?
   store_license_secret: password?
   stripe_automatic_tax: bool
+  r2_pilot_enabled: bool
+  r2_pilot_community_id: str?
+  r2_account_id: str?
+  r2_bucket: str?
+  r2_access_key_id: password?
+  r2_secret_access_key: password?
   privacy_controller_name: str
   privacy_controller_address: str?
   privacy_contact_email: str?

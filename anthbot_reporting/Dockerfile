@@ -30,6 +30,9 @@ COPY diagnostics_dedupe.py ./diagnostics_dedupe.py
 COPY migration_api.py ./migration_api.py
 COPY voice_packs.json ./voice_packs.json
 COPY store_api.py ./store_api.py
+COPY r2_voice_pilot.py ./r2_voice_pilot.py
+COPY r2_voice_pilot_upload.py ./r2_voice_pilot_upload.py
+COPY r2_manual_speed_test.py ./r2_manual_speed_test.py
 COPY custom_voice_admin.py ./custom_voice_admin.py
 COPY custom_voice_ai.py ./custom_voice_ai.py
 COPY custom_voice_inbox.py ./custom_voice_inbox.py
